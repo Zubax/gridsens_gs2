@@ -6,9 +6,10 @@
 
 PROJECT = crdr_gps
 
-CSRC = src/main.c                       \
-       src/console.c                    \
-       src/sys/board.c
+CSRC = src/sys/board.c
+
+CPPSRC = src/main.cpp                     \
+         src/console.cpp
 
 UINCDIR = src/sys
 

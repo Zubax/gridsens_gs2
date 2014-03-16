@@ -10,9 +10,6 @@
 
 #define CH_USE_HEAP                     TRUE
 #define CH_USE_DYNAMIC                  FALSE
-#define CH_USE_MAILBOXES                FALSE
-#define CH_USE_MESSAGES                 FALSE
-#define CH_USE_CONDVARS                 FALSE
 
 #if DEBUG
 #   define CH_OPTIMIZE_SPEED               FALSE
