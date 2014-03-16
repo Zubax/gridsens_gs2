@@ -1,0 +1,23 @@
+# Build outputs
+*.o
+*.elf
+*.bin
+*.hex
+lib*.so
+lib*.so.*
+*.a
+*.d
+.dep
+build
+.gdbinit
+*.swp
+*~
+*.pyc
+__pycache__
+
+# Eclipse
+.metadata/*
+.settings/*
+.project
+.cproject
+.pydevproject
