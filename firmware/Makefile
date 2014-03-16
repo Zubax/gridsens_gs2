@@ -7,6 +7,7 @@
 PROJECT = crdr_gps
 
 CSRC = src/main.c                       \
+       src/console.c                    \
        src/sys/board.c
 
 UINCDIR = src/sys
