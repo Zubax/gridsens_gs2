@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <ch.h>
 #include <hal.h>
 #include <shell.h>
@@ -65,12 +66,24 @@ static const ShellConfig _config = {(BaseSequentialStream*)&STDOUT_SD, _commands
 
 static WORKING_AREA(_wa_shell, 1024);
 
+static bool readRxPin(void)
+{
+    return palReadPad(GPIO_PORT_SERIAL_RX, GPIO_PIN_SERIAL_RX);
+}
+
 int consoleInit(void)
 {
-    if (palReadPad(GPIO_PORT_SERIAL_RX, GPIO_PIN_SERIAL_RX) == 0) {
-        lowsyslog("Console: RX pin is low, console will not be inited\n");
-        return 0; // That's OK
+#if RELEASE
+    if (!readRxPin())
+    {
+        usleep(500000);   // Some USB-serial adapters are weird and need some time to initialize TX line
+        if (!readRxPin())
+        {
+            lowsyslog("Console: RX pin is low, console will not be inited\n");
+            return 0;     // That's OK
+        }
     }
+#endif
     shellInit();
     return shellCreateStatic(&_config, _wa_shell, sizeof(_wa_shell), LOWPRIO) ? 0 : -1;
 }
