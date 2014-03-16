@@ -12,7 +12,6 @@
 #include <crdr_chibios/config/config.h>
 
 
-CONFIG_PARAM_FLOAT("my_answer", 42, 0, 99)
 CONFIG_PARAM_INT("my_int", 42, 0, 99)
 CONFIG_PARAM_BOOL("my_bool", false)
 
