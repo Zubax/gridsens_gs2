@@ -14,6 +14,8 @@
 
 #define STM32F10X_CL
 
+#define UBLOX_SD  SD2
+
 /*
  * GPIO
  */
