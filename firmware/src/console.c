@@ -66,10 +66,12 @@ static const ShellConfig _config = {(BaseSequentialStream*)&STDOUT_SD, _commands
 
 static WORKING_AREA(_wa_shell, 1024);
 
+#if RELEASE
 static bool readRxPin(void)
 {
     return palReadPad(GPIO_PORT_SERIAL_RX, GPIO_PIN_SERIAL_RX);
 }
+#endif
 
 int consoleInit(void)
 {
