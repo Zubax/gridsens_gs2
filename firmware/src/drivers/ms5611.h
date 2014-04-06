@@ -104,10 +104,10 @@ uint16_t MS5611_Read_Coef(MS5611_t* MS5611, uint8_t coef_num);
 uint8_t MS5611_Get_Prom(MS5611_t* MS5611);
 uint32_t MS5611_Convert_Dx(MS5611_t* MS5611, ms5611_cmd cmd);
 
-#endif /* _ms5611_h */
-
 #if __cplusplus
 }
 #endif
+
+#endif /* _ms5611_h */
 
 /** @} */
