@@ -10,11 +10,9 @@ PROJECT = crdr_gps
 # Application
 #
 
-CSRC = src/sys/board.c
+CSRC = $(shell find src -name '*.c')
 
-CPPSRC = src/main.cpp                     \
-         src/console.cpp                  \
-         src/uavcan.cpp
+CPPSRC = $(shell find src -name '*.cpp')
 
 UINCDIR = src/sys
 
