@@ -24,7 +24,6 @@ void publish(float pressure_pa, float temperature_degc)
 {
     if (!isUavcanNodeStarted())
     {
-        lowsyslog("Air sensor publication skipped: Node is not started\n");
         return;
     }
 
@@ -58,7 +57,7 @@ public:
 
         while (true)
         {
-            ::usleep(1000000);         // TODO: rate
+            ::usleep(100000);          // TODO: rate
 
             int32_t raw_pressure = 0;
             int32_t raw_temperature = 0;

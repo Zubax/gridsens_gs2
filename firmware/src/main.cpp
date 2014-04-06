@@ -88,7 +88,7 @@ int init()
     }
 
     ASSERT_ALWAYS(airSensorInit() >= 0);
-    ASSERT_ALWAYS(magnetometerInit() >= 0);
+    //ASSERT_ALWAYS(magnetometerInit() >= 0);  // TODO: enable later
     ASSERT_ALWAYS(gnssInit() >= 0);
 
     // Console
