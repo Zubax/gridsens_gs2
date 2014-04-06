@@ -46,13 +46,33 @@ void publishFix()
     // Uncertainty
     msg.sats_used = data.satqty;
 
-    msg.velocity_covariance.push_back(data.speedCM[0]);
-    msg.velocity_covariance.push_back(data.speedCM[4]);
-    msg.velocity_covariance.push_back(data.speedCM[8]);
+    if (data.fix == GNSSFIX_TIME)
+    {
+        msg.status = uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY;
+    }
+    else if (data.fix == GNSSFIX_2D)
+    {
+        msg.status = uavcan::equipment::gnss::Fix::STATUS_2D_FIX;
+    }
+    else if (data.fix == GNSSFIX_3D)
+    {
+        msg.status = uavcan::equipment::gnss::Fix::STATUS_3D_FIX;
+    }
+    else
+    {
+        msg.status = uavcan::equipment::gnss::Fix::STATUS_NO_FIX;
+    }
 
-    msg.position_covariance.push_back(data.posCM[0]);
-    msg.position_covariance.push_back(data.posCM[4]);
-    msg.position_covariance.push_back(data.posCM[8]);
+    if (msg.status > uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY)
+    {
+        msg.velocity_covariance.push_back(data.speedCM[0]);
+        msg.velocity_covariance.push_back(data.speedCM[4]);
+        msg.velocity_covariance.push_back(data.speedCM[8]);
+
+        msg.position_covariance.push_back(data.posCM[0]);
+        msg.position_covariance.push_back(data.posCM[4]);
+        msg.position_covariance.push_back(data.posCM[8]);
+    }
 
     // Publishing
     UavcanLock locker;
