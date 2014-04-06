@@ -38,10 +38,10 @@ const I2CConfig I2CCfg2 = {
 
 void setStatusLed(bool state)
 {
-    palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, !state);
+    palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, state);
 }
 
-std::pair<unsigned , unsigned> getStatusLedOnOffMSecDurations()
+std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 {
     const auto self_status = app::getUavcanNode().getNodeStatusProvider().getStatusCode();
     using uavcan::protocol::NodeStatus;
