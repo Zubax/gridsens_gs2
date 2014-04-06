@@ -47,7 +47,7 @@ void configureNode()
 class : public chibios_rt::BaseStaticThread<2048>
 {
 public:
-    msg_t main()
+    msg_t main() override
     {
         configureNode();
 

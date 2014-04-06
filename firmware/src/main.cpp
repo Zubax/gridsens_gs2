@@ -15,6 +15,7 @@
 
 #include "uavcan.hpp"
 #include "air_sensor.hpp"
+#include "magnetometer.hpp"
 
 int consoleInit();
 
@@ -96,6 +97,7 @@ int init()
     }
 
     ASSERT_ALWAYS(airSensorInit() >= 0);
+    ASSERT_ALWAYS(magnetometerInit() >= 0);
 
     // Console
     usleep(100000);

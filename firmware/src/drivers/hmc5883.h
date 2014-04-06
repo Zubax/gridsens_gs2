@@ -10,6 +10,10 @@
 #include "ch.h"
 #include "hal.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 /**
  * @name    hmc5883.h header files
  * @{
@@ -128,7 +132,7 @@ typedef struct HMC5883setup_t
  */
 typedef union HMC5883set_t {
     uint8_t        byte[3]; /* byte representation of HMC5883setup_t structure */
-    HMC5883setup_t bit;     /* bitfield representation of HMC5883setup_t structure */ 
+    HMC5883setup_t bit;     /* bitfield representation of HMC5883setup_t structure */
 }HMC5883set_t;
 
 /**
@@ -138,7 +142,7 @@ typedef union HMC5883set_t {
 typedef struct HMC5883_t
 {
       uint8_t        buf[HMC_BUF_SIZE];  /* TMP buffer */
-    
+
       uint32_t       HMC5883_stat;       /* HMC5883 status */
       HMC5883set_t   HMC5883_set;        /* HMC5883 setup union*/
 }HMC5883_t;
@@ -147,6 +151,10 @@ typedef struct HMC5883_t
 int16_t HMC5883_init(HMC5883_t *HMC5883, AveragingVal mavg, SampleRateVal drate, MeasureMode mmode, GainVal gain, OperatingMode opmode);
 int16_t HMC5883_simple_init(void);
 int16_t HMC5883_readData(HMC5883_t *HMC5883, HMC5883meas_t *Hout);
+
+#if __cplusplus
+}
+#endif
 
 #endif /* _hmc5883_h */
 

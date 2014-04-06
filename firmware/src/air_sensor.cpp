@@ -44,12 +44,12 @@ void publish(float pressure_pa, float temperature_degc)
     (void)air_data_pub.broadcast(air_data);
 }
 
-class : public chibios_rt::BaseStaticThread<512>
+class AirSensorThread : public chibios_rt::BaseStaticThread<512>
 {
 public:
-    msg_t main()
+    msg_t main() override
     {
-        MS5611_t sens;
+        auto sens = ::MS5611_t();
 
         MS5611_Reset(&sens);
         ::usleep(3000);                // Waiting for reset
