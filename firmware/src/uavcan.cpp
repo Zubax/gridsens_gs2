@@ -10,8 +10,7 @@
 #include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/sys/sys.h>
 
-#include <uavcan_stm32/uavcan_stm32.hpp>
-#include <uavcan/protocol/global_time_sync_slave.hpp>
+#include "uavcan.hpp"
 
 namespace app
 {
@@ -23,23 +22,11 @@ crdr_chibios::config::Param<unsigned> node_id("uavcan_node_id", 42, 1, 120);
 
 uavcan_stm32::CanInitHelper<> can;
 
-typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 64> Node;
-
-Node& getNode()
-{
-    static Node node(can.driver, uavcan_stm32::SystemClock::instance());
-    return node;
-}
-
-uavcan::GlobalTimeSyncSlave& getTimeSyncSlave()
-{
-    static uavcan::GlobalTimeSyncSlave time_sync_slave(getNode());
-    return time_sync_slave;
-}
+uavcan_stm32::Mutex node_mutex;
 
 void configureNode()
 {
-    Node& node = app::getNode();
+    UavcanNode& node = getUavcanNode();
 
     node.setNodeID(node_id.get());
     node.setName("com.courierdrone.gps");
@@ -64,53 +51,65 @@ public:
     {
         configureNode();
 
-        Node& node = app::getNode();
-
         /*
-         * Initializing the UAVCAN node - this may take a while
+         * Starting the UAVCAN node - this may take a few seconds
          */
         while (true)
         {
-            uavcan::NodeInitializationResult init_result;
-            const int uavcan_start_res = node.start(init_result);
+            {
+                UavcanLock locker;
+                uavcan::NodeInitializationResult init_result;
+                const int uavcan_start_res = getUavcanNode().start(init_result);
 
-            if (uavcan_start_res < 0)
-            {
-                lowsyslog("Node initialization failure: %i, will try agin soon\n", uavcan_start_res);
-            }
-            else if (!init_result.isOk())
-            {
-                lowsyslog("Network conflict with %u, will try again soon\n", init_result.conflicting_node.get());
-            }
-            else
-            {
-                break;
+                if (uavcan_start_res < 0)
+                {
+                    lowsyslog("Node initialization failure: %i, will try agin soon\n", uavcan_start_res);
+                }
+                else if (!init_result.isOk())
+                {
+                    lowsyslog("Network conflict with %u, will try again soon\n", init_result.conflicting_node.get());
+                }
+                else
+                {
+                    break;
+                }
             }
             ::sleep(3);
         }
 
         /*
-         * Time synchronizer
-         */
-        ASSERT_ALWAYS(getTimeSyncSlave().start() >= 0);
-
-        /*
          * Main loop
          */
         lowsyslog("UAVCAN node started\n");
-        node.setStatusOk();
         while (true)
         {
-            const int spin_res = node.spin(uavcan::MonotonicDuration::fromMSec(5000));
-            if (spin_res < 0)
             {
-                lowsyslog("Spin failure: %i\n", spin_res);
+                UavcanLock locker;
+                const int spin_res = getUavcanNode().spin(uavcan::MonotonicDuration::fromUSec(500));
+                if (spin_res < 0)
+                {
+                    lowsyslog("UAVCAN spin failure: %i\n", spin_res);
+                }
             }
+            ::usleep(1000);
         }
         return msg_t();
     }
 } node_thread;
 
+}
+
+UavcanLock::UavcanLock() : uavcan_stm32::MutexLocker(node_mutex) { }
+
+bool isUavcanNodeStarted()
+{
+    return getUavcanNode().isStarted();
+}
+
+UavcanNode& getUavcanNode()
+{
+    static UavcanNode node(can.driver, uavcan_stm32::SystemClock::instance());
+    return node;
 }
 
 int uavcanInit()

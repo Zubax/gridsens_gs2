@@ -13,12 +13,13 @@
 #include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/watchdog/watchdog.hpp>
 
+#include "uavcan.hpp"
+#include <uavcan/equipment/ahrs/Ahrs.hpp>
+
 int consoleInit();
 
 namespace app
 {
-
-int uavcanInit();
 
 namespace
 {
@@ -26,6 +27,16 @@ namespace
 void setStatusLed(bool state)
 {
     palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, !state);
+}
+
+std::pair<unsigned , unsigned> getStatusLedOnOffMSecDurations()
+{
+    const auto self_status = app::getUavcanNode().getNodeStatusProvider().getStatusCode();
+    using uavcan::protocol::NodeStatus;
+    if (self_status == NodeStatus::STATUS_INITIALIZING) { return {500, 500}; }
+    if (self_status == NodeStatus::STATUS_OK)           { return {100, 900}; }
+    if (self_status == NodeStatus::STATUS_WARNING)      { return {100, 200}; }
+    return {100, 100};  // CRITICAL and all
 }
 
 __attribute__((noreturn))
@@ -95,12 +106,32 @@ int main()
         app::die(init_res);
     }
 
-    bool led_state = false;
+    uavcan::Publisher<uavcan::equipment::ahrs::Ahrs> pub(app::getUavcanNode());
+
     while (1)
     {
-        usleep(500000);
-        app::setStatusLed(led_state);
-        led_state = !led_state;
+        const auto on_off = app::getStatusLedOnOffMSecDurations();
+        app::setStatusLed(true);
+        usleep(on_off.first * 1000);
+        app::setStatusLed(false);
+        usleep(on_off.second * 1000);
+
+        // Simple test
+        if (app::isUavcanNodeStarted())
+        {
+            uavcan::equipment::ahrs::Ahrs msg;
+            msg.timestamp = uavcan_stm32::clock::getUtc();
+            msg.angular_velocity[0] = 1;
+            msg.angular_velocity[1] = 2;
+            msg.angular_velocity[2] = 3;
+
+            app::UavcanLock locker;
+            (void)pub.broadcast(msg);
+        }
+        else
+        {
+            lowsyslog("Publication skipped - UAVCAN node is not started yet\n");
+        }
     }
 
     return 0;
