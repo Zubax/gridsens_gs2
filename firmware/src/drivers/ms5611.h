@@ -10,6 +10,10 @@
 #include "ch.h"
 #include "hal.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 /**
  * @name    ms5611.h header files
  * @{
@@ -94,12 +98,16 @@ typedef struct TP_t
 
 /* Function desctiption */
 uint8_t crc4(uint16_t *n_prom);
-void MS5611_Read_PT(MS5611_t* MS5611, volatile int32_t* pressure, volatile int32_t* temperature);
+void MS5611_Read_PT(MS5611_t* MS5611, int32_t* pressure, int32_t* temperature);
 void MS5611_Reset(MS5611_t* MS5611);
 uint16_t MS5611_Read_Coef(MS5611_t* MS5611, uint8_t coef_num);
 uint8_t MS5611_Get_Prom(MS5611_t* MS5611);
 uint32_t MS5611_Convert_Dx(MS5611_t* MS5611, ms5611_cmd cmd);
 
 #endif /* _ms5611_h */
+
+#if __cplusplus
+}
+#endif
 
 /** @} */

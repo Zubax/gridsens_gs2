@@ -69,8 +69,8 @@ uint8_t crc4(uint16_t *n_prom){
  * @param[out] tempterature   pointer to temperature data
  */
 void MS5611_Read_PT(MS5611_t* MS5611,
-                    volatile int32_t* pressure,
-                    volatile int32_t* temperature){
+                    int32_t* pressure,
+                    int32_t* temperature){
 
 //     uint32_t D1;  /* ADC value of the pressure conversion */
 //     uint32_t D2;  /* ADC value of the temperature conversion */

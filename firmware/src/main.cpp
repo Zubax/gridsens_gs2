@@ -14,7 +14,7 @@
 #include <crdr_chibios/watchdog/watchdog.hpp>
 
 #include "uavcan.hpp"
-#include <uavcan/equipment/ahrs/Ahrs.hpp>
+#include "air_sensor.hpp"
 
 int consoleInit();
 
@@ -95,6 +95,8 @@ int init()
         return uavcan_res;
     }
 
+    ASSERT_ALWAYS(airSensorInit() >= 0);
+
     // Console
     usleep(100000);
     const int console_res = consoleInit();
@@ -117,8 +119,6 @@ int main()
         app::die(init_res);
     }
 
-    uavcan::Publisher<uavcan::equipment::ahrs::Ahrs> pub(app::getUavcanNode());
-
     while (1)
     {
         const auto on_off = app::getStatusLedOnOffMSecDurations();
@@ -126,23 +126,6 @@ int main()
         usleep(on_off.first * 1000);
         app::setStatusLed(false);
         usleep(on_off.second * 1000);
-
-        // Simple test
-        if (app::isUavcanNodeStarted())
-        {
-            uavcan::equipment::ahrs::Ahrs msg;
-            msg.timestamp = uavcan_stm32::clock::getUtc();
-            msg.angular_velocity[0] = 1;
-            msg.angular_velocity[1] = 2;
-            msg.angular_velocity[2] = 3;
-
-            app::UavcanLock locker;
-            (void)pub.broadcast(msg);
-        }
-        else
-        {
-            lowsyslog("Publication skipped - UAVCAN node is not started yet\n");
-        }
     }
 
     return 0;
