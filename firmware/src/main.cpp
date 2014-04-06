@@ -24,6 +24,16 @@ namespace app
 namespace
 {
 
+/*
+ * I2C2
+ */
+const I2CConfig I2CCfg2 = {
+    OPMODE_I2C,
+    400000,
+    FAST_DUTY_CYCLE_2,
+};
+
+
 void setStatusLed(bool state)
 {
     palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, !state);
@@ -57,6 +67,7 @@ int init()
     halInit();
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
+    i2cStart(&I2CD2, &I2CCfg2);
 
     // ublox serial port
     const SerialConfig ubx_cfg =

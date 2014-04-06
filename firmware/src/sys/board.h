@@ -56,7 +56,7 @@
 #define VAL_GPIOAODR            0x00000000
 
 #define VAL_GPIOBCRL            0x88888888
-#define VAL_GPIOBCRH            0x88B88888
+#define VAL_GPIOBCRH            0x88B8FF88
 #define VAL_GPIOBODR            0x00000000
 
 #define VAL_GPIOCCRL            0x88888888

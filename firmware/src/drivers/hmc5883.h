@@ -137,10 +137,10 @@ typedef union HMC5883set_t {
  */
 typedef struct HMC5883_t
 {
-	  uint8_t        buf[HMC_BUF_SIZE];  /* TMP buffer */
-	
-	  uint32_t       HMC5883_stat;       /* HMC5883 status */
-	  HMC5883set_t   HMC5883_set;        /* HMC5883 setup union*/
+      uint8_t        buf[HMC_BUF_SIZE];  /* TMP buffer */
+    
+      uint32_t       HMC5883_stat;       /* HMC5883 status */
+      HMC5883set_t   HMC5883_set;        /* HMC5883 setup union*/
 }HMC5883_t;
 
 /* Generic functions for HMC5883 */

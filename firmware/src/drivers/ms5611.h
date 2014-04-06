@@ -18,8 +18,7 @@
 #define MS5611_BUFSIZE 16         /* define size of input and output buffers in MS5611 aux structure */
 #define MS5611_ADDR    0x77       /* MS5611 adress @ CS pin connected with GND */
 
-#pragma push
-#pragma pack(1)
+#pragma pack(push, 1)
 
 /*
 * I2C addresses and commands ENUM
@@ -27,18 +26,18 @@
 typedef enum {
     MS5611_CMD_RESET          = 0x1E,   /* Reset command for MS5611 */
     /*D1 CONVERSION */
-    MS5611_CMD_CONVD1_OSR256  = 0x40,   /* Convert D1 (oversampling rate = 256) */       
+    MS5611_CMD_CONVD1_OSR256  = 0x40,   /* Convert D1 (oversampling rate = 256) */
     MS5611_CMD_CONVD1_OSR512  = 0x42,   /* Convert D1 (oversampling rate = 512) */
     MS5611_CMD_CONVD1_OSR1024 = 0x44,   /* Convert D1 (oversampling rate = 1024) */
     MS5611_CMD_CONVD1_OSR2048 = 0x46,   /* Convert D1 (oversampling rate = 2048) */
     MS5611_CMD_CONVD1_OSR4096 = 0x48,   /* Convert D1 (oversampling rate = 4096) */
     /*D2 CONVERSION */
-    MS5611_CMD_CONVD2_OSR256  = 0x50,   /* Convert D2 (oversampling rate = 256) */       
+    MS5611_CMD_CONVD2_OSR256  = 0x50,   /* Convert D2 (oversampling rate = 256) */
     MS5611_CMD_CONVD2_OSR512  = 0x52,   /* Convert D2 (oversampling rate = 512) */
     MS5611_CMD_CONVD2_OSR1024 = 0x54,   /* Convert D2 (oversampling rate = 1024) */
     MS5611_CMD_CONVD2_OSR2048 = 0x56,   /* Convert D2 (oversampling rate = 2048) */
     MS5611_CMD_CONVD2_OSR4096 = 0x58,   /* Convert D2 (oversampling rate = 4096) */
-	
+
     MS5611_CMD_ADCREAD        = 0x00,   /* ADC READ */
     MS5611_CMD_PROM_BASE      = 0xA0,   /* PROM BASE ADRRESS 1010xxx0 */
 } ms5611_cmd;
@@ -74,7 +73,7 @@ typedef struct MS5611_t
     uint8_t  bufTx[MS5611_BUFSIZE];    /* TMP Tx buffer */
     msg_t    status;                   /* I2C Message status struct */
     i2cflags_t errors;                 /* I2C Error flag structure */
-	
+
     uint32_t MS5611_stat;              /* MS5611 status/control register */
     prom_u   MS5611_prom;              /* PROM union for MS5611 */
 }MS5611_t;
@@ -90,7 +89,7 @@ typedef struct TP_t
     float Tdisp;                       /* Dispersion of temperature */
 }TP_t;
 
-#pragma pop
+#pragma pack(pop)
 
 
 /* Function desctiption */
