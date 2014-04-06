@@ -39,7 +39,7 @@ void publish(float field[3])
     (void)mag_pub.broadcast(mag);
 }
 
-class MagThread : public chibios_rt::BaseStaticThread<512>
+class MagThread : public chibios_rt::BaseStaticThread<1024>
 {
 public:
     msg_t main() override

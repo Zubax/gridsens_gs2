@@ -131,7 +131,7 @@ void poll()
 }
 
 
-class GnssThread : public chibios_rt::BaseStaticThread<2048>
+class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
 public:
     msg_t main() override

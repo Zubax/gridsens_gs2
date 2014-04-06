@@ -43,7 +43,7 @@ void publish(float pressure_pa, float temperature_degc)
     (void)air_data_pub.broadcast(air_data);
 }
 
-class AirSensorThread : public chibios_rt::BaseStaticThread<512>
+class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
 public:
     msg_t main() override

@@ -44,7 +44,7 @@ void configureNode()
 /*
  * UAVCAN spin loop
  */
-class : public chibios_rt::BaseStaticThread<2048>
+class : public chibios_rt::BaseStaticThread<3000>
 {
 public:
     msg_t main() override
