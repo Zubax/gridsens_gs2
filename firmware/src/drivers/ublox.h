@@ -10,6 +10,10 @@
 #include "ch.h"
 #include "hal.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 /**
  * @name    ublox.h header files
  * @{
@@ -352,6 +356,10 @@ uint8_t ubx_msg_nav_sol(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
 uint8_t ubx_msg_nav_posllh(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
 uint8_t ubx_msg_nav_pvt(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
 uint8_t ubx_msg_nav_svinfo(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
+
+#if __cplusplus
+}
+#endif
 
 #endif /* _ublox_h */
 

@@ -16,6 +16,7 @@
 #include "uavcan.hpp"
 #include "air_sensor.hpp"
 #include "magnetometer.hpp"
+#include "gnss.hpp"
 
 int consoleInit();
 
@@ -70,16 +71,6 @@ int init()
     sdStart(&STDOUT_SD, NULL);
     i2cStart(&I2CD2, &I2CCfg2);
 
-    // ublox serial port
-    const SerialConfig ubx_cfg =
-    {
-        9600,
-        0,
-        USART_CR2_STOP1_BITS | USART_CR2_LINEN,
-        0
-    };
-    sdStart(&UBLOX_SD, &ubx_cfg);
-
     crdr_chibios::watchdog::init();
 
     // Config
@@ -98,6 +89,7 @@ int init()
 
     ASSERT_ALWAYS(airSensorInit() >= 0);
     ASSERT_ALWAYS(magnetometerInit() >= 0);
+    ASSERT_ALWAYS(gnssInit() >= 0);
 
     // Console
     usleep(100000);

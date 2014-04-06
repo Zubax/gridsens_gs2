@@ -51,7 +51,7 @@
  * Please refer to the STM32 Reference Manual for details.
  */
 
-#define VAL_GPIOACRL            0x88888888      // 7..0
+#define VAL_GPIOACRL            0x88888B88      // 7..0
 #define VAL_GPIOACRH            0x888B88b3      // 15..8
 #define VAL_GPIOAODR            0x00000000
 
