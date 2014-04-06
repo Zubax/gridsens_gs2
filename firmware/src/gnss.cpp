@@ -87,6 +87,15 @@ void poll()
 
     if (isUavcanNodeStarted())
     {
+        if (ubx_state.t_FIX.satqty < 6)
+        {
+            getUavcanNode().setStatusWarning();
+        }
+        else
+        {
+            getUavcanNode().setStatusOk();
+        }
+
         const uavcan::MonotonicTime time = uavcan_stm32::clock::getMonotonic();
         if ((time - prev_fix).toMSec() >= 500)
         {

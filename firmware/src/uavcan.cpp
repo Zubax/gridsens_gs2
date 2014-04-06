@@ -76,6 +76,7 @@ public:
             }
             ::sleep(3);
         }
+        getUavcanNode().setStatusOk();
 
         /*
          * Main loop
