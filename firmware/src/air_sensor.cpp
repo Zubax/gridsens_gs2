@@ -33,7 +33,7 @@ void publish(float pressure_pa, float temperature_degc)
     air_data.static_pressure = pressure_pa;
     air_data.static_pressure_variance = 10.0;
     air_data.static_temperature = temperature_degc;
-    air_data.static_temperature_variance = 5.0;
+    air_data.static_temperature_variance = 2.0;
 
     UavcanLock locker;
     UavcanNode& node = getUavcanNode();
