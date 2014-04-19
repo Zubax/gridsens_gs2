@@ -58,21 +58,12 @@ public:
         {
             {
                 UavcanLock locker;
-                uavcan::NodeInitializationResult init_result;
-                const int uavcan_start_res = getUavcanNode().start(init_result);
-
-                if (uavcan_start_res < 0)
-                {
-                    lowsyslog("Node initialization failure: %i, will try agin soon\n", uavcan_start_res);
-                }
-                else if (!init_result.isOk())
-                {
-                    lowsyslog("Network conflict with %u, will try again soon\n", init_result.conflicting_node.get());
-                }
-                else
+                const int uavcan_start_res = getUavcanNode().start();
+                if (uavcan_start_res >= 0)
                 {
                     break;
                 }
+                lowsyslog("Node initialization failure: %i, will try agin soon\n", uavcan_start_res);
             }
             ::sleep(3);
         }
