@@ -13,7 +13,7 @@
 #include <uavcan/equipment/gnss/Aux.hpp>
 
 #include "gnss.hpp"
-#include "drivers/ublox.h"
+#include "board/ublox.h"
 #include "uavcan.hpp"
 
 namespace app

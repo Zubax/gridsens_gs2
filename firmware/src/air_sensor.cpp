@@ -13,7 +13,7 @@
 
 #include "air_sensor.hpp"
 #include "uavcan.hpp"
-#include "drivers/ms5611.h"
+#include "board/ms5611.h"
 
 namespace app
 {

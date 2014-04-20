@@ -6,15 +6,9 @@
 
 #pragma once
 
-/// Assert is needed for STM32 SPL (if it is being used, that is)
-#include <assert.h>
-#define assert_param(x) assert(x)
-
 #define STM32_HSECLK            8000000
 
 #define STM32F10X_CL
-
-#define UBLOX_SD  SD2
 
 /*
  * GPIO
@@ -26,6 +20,12 @@
 // LED
 #define GPIO_PORT_LED_STATUS    GPIOB
 #define GPIO_PIN_LED_STATUS     0
+
+#define GPIO_PORT_LED_CAN1      GPIOC
+#define GPIO_PIN_LED_CAN1       5
+
+#define GPIO_PORT_LED_CAN2      GPIOC
+#define GPIO_PIN_LED_CAN2       4
 
 /*
  * I/O ports initial setup, this configuration is established soon after reset

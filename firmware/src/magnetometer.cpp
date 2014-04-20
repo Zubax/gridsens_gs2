@@ -12,7 +12,7 @@
 
 #include "magnetometer.hpp"
 #include "uavcan.hpp"
-#include "drivers/hmc5883.h"
+#include "board/hmc5883.h"
 
 namespace app
 {
