@@ -415,7 +415,7 @@ void ubxPoll(UbxState *ubx)
     assert(ubx->parse.inbuf_size >= 0 && ubx->parse.inbuf_size <= UbxInBufSize);
 
     const int16_t max_sz = UbxInBufSize - ubx->parse.inbuf_size;
-    const int16_t sz = sdReadTimeout(&SD2, ubx->parse.inbuf + ubx->parse.inbuf_size, max_sz, MS2ST(2));
+    const int16_t sz = sdReadTimeout(&SD2, ubx->parse.inbuf + ubx->parse.inbuf_size, max_sz, MS2ST(1));
     assert(sz <= max_sz);
     if (sz <= 0)
     {
@@ -435,8 +435,11 @@ void ubxPoll(UbxState *ubx)
                 break;
             }
             assert(header_index < ubx->parse.inbuf_size);
-            memmove(ubx->parse.inbuf, ubx->parse.inbuf + header_index, ubx->parse.inbuf_size - header_index);
-            ubx->parse.inbuf_size -= header_index;
+            if (header_index > 0)
+            {
+                memmove(ubx->parse.inbuf, ubx->parse.inbuf + header_index, ubx->parse.inbuf_size - header_index);
+                ubx->parse.inbuf_size -= header_index;
+            }
         }
 
         // Process the message then discard its data

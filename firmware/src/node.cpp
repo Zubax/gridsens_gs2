@@ -27,6 +27,8 @@ uavcan_stm32::Mutex node_mutex;
 
 ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIALIZING);
 
+bool started = false;
+
 void configureNode()
 {
     Node& node = getNode();
@@ -68,15 +70,30 @@ public:
                 {
                     break;
                 }
-                lowsyslog("Node initialization failure: %i, will try agin soon\n", uavcan_start_res);
+                lowsyslog("Node init failure: %i, will retry\n", uavcan_start_res);
             }
             ::sleep(3);
         }
         assert(getNode().isStarted());
 
         /*
+         * Starting the time sync slave
+         */
+        while (true)
+        {
+            const int res = getTimeSyncSlave().start();
+            if (res >= 0)
+            {
+                break;
+            }
+            lowsyslog("Time sync init failure: %i, will retry\n", res);
+            ::sleep(1);
+        }
+
+        /*
          * Main loop
          */
+        started = true;
         lowsyslog("UAVCAN node started\n");
         auto& node = getNode();
         while (true)
@@ -116,7 +133,7 @@ Lock::Lock() : uavcan_stm32::MutexLocker(node_mutex) { }
 
 bool isStarted()
 {
-    return getNode().isStarted();
+    return started;
 }
 
 Node& getNode()
@@ -125,8 +142,15 @@ Node& getNode()
     return node;
 }
 
+uavcan::GlobalTimeSyncSlave& getTimeSyncSlave()
+{
+    static uavcan::GlobalTimeSyncSlave ts(getNode());
+    return ts;
+}
+
 void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status)
 {
+    Lock locker;
     comp_stat_mgr.setComponentStatus(comp, status);
 }
 

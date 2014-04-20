@@ -7,6 +7,7 @@
 #pragma once
 
 #include <uavcan_stm32/uavcan_stm32.hpp>
+#include <uavcan/protocol/global_time_sync_slave.hpp>
 #include <uavcan/helpers/component_status_manager.hpp>
 
 namespace node
@@ -31,6 +32,8 @@ typedef uavcan::ComponentStatusManager<unsigned(ComponentID::NumComponents_)> Co
 bool isStarted();
 
 Node& getNode();
+
+uavcan::GlobalTimeSyncSlave& getTimeSyncSlave();
 
 void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status);
 
