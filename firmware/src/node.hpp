@@ -8,20 +8,20 @@
 
 #include <uavcan_stm32/uavcan_stm32.hpp>
 
-namespace app
+namespace node
 {
 
-struct UavcanLock : uavcan_stm32::MutexLocker
+struct Lock : uavcan_stm32::MutexLocker
 {
-    UavcanLock();
+    Lock();
 };
 
-typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 64> UavcanNode;
+typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 64> Node;
 
-bool isUavcanNodeStarted();
+bool isStarted();
 
-UavcanNode& getUavcanNode();
+Node& getNode();
 
-int uavcanInit();
+int init();
 
 }

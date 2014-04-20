@@ -6,9 +6,9 @@
 
 #pragma once
 
-namespace app
+namespace gnss
 {
 
-int gnssInit();
+void init();
 
 }

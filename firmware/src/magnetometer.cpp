@@ -4,24 +4,24 @@
  * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
  */
 
+#include "magnetometer.hpp"
+#include "board/hmc5883.h"
+#include "node.hpp"
+
+#include <uavcan/equipment/ahrs/Magnetometer.hpp>
+
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
 #include <unistd.h>
 
-#include <uavcan/equipment/ahrs/Magnetometer.hpp>
-
-#include "magnetometer.hpp"
-#include "uavcan.hpp"
-#include "board/hmc5883.h"
-
-namespace app
+namespace magnetometer
 {
 namespace
 {
 
 void publish(float field[3])
 {
-    if (!isUavcanNodeStarted())
+    if (!node::isStarted())
     {
         lowsyslog("Magnetometer publication skipped: Node is not started\n");
         return;
@@ -31,8 +31,8 @@ void publish(float field[3])
     std::copy(field, field + 3, mag.magnetic_field.begin());
     mag.magnetic_field_covariance.push_back(0.1);
 
-    UavcanLock locker;
-    UavcanNode& node = getUavcanNode();
+    node::Lock locker;
+    auto& node = node::getNode();
 
     static uavcan::Publisher<uavcan::equipment::ahrs::Magnetometer> mag_pub(node);
 
@@ -66,10 +66,9 @@ public:
 
 }
 
-int magnetometerInit()
+void init()
 {
     (void)mag_thread.start(HIGHPRIO - 8);
-    return 0;
 }
 
 }

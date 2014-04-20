@@ -10,9 +10,9 @@
 #include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/sys/sys.h>
 
-#include "uavcan.hpp"
+#include "node.hpp"
 
-namespace app
+namespace node
 {
 namespace
 {
@@ -26,7 +26,7 @@ uavcan_stm32::Mutex node_mutex;
 
 void configureNode()
 {
-    UavcanNode& node = getUavcanNode();
+    Node& node = getNode();
 
     node.setNodeID(node_id.get());
     node.setName("com.courierdrone.gps");
@@ -57,8 +57,8 @@ public:
         while (true)
         {
             {
-                UavcanLock locker;
-                const int uavcan_start_res = getUavcanNode().start();
+                Lock locker;
+                const int uavcan_start_res = getNode().start();
                 if (uavcan_start_res >= 0)
                 {
                     break;
@@ -67,7 +67,7 @@ public:
             }
             ::sleep(3);
         }
-        getUavcanNode().setStatusOk();
+        getNode().setStatusOk();
 
         /*
          * Main loop
@@ -76,8 +76,8 @@ public:
         while (true)
         {
             {
-                UavcanLock locker;
-                const int spin_res = getUavcanNode().spin(uavcan::MonotonicDuration::fromUSec(500));
+                Lock locker;
+                const int spin_res = getNode().spin(uavcan::MonotonicDuration::fromUSec(500));
                 if (spin_res < 0)
                 {
                     lowsyslog("UAVCAN spin failure: %i\n", spin_res);
@@ -91,20 +91,20 @@ public:
 
 }
 
-UavcanLock::UavcanLock() : uavcan_stm32::MutexLocker(node_mutex) { }
+Lock::Lock() : uavcan_stm32::MutexLocker(node_mutex) { }
 
-bool isUavcanNodeStarted()
+bool isStarted()
 {
-    return getUavcanNode().isStarted();
+    return getNode().isStarted();
 }
 
-UavcanNode& getUavcanNode()
+Node& getNode()
 {
-    static UavcanNode node(can.driver, uavcan_stm32::SystemClock::instance());
+    static Node node(can.driver, uavcan_stm32::SystemClock::instance());
     return node;
 }
 
-int uavcanInit()
+int init()
 {
     const int can_res = can.init(can_bitrate.get());
     if (can_res < 0)

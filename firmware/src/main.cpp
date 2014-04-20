@@ -14,19 +14,17 @@
 #include <crdr_chibios/watchdog/watchdog.hpp>
 
 #include "board/board.hpp"
-#include "uavcan.hpp"
+#include "node.hpp"
 #include "air_sensor.hpp"
 #include "magnetometer.hpp"
 #include "gnss.hpp"
 
-namespace app
-{
 namespace
 {
 
 std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 {
-    const auto self_status = app::getUavcanNode().getNodeStatusProvider().getStatusCode();
+    const auto self_status = node::getNode().getNodeStatusProvider().getStatusCode();
     using uavcan::protocol::NodeStatus;
     if (self_status == NodeStatus::STATUS_INITIALIZING) { return {500, 500}; }
     if (self_status == NodeStatus::STATUS_OK)           { return {100, 900}; }
@@ -38,28 +36,26 @@ void init()
 {
     board::init();
 
-    // UAVCAN stack
-    const int uavcan_res = uavcanInit();
+    const int uavcan_res = node::init();
     if (uavcan_res != 0)
     {
         board::die(uavcan_res);
     }
 
-    ASSERT_ALWAYS(airSensorInit() >= 0);
-    //ASSERT_ALWAYS(magnetometerInit() >= 0);  // TODO: enable later
-    ASSERT_ALWAYS(gnssInit() >= 0);
+    air_sensor::init();
+    gnss::init();
+    //magnetometer::init(); // TODO: enable later
 }
 
-}
 }
 
 int main()
 {
-    app::init();
+    init();
 
     while (1)
     {
-        const auto on_off = app::getStatusLedOnOffMSecDurations();
+        const auto on_off = getStatusLedOnOffMSecDurations();
         board::setStatusLed(true);
         usleep(on_off.first * 1000);
         board::setStatusLed(false);

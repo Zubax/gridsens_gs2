@@ -4,19 +4,19 @@
  * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
  */
 
-#include <ch.hpp>
-#include <crdr_chibios/sys/sys.h>
-#include <unistd.h>
+#include "gnss.hpp"
+#include "board/ublox.h"
+#include "node.hpp"
 
 #include <uavcan/equipment/gnss/RtcmStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
 #include <uavcan/equipment/gnss/Aux.hpp>
 
-#include "gnss.hpp"
-#include "board/ublox.h"
-#include "uavcan.hpp"
+#include <ch.hpp>
+#include <crdr_chibios/sys/sys.h>
+#include <unistd.h>
 
-namespace app
+namespace gnss
 {
 namespace
 {
@@ -75,8 +75,8 @@ void publishFix()
     }
 
     // Publishing
-    UavcanLock locker;
-    static uavcan::Publisher<uavcan::equipment::gnss::Fix> pub(getUavcanNode());
+    node::Lock locker;
+    static uavcan::Publisher<uavcan::equipment::gnss::Fix> pub(node::getNode());
     (void)pub.broadcast(msg);
 }
 
@@ -94,8 +94,8 @@ void publishAux()
     msg.sats_visible = msg.sats_used;        // FIXME
 
     // Publishing
-    UavcanLock locker;
-    static uavcan::Publisher<uavcan::equipment::gnss::Aux> pub(getUavcanNode());
+    node::Lock locker;
+    static uavcan::Publisher<uavcan::equipment::gnss::Aux> pub(node::getNode());
     (void)pub.broadcast(msg);
 }
 
@@ -105,15 +105,15 @@ void poll()
     static uavcan::MonotonicTime prev_fix;
     static uavcan::MonotonicTime prev_aux;
 
-    if (isUavcanNodeStarted())
+    if (node::isStarted())
     {
         if (ubx_state.t_FIX.satqty < 6)
         {
-            getUavcanNode().setStatusWarning();
+            node::getNode().setStatusWarning();
         }
         else
         {
-            getUavcanNode().setStatusOk();
+            node::getNode().setStatusOk();
         }
 
         const uavcan::MonotonicTime time = uavcan_stm32::clock::getMonotonic();
@@ -176,10 +176,9 @@ public:
 
 }
 
-int gnssInit()
+void init()
 {
     (void)gnss_thread.start(HIGHPRIO - 5);
-    return 1;
 }
 
 }

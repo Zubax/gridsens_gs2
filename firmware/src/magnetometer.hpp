@@ -6,9 +6,9 @@
 
 #pragma once
 
-namespace app
+namespace magnetometer
 {
 
-int magnetometerInit();
+void init();
 
 }

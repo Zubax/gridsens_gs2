@@ -4,25 +4,25 @@
  * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
  */
 
-#include <ch.hpp>
-#include <crdr_chibios/sys/sys.h>
-#include <unistd.h>
+#include "air_sensor.hpp"
+#include "board/ms5611.h"
+#include "node.hpp"
 
 #include <uavcan/equipment/airdata/StaticAirData.hpp>
 #include <uavcan/equipment/airdata/AltitudeAndClimbRate.hpp>
 
-#include "air_sensor.hpp"
-#include "uavcan.hpp"
-#include "board/ms5611.h"
+#include <ch.hpp>
+#include <crdr_chibios/sys/sys.h>
+#include <unistd.h>
 
-namespace app
+namespace air_sensor
 {
 namespace
 {
 
 void publish(float pressure_pa, float temperature_degc)
 {
-    if (!isUavcanNodeStarted())
+    if (!node::isStarted())
     {
         return;
     }
@@ -34,8 +34,8 @@ void publish(float pressure_pa, float temperature_degc)
     air_data.static_temperature = temperature_degc;
     air_data.static_temperature_variance = 2.0;
 
-    UavcanLock locker;
-    UavcanNode& node = getUavcanNode();
+    node::Lock locker;
+    auto& node = node::getNode();
 
     static uavcan::Publisher<uavcan::equipment::airdata::StaticAirData> air_data_pub(node);
     //static uavcan::Publisher<uavcan::equipment::airdata::AltitudeAndClimbRate> alt_climb_pub(node);  // TODO
@@ -72,10 +72,9 @@ public:
 
 }
 
-int airSensorInit()
+void init()
 {
     (void)air_sensor_thread.start(HIGHPRIO - 10);
-    return 0;
 }
 
 }
