@@ -22,12 +22,13 @@ static uavcan_linux::NodePtr initNode(const std::vector<std::string>& ifaces, ua
     node->setNodeID(nid);
     node->setName(name.c_str());
 
-    uavcan::NodeInitializationResult init_result;
-    const int start_res = node->start(init_result);
-    ENFORCE(0 == start_res);
-    if (!init_result.isOk())
+    ENFORCE(0 <= node->start());
+
+    uavcan::NetworkCompatibilityCheckResult ncc_result;
+    ENFORCE(0 <= node->checkNetworkCompatibility(ncc_result));
+    if (!ncc_result.isOk())
     {
-        throw std::runtime_error("Network conflict with node " + std::to_string(init_result.conflicting_node.get()));
+        throw std::runtime_error("Network conflict with node " + std::to_string(ncc_result.conflicting_node.get()));
     }
 
     node->setStatusOk();
