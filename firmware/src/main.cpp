@@ -44,7 +44,7 @@ void init()
 
     air_sensor::init();
     gnss::init();
-    //magnetometer::init(); // TODO: enable later
+    magnetometer::init();
 }
 
 }

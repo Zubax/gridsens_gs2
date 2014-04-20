@@ -137,7 +137,7 @@ public:
     msg_t main() override
     {
         static const SerialConfig serial_cfg_9600   = { 9600,   0, USART_CR2_STOP1_BITS, 0 };
-//        static const SerialConfig serial_cfg_115200 = { 115200, 0, USART_CR2_STOP1_BITS, 0 };
+        static const SerialConfig serial_cfg_115200 = { 115200, 0, USART_CR2_STOP1_BITS, 0 };
 
         static uint8_t buffer[512];
 
@@ -148,8 +148,8 @@ public:
         ubx_init(&ubx_state, 9600, UBX_PARITY_NO, UBX_STOP_ONE, 0x00);
 
         // Reinit the serial port
-//        sdStop(&SD2);
-//        sdStart(&SD2, &serial_cfg_115200);
+        sdStop(&SD2);
+        sdStart(&SD2, &serial_cfg_115200);
 
         while (true)
         {

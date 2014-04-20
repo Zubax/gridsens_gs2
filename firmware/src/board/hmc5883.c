@@ -135,14 +135,14 @@ int16_t HMC5883_readData(HMC5883_t *HMC5883, HMC5883meas_t *Hout)
     {
 
         /* Calculate magnetic field in Code Units */
-        Hx = (rx_buf[0] << 8) | rx_buf[1];
-        Hy = (rx_buf[2] << 8) | rx_buf[3];
-        Hz = (rx_buf[4] << 8) | rx_buf[5];
+        Hx = (((uint16_t)rx_buf[0]) << 8) | rx_buf[1];
+        Hy = (((uint16_t)rx_buf[2]) << 8) | rx_buf[3];
+        Hz = (((uint16_t)rx_buf[4]) << 8) | rx_buf[5];
 
         /* Scale to Gausses */
-        Hout->H[0] = (float)Hx * 0.92E-03; /* CUtoG[HMC5883->HMC5883_set.bit.regB_gain] */;
-        Hout->H[1] = (float)Hy * 0.92E-03; /* CUtoG[HMC5883->HMC5883_set.bit.regB_gain] */;
-        Hout->H[2] = (float)Hz * 0.92E-03; /* CUtoG[HMC5883->HMC5883_set.bit.regB_gain] */;
+        Hout->H[0] = (float)Hx;// * 0.92E-03; /* CUtoG[HMC5883->HMC5883_set.bit.regB_gain] */;
+        Hout->H[1] = (float)Hy;// * 0.92E-03; /* CUtoG[HMC5883->HMC5883_set.bit.regB_gain] */;
+        Hout->H[2] = (float)Hz;// * 0.92E-03; /* CUtoG[HMC5883->HMC5883_set.bit.regB_gain] */;
 
     }
 

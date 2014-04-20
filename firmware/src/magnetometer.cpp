@@ -52,7 +52,7 @@ public:
 
         while (true)
         {
-            ::usleep(1000000);
+            ::usleep(100000);
 
             auto meas = ::HMC5883meas_t();
             (void)HMC5883_readData(&sens, &meas);
