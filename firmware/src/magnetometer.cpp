@@ -65,6 +65,8 @@ public:
             auto meas = ::HMC5883meas_t();
             (void)hmc5883ReadData(&sensor, &meas);
 
+            // TODO: TRANSFORM COORDINATE FRAME
+
             publish(meas.h, variance);
         }
 
