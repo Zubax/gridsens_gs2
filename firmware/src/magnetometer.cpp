@@ -12,6 +12,7 @@
 
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
+#include <crdr_chibios/config/config.hpp>
 #include <unistd.h>
 
 namespace magnetometer
@@ -19,7 +20,9 @@ namespace magnetometer
 namespace
 {
 
-void publish(float field[3])
+crdr_chibios::config::Param<float> param_variance("mag_variance", 0.1, 1e-6, 1.0);
+
+void publish(float field[3], float variance)
 {
     if (!node::isStarted())
     {
@@ -29,7 +32,7 @@ void publish(float field[3])
 
     uavcan::equipment::ahrs::Magnetometer mag;
     std::copy(field, field + 3, mag.magnetic_field.begin());
-    mag.magnetic_field_covariance.push_back(0.1);
+    mag.magnetic_field_covariance.push_back(variance);
 
     node::Lock locker;
     auto& node = node::getNode();
@@ -41,23 +44,28 @@ void publish(float field[3])
 
 class MagThread : public chibios_rt::BaseStaticThread<1024>
 {
+    HMC5883_t sensor = ::HMC5883_t();
+
 public:
     msg_t main() override
     {
-        auto sens = ::HMC5883_t();
-
         lowsyslog("HMC5883: Initializing...\n");
-        ASSERT_ALWAYS(HMC5883_simple_init() >= 0);
+        while (hmc5883Init(&sensor, Avg4samp, SPS_15, MeasModeNormal, Gain1090, OmCont) < 0)
+        {
+            ::sleep(1);
+        }
         lowsyslog("HMC5883: Init OK\n");
+
+        const float variance = param_variance.get();
 
         while (true)
         {
             ::usleep(100000);
 
             auto meas = ::HMC5883meas_t();
-            (void)HMC5883_readData(&sens, &meas);
+            (void)hmc5883ReadData(&sensor, &meas);
 
-            publish(meas.H);
+            publish(meas.h, variance);
         }
 
         return msg_t();

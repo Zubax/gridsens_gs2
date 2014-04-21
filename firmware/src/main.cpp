@@ -42,7 +42,7 @@ void init()
         board::die(uavcan_res);
     }
 
-    air_sensor::init();
+    //air_sensor::init();  // TODO: Enable later
     gnss::init();
     magnetometer::init();
 }
