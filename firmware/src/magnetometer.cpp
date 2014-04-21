@@ -21,6 +21,8 @@ namespace magnetometer
 namespace
 {
 
+const float GaussScale = 0.92e-03;
+
 crdr_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
 crdr_chibios::config::Param<unsigned> param_rate("mag_rate_hz", 10, 1, 30);
 
@@ -105,9 +107,9 @@ bool tryRead(float out_gauss[3])
     const int16_t hz = (((int16_t)rx[2]) << 8) | rx[3];  // Z
     const int16_t hy = (((int16_t)rx[4]) << 8) | rx[5];  // Y
 
-    out_gauss[0] = hx;  // TODO: gauss conversion
-    out_gauss[1] = hy;
-    out_gauss[2] = hz;
+    out_gauss[0] = hx * GaussScale;
+    out_gauss[1] = hy * GaussScale;
+    out_gauss[2] = hz * GaussScale;
     return true;
 }
 
