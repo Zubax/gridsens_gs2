@@ -4,13 +4,14 @@
  * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
  */
 
-#include <unistd.h>
+#include "node.hpp"
+
+#include "board/board.hpp"
 #include <ch.hpp>
+#include <unistd.h>
 
 #include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/sys/sys.h>
-
-#include "node.hpp"
 
 namespace node
 {
@@ -46,6 +47,8 @@ void configureNode()
  */
 class : public chibios_rt::BaseStaticThread<3000>
 {
+    uavcan::MonotonicTime prev_led_update;
+
 public:
     msg_t main() override
     {
@@ -83,6 +86,18 @@ public:
                     lowsyslog("UAVCAN spin failure: %i\n", spin_res);
                 }
             }
+
+            // Iface LED update
+            const auto ts = uavcan_stm32::clock::getMonotonic();
+            if ((ts - prev_led_update).toMSec() >= 25)
+            {
+                prev_led_update = ts;
+                for (unsigned i = 0; i < can.driver.getNumIfaces(); i++)
+                {
+                    board::setCANLed(i, can.driver.getIface(i)->hadActivity());
+                }
+            }
+
             ::usleep(1000);
         }
         return msg_t();
