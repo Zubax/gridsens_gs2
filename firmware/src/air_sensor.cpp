@@ -13,6 +13,7 @@
 
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
+#include <crdr_chibios/config/config.hpp>
 #include <unistd.h>
 
 namespace air_sensor
@@ -22,9 +23,15 @@ namespace
 
 const unsigned PeriodUSec = 100000;
 
+crdr_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
+crdr_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 10.0, 1.0, 100.0);
+
+float pressure_variance = 0;
+float temperature_variance = 0;
+
 auto sens = ::Ms5611();
 
-void publish(float pressure_pa, float temperature_degc)
+void publish(const uavcan::UtcTime& timestamp, float pressure_pa, float temperature_degc)
 {
     if (!node::isStarted())
     {
@@ -32,11 +39,14 @@ void publish(float pressure_pa, float temperature_degc)
     }
 
     static uavcan::equipment::airdata::StaticAirData air_data;
-    air_data.timestamp = uavcan_stm32::clock::getUtc();
+
+    air_data.timestamp = timestamp;
+
     air_data.static_pressure = pressure_pa;
-    air_data.static_pressure_variance = 10.0;
+    air_data.static_pressure_variance = pressure_variance;
+
     air_data.static_temperature = temperature_degc;
-    air_data.static_temperature_variance = 2.0;
+    air_data.static_temperature_variance = temperature_variance;
 
     node::Lock locker;
     auto& node = node::getNode();
@@ -54,6 +64,7 @@ void tryRun()
     {
         sleep_until += US2ST(PeriodUSec);
 
+        const uavcan::UtcTime timestamp = uavcan_stm32::clock::getUtc();
         int32_t raw_pressure = 0;
         int32_t raw_temperature = 0;
         if (!ms5611ReadPT(&sens, &raw_pressure, &raw_temperature))
@@ -64,7 +75,7 @@ void tryRun()
         const float pressure = static_cast<float>(raw_pressure);
         const float temperature = raw_temperature / 100.F;
 
-        publish(pressure, temperature);
+        publish(timestamp, pressure, temperature);
 
         chibios_rt::BaseThread::sleepUntil(sleep_until);
     }
@@ -75,6 +86,9 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
+        pressure_variance = param_pressure_variance.get();
+        temperature_variance = param_temperature_variance.get();
+
         while (true)
         {
             ::sleep(1);
