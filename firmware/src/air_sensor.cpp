@@ -20,6 +20,10 @@ namespace air_sensor
 namespace
 {
 
+const unsigned PeriodUSec = 100000;
+
+auto sens = ::MS5611_t();
+
 void publish(float pressure_pa, float temperature_degc)
 {
     if (!node::isStarted())
@@ -43,29 +47,53 @@ void publish(float pressure_pa, float temperature_degc)
     (void)air_data_pub.broadcast(air_data);
 }
 
+void tryRun()
+{
+    systime_t sleep_until = chibios_rt::System::getTime();
+    while (true)
+    {
+        sleep_until += US2ST(PeriodUSec);
+
+        int32_t raw_pressure = 0;
+        int32_t raw_temperature = 0;
+        if (!ms5611ReadPT(&sens, &raw_pressure, &raw_temperature))
+        {
+            break;
+        }
+
+        const float pressure = static_cast<float>(raw_pressure);
+        const float temperature = raw_temperature / 100.F;
+
+        publish(pressure, temperature);
+
+        chibios_rt::BaseThread::sleepUntil(sleep_until);
+    }
+}
+
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
 public:
     msg_t main() override
     {
-        auto sens = ::MS5611_t();
-
-        MS5611_Reset(&sens);
-        ::usleep(3000);                // Waiting for reset
-
-        (void)MS5611_Get_Prom(&sens);  // TODO: handling PROM correctness
-
         while (true)
         {
-            ::usleep(100000);          // TODO: rate
+            ::sleep(1);
 
-            int32_t raw_pressure = 0;
-            int32_t raw_temperature = 0;
-            MS5611_Read_PT(&sens, &raw_pressure, &raw_temperature);
+            if (!ms5611Reset(&sens))
+            {
+                lowsyslog("Air sensor reset failed, will retry...\n");
+                continue;
+            }
 
-            publish(static_cast<float>(raw_pressure), raw_temperature / 100.f);
+            if (!ms5611GetProm(&sens))
+            {
+                lowsyslog("Air sensor PROM read failed, will retry...\n");
+                continue;
+            }
+
+            tryRun();
+            lowsyslog("Air sensor is about to restart...\n");
         }
-
         return msg_t();
     }
 } air_sensor_thread;
