@@ -117,10 +117,10 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         sdStart(serial_port, &SerialConfig9600);   // Default serial port config
         ubxInit(&state, 115200);
 
-//        ::sleep(1);
-//        sdStop(serial_port);
-//        sdStart(serial_port, &SerialConfig115200); // New serial port config
-//        ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
+        ::sleep(1);
+        sdStop(serial_port);
+        sdStart(serial_port, &SerialConfig115200); // New serial port config
+        ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
     }
 
     void tryRun()

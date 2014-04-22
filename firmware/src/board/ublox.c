@@ -371,8 +371,8 @@ void ubxInit(UbxState *ubx, uint32_t baudrate)
     memset(&RateCfg, 0, sizeof(RateCfg));
 
     RateCfg.meas_rate = 200; /* 200 ms for measurement @5 Hz measurement rate */
-    RateCfg.nav_rate = 1; /* default navigation rate (cannot be changed) */
-    RateCfg.time_ref = 0; /* align to UTC reference time */
+    RateCfg.nav_rate = 1;    /* default navigation rate (cannot be changed) */
+    RateCfg.time_ref = 0;    /* align to UTC reference time */
 
     ubxWrite(0x06, 0x08, (uint8_t*)&RateCfg, sizeof(RateCfg));
 
