@@ -21,40 +21,39 @@ namespace gnss
 namespace
 {
 
-t_GNSS ubx_state;
-
-
-void publishFix()
+void publishFix(const UbxState& state)
 {
-    const t_GNSSfix& data = ubx_state.t_FIX;
-    uavcan::equipment::gnss::Fix msg;
+    const auto& data = state.fix;
+
+    static uavcan::equipment::gnss::Fix msg;
+    msg = uavcan::equipment::gnss::Fix();
 
     // Timestamp - Network clock, not GPS clock
     msg.timestamp = uavcan_stm32::clock::getUtc();
 
     // Position
-    msg.alt_1e2 = data.height    * 1e2;
-    msg.lat_1e7 = data.latitude  * 1e7;
-    msg.lon_1e7 = data.longitude * 1e7;
+    msg.alt_1e2 = static_cast<uint32_t>(data.altitude  * 1e2);
+    msg.lat_1e7 = static_cast<uint32_t>(data.latitude  * 1e7);
+    msg.lon_1e7 = static_cast<uint32_t>(data.longitude * 1e7);
 
     // Velocity
     for (int i = 0; i < 3; i++)
     {
-        msg.ned_velocity[i] = data.NEDspeed[i];
+        msg.ned_velocity[i] = data.ned_speed[i];
     }
 
     // Uncertainty
-    msg.sats_used = data.satqty;
+    msg.sats_used = data.sats_used;
 
-    if (data.fix == GNSSFIX_TIME)
+    if (data.fix == GNSSfix_Time)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY;
     }
-    else if (data.fix == GNSSFIX_2D)
+    else if (data.fix == GNSSfix_2D)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_2D_FIX;
     }
-    else if (data.fix == GNSSFIX_3D)
+    else if (data.fix == GNSSfix_3D)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_3D_FIX;
     }
@@ -65,13 +64,8 @@ void publishFix()
 
     if (msg.status > uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY)
     {
-        msg.velocity_covariance.push_back(data.speedCM[0]);
-        msg.velocity_covariance.push_back(data.speedCM[4]);
-        msg.velocity_covariance.push_back(data.speedCM[8]);
-
-        msg.position_covariance.push_back(data.posCM[0]);
-        msg.position_covariance.push_back(data.posCM[4]);
-        msg.position_covariance.push_back(data.posCM[8]);
+        msg.velocity_covariance.packSquareMatrix(data.speed_cov);
+        msg.position_covariance.packSquareMatrix(data.pos_cov);
     }
 
     // Publishing
@@ -80,18 +74,23 @@ void publishFix()
     (void)pub.broadcast(msg);
 }
 
-void publishAux()
+void publishAux(const UbxState& state)
 {
-    uavcan::equipment::gnss::Aux msg;
+    static uavcan::equipment::gnss::Aux msg;
 
-    msg.gdop = ubx_state.t_DOP.gdop;
-    msg.hdop = ubx_state.t_DOP.hdop;
-    msg.pdop = ubx_state.t_DOP.pdop;
-    msg.tdop = ubx_state.t_DOP.tdop;
-    msg.vdop = ubx_state.t_DOP.vdop;
+    msg.gdop = state.dop.gdop;
+    msg.hdop = state.dop.hdop;
+    msg.pdop = state.dop.pdop;
+    msg.tdop = state.dop.tdop;
+    msg.vdop = state.dop.vdop;
 
-    msg.sats_used = ubx_state.t_FIX.satqty;
-    msg.sats_visible = msg.sats_used;        // FIXME
+    msg.sats_used = 0;
+    msg.sats_visible = 0;
+    for (const auto sat : state.sats.sat)
+    {
+        msg.sats_visible += (sat.sat_stmask == 0) ? 0 : 1;
+        msg.sats_used += (sat.sat_stmask & UbxSat_Used) ? 1 : 0;
+    }
 
     // Publishing
     node::Lock locker;
@@ -100,75 +99,70 @@ void publishAux()
 }
 
 
-void poll()
-{
-    static uavcan::MonotonicTime prev_fix;
-    static uavcan::MonotonicTime prev_aux;
+const SerialConfig SerialConfig9600   = { 9600,   0, USART_CR2_STOP1_BITS, 0 };
+const SerialConfig SerialConfig115200 = { 115200, 0, USART_CR2_STOP1_BITS, 0 };
 
-    if (node::isStarted())
-    {
-        if (ubx_state.t_FIX.satqty < 6)
-        {
-            node::getNode().setStatusWarning();
-        }
-        else
-        {
-            node::getNode().setStatusOk();
-        }
-
-        const uavcan::MonotonicTime time = uavcan_stm32::clock::getMonotonic();
-        if ((time - prev_fix).toMSec() >= 500)
-        {
-            prev_fix = time;
-            publishFix();
-        }
-        if ((time - prev_aux).toMSec() >= 5000)
-        {
-            prev_aux = time;
-            publishAux();
-        }
-    }
-}
-
+auto* const serial_port = &SD2;
 
 class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
+    UbxState state;
+
+    void tryInit()
+    {
+        state = UbxState();
+
+        ::sleep(1);
+        sdStop(serial_port);
+        sdStart(serial_port, &SerialConfig9600);   // Default serial port config
+        ubxInit(&state, 115200);
+
+//        ::sleep(1);
+//        sdStop(serial_port);
+//        sdStart(serial_port, &SerialConfig115200); // New serial port config
+//        ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
+    }
+
+    void tryRun()
+    {
+        const unsigned ReportTimeoutMSec = 1100;
+        auto prev_fix_report_at = uavcan_stm32::clock::getMonotonic();
+        while (true)
+        {
+            const auto ts = uavcan_stm32::clock::getMonotonic();
+
+            ubxPoll(&state);
+
+            if (ubxGetStReadyStat(&state, FixSt))
+            {
+                prev_fix_report_at = ts;
+                ubxResetStReadyStat(&state, FixSt);
+                publishFix(state);
+            }
+            else  // Fix and Aux will never be published within the same poll, that's intentional.
+            {
+                // TODO: Publish AUX at fixed rate 0.5 Hz
+            }
+
+            // TODO: update node status
+
+            if ((ts - prev_fix_report_at).toMSec() > ReportTimeoutMSec)
+            {
+                // TODO: Set node status ERROR
+                break;
+            }
+        }
+    }
+
 public:
     msg_t main() override
     {
-        static const SerialConfig serial_cfg_9600   = { 9600,   0, USART_CR2_STOP1_BITS, 0 };
-        static const SerialConfig serial_cfg_115200 = { 115200, 0, USART_CR2_STOP1_BITS, 0 };
-
-        static uint8_t buffer[512];
-
-        // Default serial port config
-        sdStart(&SD2, &serial_cfg_9600);
-
-        // Init UBX (CREATE AND SEND CFG-PRT MESSAGE)
-        ubx_init(&ubx_state, 9600, UBX_PARITY_NO, UBX_STOP_ONE, 0x00);
-
-        // Reinit the serial port
-        sdStop(&SD2);
-        sdStart(&SD2, &serial_cfg_115200);
-
         while (true)
         {
-            const int16_t sz = sdReadTimeout(&SD2, buffer, sizeof(buffer), TIME_INFINITE);
-            if (sz > 0)
-            {
-                int16_t ubh_idx = -1;
-                do
-                {
-                    ubh_idx++;
-                    ubh_idx = ubx_findheader(buffer, sz - ubh_idx, ubh_idx);
-                    if (ubh_idx >= 0)
-                    {
-                        ubx_parse(&ubx_state, buffer + ubh_idx, sz - ubh_idx);
-                        poll();
-                    }
-                }
-                while (ubh_idx >= 0);
-            }
+            ::sleep(1);
+            lowsyslog("GNSS init...\n");
+            tryInit();
+            tryRun();
         }
         return msg_t();
     }
@@ -178,7 +172,7 @@ public:
 
 void init()
 {
-    (void)gnss_thread.start(HIGHPRIO - 5);
+    (void)gnss_thread.start(HIGHPRIO);
 }
 
 }

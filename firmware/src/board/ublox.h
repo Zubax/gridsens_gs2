@@ -2,365 +2,324 @@
  * Copyright (c) 2014 Courierdrone, courierdrone.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Alexander Buraga <dtp-avb@yandex.ru>
+ *         Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ *
+ * TODO: Current implementation is a garbage. Someday this shall be burned and rewritten from scratch.
  */
 
-#ifndef _ublox_h
-#define _ublox_h
+#pragma once
 
-#include "ch.h"
-#include "hal.h"
+#include <ch.h>
+#include <hal.h>
 
 #if __cplusplus
 extern "C" {
 #endif
 
-/**
- * @name    ublox.h header files
- * @{
- */
-#define UBX_IN_BUF_SIZE        512
-#define UBX_OUT_BUF_SIZE    64
-#define NO_OF_GPS_CHANS        128
-
-#define GNSSFIX_NOFIX    0        /**< @brief GNSS FIX MODE: no fix.          */
-#define GNSSFIX_TIME    1        /**< @brief GNSS FIX MODE: time only.       */
-#define GNSSFIX_2D        2        /**< @brief GNSS FIX MODE: 2D.              */
-#define GNSSFIX_3D        3       /**< @brief GNSS FIX MODE: 3D.              */
+#define UbxInBufSize      512        /**< @brief Temp buffer (to hold ubx message tail) size   */
+#define NoOfGNSSch        128        /**< @brief Number of satellites to track   */
+#define UnixTimeEpoch     315964800  /**< @brief Difference (in seconds) between Unix time epoch and Gps time epoch  */
 
 /*
- *        UBX MACROSES AND DATA
+ *        UBX MACROS AND DATA
  */
 
-#define UBX_MESSAGE_BASE_SIZE                 6
-#define UBX_MESSAGE_DATA_OFFSET             UBX_MESSAGE_BASE_SIZE
+#define UbxMessageBaseSize     6
+#define UbxMessageDataOffset   UbxMessageBaseSize
 
-typedef enum {
-    UBX_CLASS_NAV = 0x01,     /**< Navigation */
-    UBX_CLASS_RXM = 0x02,     /**< Receiver Manager */
-    UBX_CLASS_INF = 0x04,     /**< Informative text messages */
-    UBX_CLASS_ACK = 0x05,     /**< (Not) Acknowledges for cfg messages */
-    UBX_CLASS_CFG = 0x06,     /**< Configuration requests */
-    UBX_CLASS_UPD = 0x09,     /**< Firmware updates */
-    UBX_CLASS_MON = 0x0a,     /**< System monitoring */
-    UBX_CLASS_AID = 0x0b,     /**< AGPS */
-    UBX_CLASS_TIM = 0x0d,     /**< Time */
-} ubx_classes_t;
+typedef enum
+{
+    UbxSVM_SvUsed = 1 << 0,     /**< @brief UBX space vehicle mask: SV is used in navigational solution */
+    UbxSVM_DiffCorr = 1 << 1,   /**< @brief UBX space vehicle mask: Differentical correction is aviable  */
+    UbxSVM_OrbitAvail = 1 << 2, /**< @brief UBX space vehicle mask: Orbit information is aviable (Eph or Alm) */
+    UbxSVM_OrbitEph = 1 << 3,   /**< @brief UBX space vehicle mask: Orbit information if Ephemeris */
+    UbxSVM_Unhealthy = 1 << 4,  /**< @brief UBX space vehicle mask: SV shall not be used */
+    UbxSVM_OrbitAlm = 1 << 5,   /**< @brief UBX space vehicle mask: Orbit information is Almanac Plus */
+    UbxSVM_OrbitAop = 1 << 6,   /**< @brief UBX space vehicle mask: Orbit information is AssistNow Autonomous */
+    UbxSVM_Smoothed = 1 << 7    /**< @brief UBX space vehicle mask: Carrier smoothed pseudocarriage used */
+} UbxSVMask;
 
+typedef enum
+{
+    GNSSfix_NoFix = 0, /**< @brief GNSS FIX MODE: no fix.          */
+    GNSSfix_Time = 1,  /**< @brief GNSS FIX MODE: time only.       */
+    GNSSfix_2D = 2,    /**< @brief GNSS FIX MODE: 2D.              */
+    GNSSfix_3D = 3     /**< @brief GNSS FIX MODE: 3D.              */
+} UbxFixMode;
+
+typedef enum
+{
+    UbxClassNav = 0x01, /**< Navigation */
+    UbxClassRxm = 0x02, /**< Receiver Manager */
+    UbxClassInf = 0x04, /**< Informative text messages */
+    UbxClassAck = 0x05, /**< (Not) Acknowledges for cfg messages */
+    UbxClassCfg = 0x06, /**< Configuration requests */
+    UbxClassUpd = 0x09, /**< Firmware updates */
+    UbxClassMon = 0x0a, /**< System monitoring */
+    UbxClassAid = 0x0b, /**< AGPS */
+    UbxClassTim = 0x0d  /**< Time */
+} UbxClasses;
+
+typedef enum
+{
+    UbxNavDopBit = 1 << 0,    /**< NAV DOP msg bitfield */
+    UbxNavSolBit = 1 << 1,    /**< NAV SOL msg bitfield */
+    UbxNavPosllhBit = 1 << 2, /**< NAV POSLLH msg bitfield */
+    UbxNavPvtBit = 1 << 3,    /**< NAV PVT msg bitfield */
+    UbxNavSvinfoBit = 1 << 4  /**< NAV SVINFO msg bitfield */
+} UbxMsgBitfield;
+
+/** Compile UBX header from class and ID */
 #define UBX_MSGID(cls_, id_) (((cls_)<<8)|(id_))
 
-typedef enum {
-    UBX_NAV_POSECEF    = UBX_MSGID(UBX_CLASS_NAV, 0x01),
-    UBX_NAV_POSLLH    = UBX_MSGID(UBX_CLASS_NAV, 0x02),
-    UBX_NAV_STATUS    = UBX_MSGID(UBX_CLASS_NAV, 0x03),
-    UBX_NAV_DOP     = UBX_MSGID(UBX_CLASS_NAV, 0x04),
-    UBX_NAV_SOL     = UBX_MSGID(UBX_CLASS_NAV, 0x06),
-    UBX_NAV_PVT        = UBX_MSGID(UBX_CLASS_NAV, 0x07),
-    UBX_NAV_POSUTM    = UBX_MSGID(UBX_CLASS_NAV, 0x08),
-    UBX_NAV_VELECEF    = UBX_MSGID(UBX_CLASS_NAV, 0x11),
-    UBX_NAV_VELNED    = UBX_MSGID(UBX_CLASS_NAV, 0x12),
-    UBX_NAV_TIMEGPS    = UBX_MSGID(UBX_CLASS_NAV, 0x20),
-    UBX_NAV_TIMEUTC    = UBX_MSGID(UBX_CLASS_NAV, 0x21),
-    UBX_NAV_CLOCK   = UBX_MSGID(UBX_CLASS_NAV, 0x22),
-    UBX_NAV_SVINFO    = UBX_MSGID(UBX_CLASS_NAV, 0x30),
-    UBX_NAV_DGPS    = UBX_MSGID(UBX_CLASS_NAV, 0x31),
-    UBX_NAV_SBAS    = UBX_MSGID(UBX_CLASS_NAV, 0x32),
-    UBX_NAV_EKFSTATUS = UBX_MSGID(UBX_CLASS_NAV, 0x40),
+enum
+{
+    UbxNavPosecef = UBX_MSGID(UbxClassNav, 0x01),
+    UbxNavPosllh = UBX_MSGID(UbxClassNav, 0x02),
+    UbxNavStatus = UBX_MSGID(UbxClassNav, 0x03),
+    UbxNavDop = UBX_MSGID(UbxClassNav, 0x04),
+    UbxNavSol = UBX_MSGID(UbxClassNav, 0x06),
+    UbxNavPvt = UBX_MSGID(UbxClassNav, 0x07),
+    UbxNavPosutm = UBX_MSGID(UbxClassNav, 0x08),
+    UbxNavVelecef = UBX_MSGID(UbxClassNav, 0x11),
+    UbxNavVelned = UBX_MSGID(UbxClassNav, 0x12),
+    UbxNavTimegps = UBX_MSGID(UbxClassNav, 0x20),
+    UbxNavTimeutc = UBX_MSGID(UbxClassNav, 0x21),
+    UbxNavClock = UBX_MSGID(UbxClassNav, 0x22),
+    UbxNavSvinfo = UBX_MSGID(UbxClassNav, 0x30),
+    UbxNavDgps = UBX_MSGID(UbxClassNav, 0x31),
+    UbxNavSbas = UBX_MSGID(UbxClassNav, 0x32),
+    UbxNavEkfstatus = UBX_MSGID(UbxClassNav, 0x40),
 
-    UBX_RXM_RAW        = UBX_MSGID(UBX_CLASS_RXM, 0x10),
-    UBX_RXM_SFRB    = UBX_MSGID(UBX_CLASS_RXM, 0x11),
-    UBX_RXM_SVSI    = UBX_MSGID(UBX_CLASS_RXM, 0x20),
-    UBX_RXM_ALM        = UBX_MSGID(UBX_CLASS_RXM, 0x30),
-    UBX_RXM_EPH        = UBX_MSGID(UBX_CLASS_RXM, 0x31),
-    UBX_RXM_POSREQ    = UBX_MSGID(UBX_CLASS_RXM, 0x40),
+    UbxRxmRaw = UBX_MSGID(UbxClassRxm, 0x10),
+    UbxRxmSfrb = UBX_MSGID(UbxClassRxm, 0x11),
+    UbxRxmSvsi = UBX_MSGID(UbxClassRxm, 0x20),
+    UbxRxmAlm = UBX_MSGID(UbxClassRxm, 0x30),
+    UbxRxmEph = UBX_MSGID(UbxClassRxm, 0x31),
+    UbxRxmPosreq = UBX_MSGID(UbxClassRxm, 0x40),
 
-    UBX_INF_ERROR    = UBX_MSGID(UBX_CLASS_INF, 0x00),
-    UBX_INF_WARNING    = UBX_MSGID(UBX_CLASS_INF, 0x01),
-    UBX_INF_NOTICE    = UBX_MSGID(UBX_CLASS_INF, 0x02),
-    UBX_INF_TEST    = UBX_MSGID(UBX_CLASS_INF, 0x03),
-    UBX_INF_DEBUG    = UBX_MSGID(UBX_CLASS_INF, 0x04),
-    UBX_INF_USER    = UBX_MSGID(UBX_CLASS_INF, 0x07),
+    UbxInfError = UBX_MSGID(UbxClassInf, 0x00),
+    UbxInfWarning = UBX_MSGID(UbxClassInf, 0x01),
+    UbxInfNotice = UBX_MSGID(UbxClassInf, 0x02),
+    UbxInfTest = UBX_MSGID(UbxClassInf, 0x03),
+    UbxInfDebug = UBX_MSGID(UbxClassInf, 0x04),
+    UbxInfUser = UBX_MSGID(UbxClassInf, 0x07),
 
-    UBX_ACK_NAK        = UBX_MSGID(UBX_CLASS_ACK, 0x00),
-    UBX_ACK_ACK        = UBX_MSGID(UBX_CLASS_ACK, 0x01),
+    UbxAckNak = UBX_MSGID(UbxClassAck, 0x00),
+    UbxAckAck = UBX_MSGID(UbxClassAck, 0x01),
 
-    UBX_CFG_PRT        = UBX_MSGID(UBX_CLASS_CFG, 0x00),
+    UbxCfgPrt = UBX_MSGID(UbxClassCfg, 0x00),
 
-    UBX_UPD_DOWNL    = UBX_MSGID(UBX_CLASS_UPD, 0x01),
-    UBX_UPD_UPLOAD    = UBX_MSGID(UBX_CLASS_UPD, 0x02),
-    UBX_UPD_EXEC    = UBX_MSGID(UBX_CLASS_UPD, 0x03),
-    UBX_UPD_MEMCPY    = UBX_MSGID(UBX_CLASS_UPD, 0x04),
+    UbxUpdDownl = UBX_MSGID(UbxClassUpd, 0x01),
+    UbxUpdUpload = UBX_MSGID(UbxClassUpd, 0x02),
+    UbxUpdExec = UBX_MSGID(UbxClassUpd, 0x03),
+    UbxUpdMemcpy = UBX_MSGID(UbxClassUpd, 0x04),
 
-    UBX_MON_SCHED    = UBX_MSGID(UBX_CLASS_MON, 0x01),
-    UBX_MON_IO        = UBX_MSGID(UBX_CLASS_MON, 0x02),
-    UBX_MON_IPC        = UBX_MSGID(UBX_CLASS_MON, 0x03),
-    UBX_MON_VER        = UBX_MSGID(UBX_CLASS_MON, 0x04),
-    UBX_MON_EXCEPT    = UBX_MSGID(UBX_CLASS_MON, 0x05),
-    UBX_MON_MSGPP    = UBX_MSGID(UBX_CLASS_MON, 0x06),
-    UBX_MON_RXBUF    = UBX_MSGID(UBX_CLASS_MON, 0x07),
-    UBX_MON_TXBUF    = UBX_MSGID(UBX_CLASS_MON, 0x08),
-    UBX_MON_HW        = UBX_MSGID(UBX_CLASS_MON, 0x09),
-    UBX_MON_USB        = UBX_MSGID(UBX_CLASS_MON, 0x0a),
+    UbxMonSched = UBX_MSGID(UbxClassMon, 0x01),
+    UbxMonIo = UBX_MSGID(UbxClassMon, 0x02),
+    UbxMonIpc = UBX_MSGID(UbxClassMon, 0x03),
+    UbxMonVer = UBX_MSGID(UbxClassMon, 0x04),
+    UbxMonExcept = UBX_MSGID(UbxClassMon, 0x05),
+    UbxMonMsgpp = UBX_MSGID(UbxClassMon, 0x06),
+    UbxMonRxbuf = UBX_MSGID(UbxClassMon, 0x07),
+    UbxMonTxbuf = UBX_MSGID(UbxClassMon, 0x08),
+    UbxMonHw = UBX_MSGID(UbxClassMon, 0x09),
+    UbxMonUsb = UBX_MSGID(UbxClassMon, 0x0a),
 
-    UBX_AID_REQ        = UBX_MSGID(UBX_CLASS_AID, 0x00),
-    UBX_AID_INI        = UBX_MSGID(UBX_CLASS_AID, 0x01),
-    UBX_AID_HUI        = UBX_MSGID(UBX_CLASS_AID, 0x02),
-    UBX_AID_DATA    = UBX_MSGID(UBX_CLASS_AID, 0x10),
-    UBX_AID_ALM        = UBX_MSGID(UBX_CLASS_AID, 0x30),
-    UBX_AID_EPH        = UBX_MSGID(UBX_CLASS_AID, 0x31),
+    UbxAidReq = UBX_MSGID(UbxClassAid, 0x00),
+    UbxAidIni = UBX_MSGID(UbxClassAid, 0x01),
+    UbxAidHui = UBX_MSGID(UbxClassAid, 0x02),
+    UbxAidData = UBX_MSGID(UbxClassAid, 0x10),
+    UbxAidAlm = UBX_MSGID(UbxClassAid, 0x30),
+    UbxAidEph = UBX_MSGID(UbxClassAid, 0x31),
 
-    UBX_TIM_TP        = UBX_MSGID(UBX_CLASS_TIM, 0x01),
-    UBX_TIM_TM        = UBX_MSGID(UBX_CLASS_TIM, 0x02),
-    UBX_TIM_TM2        = UBX_MSGID(UBX_CLASS_TIM, 0x03),
-    UBX_TIM_SVIN    = UBX_MSGID(UBX_CLASS_TIM, 0x04),
-} ubx_message_t; /* UBX Message classes and IDs */
+    UbxTimTp = UBX_MSGID(UbxClassTim, 0x01),
+    UbxTimTm = UBX_MSGID(UbxClassTim, 0x02),
+    UbxTimTm2 = UBX_MSGID(UbxClassTim, 0x03),
+    UbxTimSvin = UBX_MSGID(UbxClassTim, 0x04)
+};
 
-typedef enum {
-    UBX_MODE_NOFIX  = 0x00,    /* no fix available */
-    UBX_MODE_DR        = 0x01,    /* Dead reckoning */
-    UBX_MODE_2D        = 0x02,    /* 2D fix */
-    UBX_MODE_3D        = 0x03,    /* 3D fix */
-    UBX_MODE_GPSDR  = 0x04,    /* GPS + dead reckoning */
-    UBX_MODE_TMONLY = 0x05,    /* Time-only fix */
-} ubx_mode_t;
+enum
+{
+    UbxMode_NOFIX = 0x00,   /* no fix available */
+    UbxMode_DR = 0x01,      /* Dead reckoning */
+    UbxMode_2D = 0x02,      /* 2D fix */
+    UbxMode_3D = 0x03,      /* 3D fix */
+    UbxMode_GPSDR = 0x04,   /* GPS + dead reckoning */
+    UbxMode_TIMONLY = 0x05  /* Time-only fix */
+};
 
-typedef enum {
-    UBX_PARITY_EVEN = 0x00,    /* Even Parity */
-    UBX_PARITY_ODD  = 0x01,    /* Odd Parity */
-    UBX_PARITY_NO   = 0x04,    /* No Parity */
-} ubx7_parity_t;
+#define SecsPerWeek             604800
 
-typedef enum {
-    UBX_STOP_ONE    = 0x00,    /* 1 Stop Bit */
-    UBX_STOP_ONEH   = 0x01,    /* 1.5 Stop Bit */
-    UBX_STOP_TWO    = 0x02,    /* 2 Stop Bit */
-    UBX_STOP_TWOH   = 0x03,    /* No Parity */
-} ubx7_stopbits_t;
-
-#define GPS_EPOCH               315964800
-#define SECS_PER_WEEK           604800
-
-#define UBX_SOL_FLAG_GPS_FIX_OK 0x01
-#define UBX_SOL_FLAG_DGPS       0x02
-#define UBX_SOL_VALID_WEEK      0x04
-#define UBX_SOL_VALID_TIME      0x08
+#define UbxSol_FlagGpsFixOk     0x01
+#define UbxSol_FlagDgps         0x02
+#define UbxSol_ValidWeek        0x04
+#define UbxSol_ValidTime        0x08
 
 /* from UBX_NAV_SVINFO */
-#define UBX_SAT_USED            0x01
-#define UBX_SAT_DGPS            0x02
-#define UBX_SAT_EPHALM          0x04
-#define UBX_SAT_EPHEM           0x08
-#define UBX_SAT_UNHEALTHY       0x10
+#define UbxSat_Used             0x01
+#define UbxSat_Dgps             0x02
+#define UbxSat_EphAlm           0x04
+#define UbxSat_Ephem            0x08
+#define UbxSat_Unhealthy        0x10
 
-#define UBX_SIG_IDLE            0
-#define UBX_SIG_SRCH1           1
-#define UBX_SIG_SRCH2           2
-#define UBX_SIG_DETECT          3
-#define UBX_SIG_CDLK            4
-#define UBX_SIG_CDCRLK1         5
-#define UBX_SIG_CDCRLK2         6
-#define UBX_SIG_NAVMSG          7
+#define UbxSig_Idle             0
+#define UbxSig_Srch1            1
+#define UbxSig_Srch2            2
+#define UbxSig_Detect           3
+#define UbxSig_Cdlk             4
+#define UbxSig_Cdcrlk1          5
+#define UbxSig_Cdcrlk2          6
+#define UbxSig_NavMsg           7
 
 /*
  *            UBLOX DEFINES
  */
 
-#define UBX_PREFIX_LEN            6
-#define UBX_CLASS_OFFSET        2
-#define UBX_TYPE_OFFSET         3
-#define USART1_ID                1
-#define USART2_ID               2
-#define USB_ID                  3
-#define UBX_PROTOCOL_MASK        0x01
-#define NMEA_PROTOCOL_MASK      0x02
-#define RTCM_PROTOCOL_MASK      0x04
-#define UBX_CFG_LEN                36
+#define Ubx_PrefixLen           6     /* UBX prefix lenght (UBX header + class + type + lenght) */
+#define Ubx_ClassOffset         2     /* Class offset (UBX packet) */
+#define Ubx_TypeOffset          3     /* Type offset (UBX packet) */
+#define Ubx_Usart1_id           1     /* Interface ID: USART1 */
+#define Ubx_Usart2_id           2     /* Interface ID: USART2 */
+#define Ubx_USB_id              3     /* Interface ID: USB */
+#define Ubx_PrMask_UBX          0x01  /* UBX protocol mask: UBX */
+#define Ubx_PrMask_NMEA         0x02  /* UBX protocol mask: NMEA */
+#define Ubx_PrMask_RTCM         0x04  /* UBX protocol mask: RTCM */
+#define Ubx_CfgLen              36    /* Maximum congiguration packet lenght for UBX */
 
-/*
- *      AUX MACROSES TO GET DATA (i8, u8, i16, u16, i32, u32, f32, f64)
+typedef struct
+{
+    UbxFixMode fix;     /**< @brief Fix mode.                       */
+    double latitude;    /**< @brief GNSS estimated latitude.        */
+    double longitude;   /**< @brief GNSS estimated longitude.       */
+    float altitude;     /**< @brief GNSS estimated altitude.        */
+    float ned_speed[3]; /**< @brief North-East-Down velocity        */
+    float pos_cov[9];   /**< @brief Cov matrix of position          */
+    float speed_cov[9]; /**< @brief Cov matrix of speed             */
+    uint64_t utc_usec;  /**< @brief UTC time (UNIX epoch)           */
+    float time_err_var; /**< @brief Time error variance             */
+    uint8_t sats_used;   /**< @brief Qty of sats in NAV solution     */
+} UbxFix;
+
+typedef struct
+{
+    float gdop; /**< @brief GDOP value.                     */
+    float pdop; /**< @brief PDOP value.                     */
+    float hdop; /**< @brief HDOP value.                     */
+    float vdop; /**< @brief VDOP value.                     */
+    float tdop; /**< @brief TDOP value.                     */
+} UbxDop;
+
+typedef struct
+{
+    uint8_t sat_stmask; /**< @brief satellite status mask.           */
+} UbxSatInfo;
+
+typedef struct
+{
+    UbxSatInfo sat[NoOfGNSSch]; /**< @brief complete info about satellites.   */
+} UbxSatsInfo;
+
+typedef struct
+{
+    uint8_t inbuf[UbxInBufSize]; /* input buffer for UBX data */
+    uint16_t packstat;           /* UBX packet collection status:
+                                  * 0b1 - ready to send (and not sent yet), 0b0 - not ready to send */
+    int16_t inbuf_size;
+} UbxParserState;
+
+typedef struct
+{
+    UbxParserState parse;
+    UbxFix fix;
+    UbxDop dop;
+    UbxSatsInfo sats;
+} UbxState;
+
+enum
+{
+    FixSt = 1 << 0, /* FIX structure */
+    DopSt = 1 << 1, /* DOP structure */
+    SatSt = 1 << 2  /* SATS structure */
+};
+
+/**
+ * @brief   Bitfields for successfully recieved and parsed packets
+ * @note    none
  */
+enum
+{
+    UbxNavDopUp = 1 << 0,    /* NavDop message is successfully updated */
+    UbxNavSolUp = 1 << 1,    /* NavSol message is successfully updated */
+    UbxNavPosllhUp = 1 << 2, /* NavPosllh message is successfully updated */
+    UbxNavPvtUp = 1 << 3,    /* NavPvt message is successfully updated */
+    UbxNavSvinfoUp = 1 << 4  /* NavSvinfo message is successfully updated */
+};
 
-#define     GET_ORIGIN   0
-#define     PUT_ORIGIN   0
-#define     getsb(buf, off)               ((int8_t)buf[(off)-(GET_ORIGIN)])
-#define     getub(buf, off)               ((uint8_t)buf[(off)-(GET_ORIGIN)])
-#define     putbyte(buf, off, b)           do {buf[(off)-(PUT_ORIGIN)] = (unsigned char)(b);} while (0)
-#define     getles16(buf, off)           ((int16_t)(((uint16_t)getub((buf), (off)+1) << 8) | (uint16_t)getub((buf), (off))))
-#define     getleu16(buf, off)           ((uint16_t)(((uint16_t)getub((buf), (off)+1) << 8) | (uint16_t)getub((buf), (off))))
-#define     getles32(buf, off)           ((int32_t)(((uint16_t)getleu16((buf), (off)+2) << 16) | (uint16_t)getleu16((buf), (off))))
-#define     getleu32(buf, off)           ((uint32_t)(((uint16_t)getleu16((buf),(off)+2) << 16) | (uint16_t)getleu16((buf), (off))))
-#define     putle16(buf, off, w)         do {putbyte(buf, (off)+1, (uint16_t)(w) >> 8); putbyte(buf, (off), (w));} while (0)
-#define     putle32(buf, off, l)         do {putle16(buf, (off)+2, (uint32_t)(l) >> 16); putle16(buf, (off), (l));} while (0)
-#define     getles64(buf, off)           ((int64_t)(((uint64_t)getleu32(buf, (off)+4) << 32) | getleu32(buf, (off))))
-#define     getleu64(buf, off)           ((uint64_t)(((uint64_t)getleu32(buf, (off)+4) << 32) | getleu32(buf, (off))))
-#define     getlef(buf, off)                (i_f.i = getles32(buf, off), i_f.f)
-#define     getled(buf, off)                (l_d.l = getles64(buf, off), l_d.d)
-#define     getbes16(buf, off)           ((int16_t)(((uint16_t)getub(buf, (off)) << 8) | (uint16_t)getub(buf, (off)+1)))
-#define     getbeu16(buf, off)           ((uint16_t)(((uint16_t)getub(buf, (off)) << 8) | (uint16_t)getub(buf, (off)+1)))
-#define     getbes32(buf, off)           ((int32_t)(((uint16_t)getbeu16(buf, (off)) << 16) | getbeu16(buf, (off)+2)))
-#define     getbeu32(buf, off)           ((uint32_t)(((uint16_t)getbeu16(buf, (off)) << 16) | getbeu16(buf, (off)+2)))
-#define     getbes64(buf, off)           ((int64_t)(((uint64_t)getbeu32(buf, (off)) << 32) | getbeu32(buf, (off)+4)))
-#define     getbeu64(buf, off)           ((uint64_t)(((uint64_t)getbeu32(buf, (off)) << 32) | getbeu32(buf, (off)+4)))
-#define     putbe16(buf, off, w)        do {putbyte(buf, (off), (w) >> 8); putbyte(buf, (off)+1, (w));} while (0)
-#define     putbe32(buf, off, l)        do {putbe16(buf, (off), (l) >> 16); putbe16(buf, (off)+2, (l));} while (0)
-#define     getbef(buf, off)               (i_f.i = getbes32(buf, off), i_f.f)
-#define     getbed(buf, off)               (l_d.l = getbes64(buf, off), l_d.d)
+enum
+{
+    NAV5_dyn = 1 << 0,        /* Apply dynamic model settings */
+    NAV5_minEl = 1 << 1,      /* Apply minimum elevation settings */
+    NAV5_posFixMode = 1 << 2, /* Apply fix mode settings */
+    NAV5_drLim = 1 << 3,      /* Reserved */
+    NAV5_dposMask = 1 << 4,   /* Apply position mask settings */
+    NAV5_timeMask = 1 << 5,   /* Apply time mask settings */
+    NAV5_sHoldMask = 1 << 6,  /* Apply static hold settings */
+    NAV5_dgpsMask = 1 << 7    /* Apply DGPS settings */
+};
 
-
-/* Pragma align to ONE byte */
 #pragma pack(push, 1)
 
-
-/**
- * @brief   Main navigation parameter structure.
- * @note    none
- */
-typedef struct t_GNSSfix
-{
-    uint8_t  fix;           /**< @brief Fix mode.                       */
-    double   latitude;        /**< @brief GNSS estimated latitude.        */
-    double   longitude;     /**< @brief GNSS estimated longitude.       */
-    float    height;        /**< @brief GNSS estimated height.          */
-    float    NEDspeed[3];   /**< @brief North-East-Down velocity        */
-    float      posCM[9];        /**< @brief Cov matrix of position          */
-    float      speedCM[9];    /**< @brief Cov matrix of speed             */
-    uint64_t UTCtime;       /**< @brief UTC time (UNIX epoch)           */
-    float    terrdisp;        /**< @brief Time error dispersion           */
-    uint8_t  satqty;        /**< @brief Qty of sats in NAV solution     */
-}t_GNSSfix;
-
-/**
- * @brief   DOP (degree of precision) parameters structue.
- * @note    none
- */
-typedef struct t_GNSSdop
-{
-    float  gdop;            /**< @brief GDOP value.                     */
-    float  pdop;            /**< @brief PDOP value.                     */
-    float  hdop;            /**< @brief HDOP value.                     */
-    float  vdop;            /**< @brief VDOP value.                     */
-    float  tdop;            /**< @brief TDOP value.                     */
-}t_GNSSdop;
-
-/**
- * @brief   Satellite status information.
- * @note    none
- */
-typedef struct t_GNSSsat
-{
-    uint8_t  satStMask;        /**< @brief satellite status mask.           */
-}t_GNSSsat;
-
-/**
- * @brief   Current information about satellites.
- * @note    none
- */
-typedef struct t_GNSSsats
-{
-    t_GNSSsat  sat[NO_OF_GPS_CHANS];        /**< @brief complete info about satellites.   */
-}t_GNSSsats;
-
-/**
- * @brief   UBX parser helper struct
- * @note    none
- */
-typedef struct t_UBXparse
-{
-    uint8_t ubx_in_buf[UBX_IN_BUF_SIZE];    /* input buffer for UBX data */
-    uint8_t ubx_out_buf[UBX_OUT_BUF_SIZE];  /* output buffer for UBX commands */
-    uint8_t ubx_parse_stat;                    /* UBX parsing status */
-    /*int16_t ubx_inbuf_bp_ind;*/            /* UBX input buffer "begin-of-packet" index */
-    int16_t ubx_wi;                            /* UBX input buffer write index*/
-}t_UBXparse;
-
-/**
- * @brief   Generic GNSS struct (output structs and buffer control)
- * @note    none
- */
-typedef struct  t_GNSS
-{
-    t_UBXparse t_PARSE;                        /* PARSE structure */
-    t_GNSSfix  t_FIX;                        /* FIX structure */
-    t_GNSSdop  t_DOP;                        /* DOP structure */
-    t_GNSSsats t_SATS;                        /* SATS structure */
-}t_GNSS;
-
-/**
- * @brief   GFG-NAV5 struct
- * @note    none
- */
-
-typedef enum {
-    NAV5_dyn        = 1 << 0,    /* Apply dynamic model settings */
-    NAV5_minEl      = 1 << 1,    /* Apply minimum elevation settings */
-    NAV5_posFixMode = 1 << 2,    /* Apply fix mode settings */
-    NAV5_drLim      = 1 << 3,    /* Reserved */
-    NAV5_dposMask   = 1 << 4,    /* Apply position mask settings */
-    NAV5_timeMask   = 1 << 5,    /* Apply time mask settings */
-    NAV5_sHoldMask  = 1 << 6,    /* Apply static hold settings */
-    NAV5_dgpsMask   = 1 << 7,    /* Apply DGPS settings */
-} CFG_NAV5_mask;
-
-/**
- * @brief   GFG-NAV5 struct
- * @note    none
- */
-typedef struct CFG_NAV5
+typedef struct
 {
     uint16_t mask;              /* Parameters bitmask */
-    uint8_t  dynModel;          /* Dynamic model */
-    uint8_t  fixMode;           /* Position Fixing Mode */
-    int32_t  fixedAlt;          /* Fixed altitude (mean sea level) for 2D fix mode. */
-    uint32_t fixedAltVar;       /* Fixed altitude variance for 2D mode. */
-    int8_t   minElev;           /* Minimum Elevation for a GNSS satellite to be used in NAV */
-    uint8_t  drLimit;           /* Reserved */
-    uint16_t pDop;                /* Position DOP Mask to use */
-    uint16_t tDop;              /* Time DOP Mask to use */
-    uint16_t pAcc;              /* Position Accuracy Mask */
-    uint16_t tAcc;                /* Time Accuracy Mask */
-    uint8_t  staticHoldThresh;  /* Static hold threshold */
-    uint8_t  dgpsTimeOut;       /* DGPS timeout */
-    uint8_t  cnoThreshNumSVs;    /* Number of satellites required to have C/N0 above cnoThresh for a fix to be attempted */
-    uint8_t  cnoThresh;            /* C/N0 threshold for deciding whether to attempt a fix */
-    uint16_t reserved2;            /* Reserved */
-    uint32_t reserved3;            /* Reserved */
-    uint32_t reserved4;            /* Reserved */
-}CFG_NAV5;
+    uint8_t dyn_model;          /* Dynamic model */
+    uint8_t fix_mode;           /* Position Fixing Mode */
+    int32_t fixed_alt;          /* Fixed altitude (mean sea level) for 2D fix mode. */
+    uint32_t fixed_alt_var;     /* Fixed altitude variance for 2D mode. */
+    int8_t min_elev;            /* Minimum Elevation for a GNSS satellite to be used in NAV */
+    uint8_t dr_limit;           /* Reserved */
+    uint16_t p_dop;             /* Position DOP Mask to use */
+    uint16_t t_dop;             /* Time DOP Mask to use */
+    uint16_t p_acc;             /* Position Accuracy Mask */
+    uint16_t t_acc;             /* Time Accuracy Mask */
+    uint8_t static_hold_thresh; /* Static hold threshold */
+    uint8_t dgps_timeout;       /* DGPS timeout */
+    uint8_t cno_thresh_numSVs;  /* Num sats required to have C/N0 above cnoThresh for a fix to be attempted */
+    uint8_t cno_thresh;         /* C/N0 threshold for deciding whether to attempt a fix */
+    uint16_t reserved2;         /* Reserved */
+    uint32_t reserved3;         /* Reserved */
+    uint32_t reserved4;         /* Reserved */
+} CfgNav5;
 
-/**
- * @brief   GFG-RATE struct
- * @note    none
- */
-
-typedef struct CFG_RATE
+typedef struct
 {
-    uint16_t measRate;           /* Parameters bitmask */
-    uint16_t navRate;            /* Dynamic model */
-    uint16_t timeRef;            /* Position Fixing Mode */
-}CFG_RATE;
+    uint16_t meas_rate; /* Parameters bitmask */
+    uint16_t nav_rate;  /* Dynamic model */
+    uint16_t time_ref;  /* Position Fixing Mode */
+} CfgRate;
 
+typedef struct
+{
+    uint8_t portid;        /* Port ID mask */
+    uint8_t resv1;         /* Reserved 1 */
+    uint16_t txready;      /* Tx ready pin config */
+    uint32_t mode;         /* Mode */
+    uint32_t baudrate;     /* Baudrate register */
+    uint16_t inprotomask;  /* In protocol mask */
+    uint16_t outprotomask; /* Out protocol mask */
+    uint16_t flags;        /* Flags bitfield */
+    uint16_t resv5;        /* Reserved 5 */
+} CfgPrt;
 
 #pragma pack(pop)
 
+void ubxInit(UbxState *ubx, uint32_t baudrate);
+void ubxPoll(UbxState *ubx);
 
-/* MISC FUNCTIONS */
-uint16_t ubx_write(uint8_t  *msgbuf, uint8_t  msg_class, uint8_t  msg_id, uint8_t *msg, uint16_t data_len);
-uint64_t gnss_gpstime_resolve(uint16_t week, uint32_t tow);
-int16_t ubx_findheader(uint8_t *buf, uint16_t len, uint16_t st_pos);
-int16_t ubx_parse(t_GNSS *GNSS_t, uint8_t *buf, uint16_t len);
-void ubx_init(t_GNSS *GNSS, uint32_t baudrate, uint8_t parity, uint8_t stopbits, uint32_t mode);
-void ubx_setMSGtypes(t_GNSS *GNSS);
-
-/* PACKET TYPE PARSING */
-uint8_t ubx_msg_nav_dop(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
-uint8_t ubx_msg_nav_sol(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
-uint8_t ubx_msg_nav_posllh(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
-uint8_t ubx_msg_nav_pvt(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
-uint8_t ubx_msg_nav_svinfo(t_GNSS *GNSS, uint8_t *buf, size_t data_len);
+bool ubxGetStReadyStat(UbxState *ubx, uint16_t st_bf);
+void ubxResetStReadyStat(UbxState *ubx, uint16_t st_bf);
 
 #if __cplusplus
 }
 #endif
-
-#endif /* _ublox_h */
-
-/** @} */

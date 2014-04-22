@@ -46,6 +46,6 @@ UINCDIR += dsdlc_generated
 SERIAL_CLI_PORT_NUMBER = 1
 
 RELEASE_OPT = -Os -fomit-frame-pointer
-DEBUG_OPT = -Os -g3
+DEBUG_OPT = -Og -g3
 
 include crdr_chibios/rules_stm32f105_107.mk

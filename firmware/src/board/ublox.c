@@ -2,37 +2,77 @@
  * Copyright (c) 2014 Courierdrone, courierdrone.com
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Alexander Buraga <dtp-avb@yandex.ru>
+ *         Pavel Kirienko <pavel.kirienko@courierdrone.com>
  */
 
-/**
- * @file    ublox.c
- * @brief   General functions for UBLOX (i.e. MAX 7) GNSS reciever.
- *
- */
-
-#include "ch.h"
-#include "hal.h"
 #include "ublox.h"
-#include "string.h"
+#include <assert.h>
+#include <math.h>
+#include <string.h>
+
+/*
+ *      Data marshaling helpers (i8, u8, i16, u16, i32, u32, f32, f64)
+ */
+#define     GET_ORIGIN   0
+#define     PUT_ORIGIN   0
+
+#define     getsb(buf, off)      ((int8_t)buf[(off)-(GET_ORIGIN)])
+#define     getub(buf, off)      ((uint8_t)buf[(off)-(GET_ORIGIN)])
+#define     putbyte(buf, off, b) do {buf[(off)-(PUT_ORIGIN)] = (unsigned char)(b);} while (0)
+#define     getles16(buf, off)   ((int16_t)(((uint16_t)getub((buf), (off)+1) << 8) | (uint16_t)getub((buf), (off))))
+#define     getleu16(buf, off)   ((uint16_t)(((uint16_t)getub((buf), (off)+1) << 8) | (uint16_t)getub((buf), (off))))
+#define     getles32(buf, off)   ((int32_t)(((uint16_t)getleu16((buf), (off)+2) << 16) | (uint16_t)getleu16((buf), (off))))
+#define     getleu32(buf, off)   ((uint32_t)(((uint16_t)getleu16((buf),(off)+2) << 16) | (uint16_t)getleu16((buf), (off))))
+#define     putle16(buf, off, w) do {putbyte(buf, (off)+1, (uint16_t)(w) >> 8); putbyte(buf, (off), (w));} while (0)
+#define     putle32(buf, off, l) do {putle16(buf, (off)+2, (uint32_t)(l) >> 16); putle16(buf, (off), (l));} while (0)
+#define     getles64(buf, off)   ((int64_t)(((uint64_t)getleu32(buf, (off)+4) << 32) | getleu32(buf, (off))))
+#define     getleu64(buf, off)   ((uint64_t)(((uint64_t)getleu32(buf, (off)+4) << 32) | getleu32(buf, (off))))
+#define     getlef(buf, off)     (i_f.i = getles32(buf, off), i_f.f)
+#define     getled(buf, off)     (l_d.l = getles64(buf, off), l_d.d)
+#define     getbes16(buf, off)   ((int16_t)(((uint16_t)getub(buf, (off)) << 8) | (uint16_t)getub(buf, (off)+1)))
+#define     getbeu16(buf, off)   ((uint16_t)(((uint16_t)getub(buf, (off)) << 8) | (uint16_t)getub(buf, (off)+1)))
+#define     getbes32(buf, off)   ((int32_t)(((uint16_t)getbeu16(buf, (off)) << 16) | getbeu16(buf, (off)+2)))
+#define     getbeu32(buf, off)   ((uint32_t)(((uint16_t)getbeu16(buf, (off)) << 16) | getbeu16(buf, (off)+2)))
+#define     getbes64(buf, off)   ((int64_t)(((uint64_t)getbeu32(buf, (off)) << 32) | getbeu32(buf, (off)+4)))
+#define     getbeu64(buf, off)   ((uint64_t)(((uint64_t)getbeu32(buf, (off)) << 32) | getbeu32(buf, (off)+4)))
+#define     putbe16(buf, off, w) do {putbyte(buf, (off), (w) >> 8); putbyte(buf, (off)+1, (w));} while (0)
+#define     putbe32(buf, off, l) do {putbe16(buf, (off), (l) >> 16); putbe16(buf, (off)+2, (l));} while (0)
+#define     getbef(buf, off)     (i_f.i = getbes32(buf, off), i_f.f)
+#define     getbed(buf, off)     (l_d.l = getbes64(buf, off), l_d.d)
+
+/*
+ * Local functions
+ */
+static int16_t ubxFindheader(uint8_t *buf, uint16_t len, uint16_t stpos);
+static int16_t ubxParse(UbxState *ubx, uint8_t *buf, uint16_t len);
+static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus);
+
+static uint64_t computeUtcUSec(uint16_t week, uint32_t tow, int32_t ftow);
+static void ubxSetMSGtypes(void);
+
+/* PACKET TYPE PARSING */
+static uint8_t ubxMsgNavDop(UbxState *ubx, uint8_t *buf, size_t len);
+static uint8_t ubxNsgNavSol(UbxState *ubx, uint8_t *buf, size_t len);
+static uint8_t ubxMsgNavPosllh(UbxState *ubx, uint8_t *buf, size_t len);
+static uint8_t ubxMsgNavPvt(UbxState *ubx, uint8_t *buf, size_t len);
+static uint8_t ubxMsgNavSvinfo(UbxState *ubx, uint8_t *buf, size_t len);
 
 /**
  * @brief   Form UBX message to uint8_t array
  *
- * @param[in] msgbuf[]    pointer to buffer (during saving data)
  * @param[in] msg_class   UBX message class
  * @param[in] msg_id      UBX message ID
  * @param[in] msg         pointer to UBX message body
  * @param[in] data_len    lenght of message body
- * @param[out]            total number of bytes in output array
+ * @return                total number of bytes in output array
  */
-uint16_t ubx_write(uint8_t  *msgbuf,
-                                 uint8_t  msg_class,
-                                 uint8_t  msg_id,
-                     uint8_t  *msg,
-                                 uint16_t data_len)
+uint16_t ubxWrite(uint8_t msg_class, uint8_t msg_id, uint8_t *msg, uint16_t data_len)
 {
+    uint8_t msgbuf[Ubx_CfgLen];
     uint8_t CK_A, CK_B;
     uint16_t i;
+
+    memset(&msgbuf, sizeof(msgbuf), 0x00);
 
     /*@ -type @*/
     msgbuf[0] = 0xb5;
@@ -44,34 +84,33 @@ uint16_t ubx_write(uint8_t  *msgbuf,
     msgbuf[4] = data_len & 0xff;
     msgbuf[5] = (data_len >> 8) & 0xff;
 
-        /* check for presence of data */
-    if (msg != NULL){
-          memcpy(&msgbuf[6], msg, data_len);
+    /* check for presence of data */
+    if (msg != NULL)
+    {
+        memcpy(&msgbuf[6], msg, data_len);
     }
 
     /* calculate CRC */
-    for (i = 2; i < 6; i++) {
+    for (i = 2; i < 6; i++)
+    {
         CK_A += msgbuf[i];
         CK_B += CK_A;
     }
 
     /*@ -nullderef @*/
     if (msg != NULL)
-      for (i = 0; i < data_len; i++) {
-        CK_A += msg[i];
-        CK_B += CK_A;
-      }
+    {
+        for (i = 0; i < data_len; i++)
+        {
+            CK_A += msg[i];
+            CK_B += CK_A;
+        }
+    }
 
     msgbuf[6 + data_len] = CK_A;
     msgbuf[7 + data_len] = CK_B;
 
-    /* SEND DATAT TO PORT (CHIBOS SERIAL PORT MUST BE CONFIGURATED) */
-    sdWrite(&SD2, msgbuf, data_len + 8);    /* WRITE DATA TO SERIAL PORT */
-
-    /*  COMMENT:
-            BLOCKING WRITE METHOD BECAUSE SERIAL2 (UBLOX) TX
-            IS USED ONLY DURING INIT */
-
+    (void)sdWrite(&SD2, msgbuf, data_len + 8);
     return (data_len + 8);
 }
 
@@ -81,26 +120,30 @@ uint16_t ubx_write(uint8_t  *msgbuf,
  * @param[in] *buf        pointer to buffer (to find UBX header)
  * @param[in] len         length of input buffer
  * @param[in] stpos       start position of search
- * @param[out]            number of position of first UBX message in buffer (if header isn't find => index == -1)
+ * @return                position of the first UBX message in the buffer (index == -1 if the header is not found)
  */
-int16_t ubx_findheader(uint8_t *buf, uint16_t len, uint16_t st_pos)
+static int16_t ubxFindheader(uint8_t *buf, uint16_t len, uint16_t stpos)
 {
-    uint16_t i;                    /* counter variable */
-    int16_t data_hind;  /* position of first header index */
+    uint16_t i; /* counter variable */
+    int16_t hind; /* position of first header index */
 
-    data_hind = -1;
+    hind = -1;
 
     /* Try to find UBX header */
-    for(i = st_pos; i < len - st_pos - 1; i++){
-        if(buf[i] == 0xB5){
-            if(buf[i+1] == 0x62){
-                data_hind = i;
-            break;}
+    for (i = stpos; i < len - stpos - 1; i++)
+    {
+        if (buf[i] == 0xB5)
+        {
+            if (buf[i + 1] == 0x62)
+            {
+                hind = i;
+                break;
+            }
         }
     }
 
     /* Return first index number */
-    return data_hind;
+    return hind;
 }
 
 /**
@@ -108,9 +151,9 @@ int16_t ubx_findheader(uint8_t *buf, uint16_t len, uint16_t st_pos)
  *
  * @param[in] *buf        pointer to buffer (to calculate UBX CRC)
  * @param[in] len         length of input buffer
- * @param[out]            returns CRC of buffer
+ * @return                CRC
  */
-uint16_t ubx_calcCRC(uint8_t *buf, uint16_t len)
+static uint16_t ubxCalcCRC(uint8_t *buf, uint16_t len)
 {
     uint8_t CK_A = 0;
     uint8_t CK_B = 0;
@@ -118,7 +161,7 @@ uint16_t ubx_calcCRC(uint8_t *buf, uint16_t len)
     uint16_t crc;
 
     /* Calculate CRC */
-    for(i = 0; i < len; i++)
+    for (i = 0; i < len; i++)
     {
         CK_A += buf[i];
         CK_B += CK_A;
@@ -133,196 +176,278 @@ uint16_t ubx_calcCRC(uint8_t *buf, uint16_t len)
 /**
  * @brief   Calculate UBX CRC in uint8_t array
  *
- * @param[in] *GNSS_t     pointer to GNSS structure (to update GNSS parameters)
+ * @param[in] *UbxState     pointer to GNSS structure (to update GNSS parameters)
  * @param[in] *buf        pointer to buffer (to parse UBX packet)
  * @param[in] len         length of input buffer
- * @param[out]            returns size of parsed UBX message (negative = UBX parsing error)
+ * @return                size of parsed UBX message (negative = UBX parsing error)
  */
-int16_t ubx_parse(t_GNSS *GNSS_t,
-                  uint8_t *buf,
-                  uint16_t len)
+static int16_t ubxParse(UbxState *ubx, uint8_t *Buf, uint16_t Len)
 {
-    static uint16_t data_len;    /* total lenght of data */
-    static uint16_t msgid;     /* message ID */
+    uint16_t data_len; /* Total lenght of data */
+    uint16_t msg_id; /* Message ID */
+    uint16_t CRCp; /* CRC in packet */
+    uint16_t CRCc; /* CRC calculated */
 
     /* The packet at least contains a head long enough for an empty message */
-    if (len < UBX_PREFIX_LEN)
-        return -1;    /* Parse ERROR: not sufficient data */
+    if (Len < Ubx_PrefixLen)
+        return -1; /* Parse ERROR: not sufficient data */
 
     /* Extract message id and length */
-    msgid = (buf[2] << 8) | buf[3];
-    data_len = (size_t) getles16(buf, 4);
+    msg_id = (Buf[2] << 8) | Buf[3];
+    data_len = (size_t) getles16(Buf, 4);
 
-    if (len < data_len + 8)
-    return -1;    /* Parse ERROR: not sufficient data */
+    if (Len < data_len + 8)
+        return -1; /* Parse ERROR: not sufficient data */
 
-    /* TODO: Get checksum of packet */
-    /* tCRC = (buf[data_len + 6] << 8) | buf[data_len + 7]; */
+    CRCp = (Buf[data_len + 6] << 8) | Buf[data_len + 7]; /* Get  CRC from packet */
+    CRCc = ubxCalcCRC(&Buf[2], data_len + 4); /* Calc CRC for packet body */
+
+    if (CRCp != CRCc)
+        return -2; /* CRC ERROR: calculated CRC not equal with packet CRC */
 
     /* Decode packet & update GNSS data */
-    switch (msgid) {
-        case UBX_NAV_DOP: /* UBX_NAV_DOP */
-            ubx_msg_nav_dop(GNSS_t, &buf[6], data_len);     /* NAV DOP EXECUTION */
-            break;
-        case UBX_NAV_SOL: /* UBX NAV SOL */
-            ubx_msg_nav_sol(GNSS_t, &buf[6], data_len);     /* NAV SOL EXECUTION */
-            break;
-        case UBX_NAV_POSLLH: /* UBX NAV POSLLH */
-            ubx_msg_nav_posllh(GNSS_t, &buf[6], data_len);  /* NAV POSLLH EXECUTION */
-            break;
-        case UBX_NAV_PVT: /* UBX NAV PVT */
-            ubx_msg_nav_pvt(GNSS_t, &buf[6], data_len);     /* NAV PVT EXECUTION */
-            break;
-        case UBX_NAV_SVINFO:
-            ubx_msg_nav_svinfo(GNSS_t, &buf[6], data_len);  /* NAV SVINFO EXECUTION */
-            break;
-        default:
-            break;
+    switch (msg_id)
+    {
+    case UbxNavDop: /* UBX_NAV_DOP */
+    {
+        if (ubxMsgNavDop(ubx, &Buf[6], data_len) != 0)
+        { /* NAV DOP parsing SUCCESS */
+            ubx->parse.packstat |= UbxNavDopUp;
+        }
+        else
+        {
+            /* Error in parsing NAV DOP output message */
+        }
+        break;
     }
-
+    case UbxNavSol: /* UBX NAV SOL */
+    {
+        if (ubxNsgNavSol(ubx, &Buf[6], data_len) != 0)
+        { /* NAV SOL parsing SUCCESS */
+            ubx->parse.packstat |= UbxNavSolUp;
+        }
+        else
+        {
+            /* Error in parsing NAV SOL output message */
+        }
+        break;
+    }
+    case UbxNavPosllh: /* UBX NAV POSLLH */
+    {
+        if (ubxMsgNavPosllh(ubx, &Buf[6], data_len) != 0)
+        { /* NAV POSLLH parsing SUCCESS */
+            ubx->parse.packstat |= UbxNavPosllhUp;
+        }
+        else
+        {
+            /* Error in parsing NAV POSLLH output message */
+        }
+        break;
+    }
+    case UbxNavPvt: /* UBX NAV PVT */
+    {
+        if (ubxMsgNavPvt(ubx, &Buf[6], data_len) != 0)
+        { /* NAV PVT parsing SUCCESS */
+            ubx->parse.packstat |= UbxNavPvtUp;
+        }
+        else
+        {
+            /* Error in parsing NAV PVT output message */
+        }
+        break;
+    }
+    case UbxNavSvinfo: /* UBX NAV SVINFO */
+    {
+        if (ubxMsgNavSvinfo(ubx, &Buf[6], data_len) != 0)
+        { /* NAV SVINFO parsing SUCCESS */
+            ubx->parse.packstat |= UbxNavSvinfoUp;
+        }
+        else
+        {
+            /* Error in parsing NAV PVT output message */
+        }
+        break;
+    }
+    default:
+        break;
+    }
     return (data_len + 8); /* Parsing of packet is complete */
-
 }
 
 /**
  * @brief    Set required msg types to recieve (UBX MODE)
  */
-void ubx_setMSGtypes(t_GNSS *GNSS) /* DUE TO u-Center UBX example */
+static void ubxSetMSGtypes(void) /* u-Center UBX example */
 {
-    uint8_t  msg[8];
+    uint8_t msg[8];
 
     /* SETUP BINARY MODE OUTPUT RATES */
 
     /* PRE HEADER */
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x04;        /* msg id  = UBX_NAV_DOP */
+    msg[0] = 0x01; /* class */
+    msg[1] = 0x04; /* msg id  = UBX_NAV_DOP */
 
-    msg[2] = 0x01;        /* rate I2C ? */
-    msg[3] = 0x01;        /* rate UART1 */
-    msg[4] = 0x01;        /* rate UART2 */
-    msg[5] = 0x01;        /* rate USB */
-    msg[6] = 0x01;        /* rate SPI */
-    msg[7] = 0x00;        /* ??? */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 8);
+    msg[2] = 0x01; /* rate I2C ? */
+    msg[3] = 0x01; /* rate UART1 */
+    msg[4] = 0x01; /* rate UART2 */
+    msg[5] = 0x01; /* rate USB */
+    msg[6] = 0x01; /* rate SPI */
+    msg[7] = 0x00; /* ??? */
+    ubxWrite(0x06, 0x01, msg, 8);
 
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x06;        /* msg id  = NAV_SOL */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 8);
+    msg[0] = 0x01; /* class */
+    msg[1] = 0x06; /* msg id  = NAV_SOL */
+    ubxWrite(0x06, 0x01, msg, 8);
 
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x02;        /* msg id  = UBX_NAV_POSLLH */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 8);
+    msg[0] = 0x01; /* class */
+    msg[1] = 0x02; /* msg id  = UBX_NAV_POSLLH */
+    ubxWrite(0x06, 0x01, msg, 8);
 
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x07;        /* msg id  = UBX_NAV_PVT */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 8);
+    msg[0] = 0x01; /* class */
+    msg[1] = 0x07; /* msg id  = UBX_NAV_PVT */
+    ubxWrite(0x06, 0x01, msg, 8);
 
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x30;        /* msg id  = NAV-SVINFO */
+    msg[0] = 0x01; /* class */
+    msg[1] = 0x30; /* msg id  = NAV-SVINFO */
 
-    msg[2] = 0x0a;        /* rate I2C ? */
-    msg[3] = 0x0a;        /* rate UART1 */
-    msg[4] = 0x0a;        /* rate UART2 */
-    msg[5] = 0x0a;        /* rate USB */
-    msg[6] = 0x0a;        /* rate SPI */
+    msg[2] = 0x0a; /* rate I2C ? */
+    msg[3] = 0x0a; /* rate UART1 */
+    msg[4] = 0x0a; /* rate UART2 */
+    msg[5] = 0x0a; /* rate USB */
+    msg[6] = 0x0a; /* rate SPI */
 
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 8);
+    ubxWrite(0x06, 0x01, msg, 8);
 }
-
 
 /**
  * @brief   Init UBX mode with known baudrate, parity bits setup, stopbits and mode
  *
  * @param[in] baudrate    uart port baudrate setup
- * @param[in] parity      parity bits setup
- * @param[in] stopbits    stopbits setup
- * @param[in] mode        mode setup
  */
-void ubx_init(t_GNSS *GNSS,
-                uint32_t baudrate,
-                uint8_t parity,
-                uint8_t stopbits,
-                uint32_t mode)
+void ubxInit(UbxState *ubx, uint32_t baudrate)
 {
-    uint32_t usart_mode = 0;
-    uint8_t  buf[UBX_CFG_LEN];
-    uint8_t  msg[3];
+    ubxSetMSGtypes();
 
-    CFG_NAV5 nav5_cfg; /* NAV5_cfg init structure */
-    CFG_RATE rate_cfg; /* RATE_cfg init structure */
+    /* GNSS FIX */
+    ubx->fix.fix = GNSSfix_NoFix;
+    ubx->fix.latitude = NAN;
+    ubx->fix.longitude = NAN;
+    ubx->fix.altitude = NAN;
+
+    for (uint8_t i = 0; i < 3; i++)
+    {
+        ubx->fix.ned_speed[i] = NAN; /* SET TO Not-a-number */
+    }
+
+    for (uint8_t i = 0; i < 9; i++)
+    {
+        ubx->fix.pos_cov[i] = 0.0;
+        ubx->fix.speed_cov[i] = 0.0;
+    }
+
+    ubx->fix.utc_usec = 0;
+    ubx->fix.time_err_var = INFINITY;
+    ubx->fix.sats_used = 0;
+
+    /* GNSS DOP */
+    ubx->dop.gdop = INFINITY;
+    ubx->dop.pdop = INFINITY;
+    ubx->dop.hdop = INFINITY;
+    ubx->dop.vdop = INFINITY;
+    ubx->dop.tdop = INFINITY;
+
+    /* GNSS SATS */
+    memset(&ubx->sats, sizeof(ubx->sats), 0x00);
+
+    /* === COMM INTERFACE SETUP === */
+    /* Messages and transmitting modes */
 
     /* SETUP UBX GFG-RATE */
-    /* TODO: init struct via pointers */
-    rate_cfg.measRate = 200; /* 200 ms for measurement @5 Hz measurement rate */
-    rate_cfg.navRate = 1;    /* default navigation rate (cannot be changed) */
-    rate_cfg.timeRef = 0;    /* UTC reference time */
+    CfgRate RateCfg;
+    RateCfg.meas_rate = 200; /* 200 ms for measurement @5 Hz measurement rate */
+    RateCfg.nav_rate = 1; /* default navigation rate (cannot be changed) */
+    RateCfg.time_ref = 0; /* UTC reference time */
 
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x08, (uint8_t*)&rate_cfg, sizeof(rate_cfg));
+    ubxWrite(0x06, 0x08, (uint8_t*)&RateCfg, sizeof(RateCfg));
 
-    /* SETUP UBX GFG-NAV5 */        /* TODO: init struct via pointers */
-    nav5_cfg.dynModel = 0x07;
-    nav5_cfg.mask = NAV5_dyn;
+    /* SETUP UBX GFG-NAV5 */
+    CfgNav5 Nav5Cfg;
+    Nav5Cfg.dyn_model = 0x07;
+    Nav5Cfg.mask = NAV5_dyn;
 
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x24, (uint8_t*)&nav5_cfg, sizeof(nav5_cfg));
+    ubxWrite(0x06, 0x24, (uint8_t*)&Nav5Cfg, sizeof(Nav5Cfg));
 
     /* SETUP BINARY MODE OUTPUT RATES */
-
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x04;        /* msg id  = UBX_NAV_DOP */
-    msg[2] = 0x01;        /* rate */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 3);
-
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x06;        /* msg id  = NAV_SOL */
-    msg[2] = 0x01;        /* rate */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 3);
-
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x02;        /* msg id  = UBX_NAV_POSLLH */
-    msg[2] = 0x01;        /* rate */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 3);
-
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x07;        /* msg id  = UBX_NAV_PVT */
-    msg[2] = 0x01;        /* rate */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 3);
-
-    msg[0] = 0x01;        /* class */
-    msg[1] = 0x30;        /* msg id  = NAV-SVINFO */
-    msg[2] = 0x0a;        /* rate */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x01, msg, 3);
+    /* ubxSetMSGtypes(); */
 
     /* SETUP UBX CONFIG */
+    CfgPrt PrtCfg;
+    memset(&PrtCfg, sizeof(PrtCfg), 0);
 
-    /* Set USART as main protocol */
-    buf[0] = USART1_ID;
+    PrtCfg.portid = Ubx_Usart1_id;
+    PrtCfg.mode = 0x000008D0; /* 8bit, 1stop, no parity check */
+    PrtCfg.baudrate = baudrate;
+    PrtCfg.inprotomask = Ubx_PrMask_NMEA | Ubx_PrMask_UBX | Ubx_PrMask_RTCM;
+    PrtCfg.outprotomask = Ubx_PrMask_UBX;
+    PrtCfg.flags = 0;
+    PrtCfg.resv5 = 0;
 
-    /* Set baudrate to config buffer */
-    putle32(buf, 8, baudrate);
+    ubxWrite(0x06, 0x00, (uint8_t*)&PrtCfg, sizeof(PrtCfg));
+}
 
-    /* Mode word setup */
-    usart_mode |= (1<<4);          /* reserved1 Antaris 4 compatibility bit */
-    usart_mode |= (3<<6);          /* set char_Len to 8 bits */
-    usart_mode |= (parity << 9);   /* setup parity bits */
-    usart_mode |= (stopbits << 9); /* setup stop bits */
+void ubxPoll(UbxState *ubx)
+{
+    assert(ubx != NULL);
+    assert(ubx->parse.inbuf_size >= 0 && ubx->parse.inbuf_size <= UbxInBufSize);
 
-    /* Setup UART mode */
-    if(mode == 0){ /* If external mode config isn't set */
-        putle32(buf, 4, usart_mode);
+    const int16_t max_sz = UbxInBufSize - ubx->parse.inbuf_size;
+    const int16_t sz = sdReadTimeout(&SD2, ubx->parse.inbuf + ubx->parse.inbuf_size, max_sz, MS2ST(2));
+    assert(sz <= max_sz);
+    if (sz <= 0)
+    {
+        return;
     }
-    else{ /* If external mode config is set */
-        putle32(buf, 4, mode);
+    ubx->parse.inbuf_size += sz;
+    assert(ubx->parse.inbuf_size >= 0 && ubx->parse.inbuf_size <= UbxInBufSize);
+
+    while (1)
+    {
+        // Find the first header and discard all preceding data
+        {
+            const int16_t header_index = ubxFindheader(ubx->parse.inbuf, ubx->parse.inbuf_size, 0);
+            if (header_index < 0)
+            {
+                ubx->parse.inbuf_size = 0;
+                break;
+            }
+            assert(header_index < ubx->parse.inbuf_size);
+            memmove(ubx->parse.inbuf, ubx->parse.inbuf + header_index, ubx->parse.inbuf_size - header_index);
+            ubx->parse.inbuf_size -= header_index;
+        }
+
+        // Process the message then discard its data
+        {
+            int16_t num_discard = ubxParse(ubx, ubx->parse.inbuf, ubx->parse.inbuf_size);
+            if (num_discard < 0)
+            {
+                if (ubx->parse.inbuf_size == UbxInBufSize)
+                {
+                    /*
+                     * Failed to parse AND buffer is full --> we stuck, buffer contains invalid data.
+                     * Discard the header to parse the rest.
+                     */
+                    num_discard = 1;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            assert(num_discard <= ubx->parse.inbuf_size);
+            memmove(ubx->parse.inbuf, ubx->parse.inbuf + num_discard, ubx->parse.inbuf_size - num_discard);
+            ubx->parse.inbuf_size -= num_discard;
+        }
     }
-
-    /* Setup inProtoMask (set all input protocols as active) */
-    buf[12] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK | RTCM_PROTOCOL_MASK;
-
-    /* Setup outProtoMask (set only UBX as active output protocol) */
-    buf[14] = UBX_PROTOCOL_MASK;
-
-    /* Send setup CMD */
-    ubx_write(&GNSS->t_PARSE.ubx_out_buf[0], 0x06, 0x00, buf, 20);
-
 }
 
 /**
@@ -331,23 +456,20 @@ void ubx_init(t_GNSS *GNSS,
  * @param[in] t_GNSS      GNSS generic struct
  * @param[in] buf*        pointer to buffer
  * @param[in] data_len    data len of buffer
- * @param[out] status     (status == 0 => ERROR; status == 1 => OK)
+ * @return    status      (status == 0 => ERROR; status == 1 => OK)
  */
-uint8_t ubx_msg_nav_dop(t_GNSS *GNSS,
-                        uint8_t *buf,
-                        size_t data_len)
+static uint8_t ubxMsgNavDop(UbxState *ubx, uint8_t *buf, size_t len)
 {
-    if (data_len != 18)
-            return 0; /* Error */
+    if (len != 18)
+        return 0; /* Error */
 
-        GNSS->t_DOP.gdop = (double)(getleu16(buf, 4) / 100.0);
-        GNSS->t_DOP.pdop = (double)(getleu16(buf, 6) / 100.0);
-        GNSS->t_DOP.tdop = (double)(getleu16(buf, 8) / 100.0);
-        GNSS->t_DOP.vdop = (double)(getleu16(buf, 10) / 100.0);
-        GNSS->t_DOP.hdop = (double)(getleu16(buf, 12) / 100.0);
+    ubx->dop.gdop = (float)(getleu16(buf, 4) / 100.0);
+    ubx->dop.pdop = (float)(getleu16(buf, 6) / 100.0);
+    ubx->dop.tdop = (float)(getleu16(buf, 8) / 100.0);
+    ubx->dop.vdop = (float)(getleu16(buf, 10) / 100.0);
+    ubx->dop.hdop = (float)(getleu16(buf, 12) / 100.0);
 
-        /* TODO: SETUP BIT FLAGS FOR NEW DATA */
-        return 1; /* NAV_DOP parsed OK */
+    return 1; /* NAV_DOP parsed OK */
 }
 
 /**
@@ -356,39 +478,41 @@ uint8_t ubx_msg_nav_dop(t_GNSS *GNSS,
  * @param[in] t_GNSS      GNSS generic struct
  * @param[in] buf*        pointer to buffer
  * @param[in] data_len    data len of buffer
- * @param[out] status     (status == 0 => ERROR; status == 1 => OK)
+ * @return    status      (status == 0 => ERROR; status == 1 => OK)
  */
-uint8_t ubx_msg_nav_sol(t_GNSS *GNSS,
-                        uint8_t *buf,
-                            size_t data_len)
+static uint8_t ubxNsgNavSol(UbxState *ubx, uint8_t *buf, size_t len)
 {
-    uint8_t navmode;
-    uint16_t gw;
-    uint32_t tow;
+    uint8_t navmode; /* Navigation mode: none, time only, 2D, 3D */
+    uint16_t gw; /* GNSS current week from beginning of year [w] */
+    uint32_t tow; /* GNSS current time of week [ms] */
+    int32_t ftow; /* GNSS current fractional time of week [ns] */
 
-    if (data_len != 52)
+    if (len != 52)
         return 0;
 
-        /* Get FIX information */
-        navmode = (uint8_t)getub(buf, 10); /* get NAV FIX info data */
-        navmode &= 0x3;    /* release only 2 LSBs */
+    /* Get FIX information */
+    navmode = (uint8_t) getub(buf, 10); /* get NAV FIX info data */
+    navmode &= 0x3; /* release only 2 LSBs */
 
-        GNSS->t_FIX.fix = navmode;
+    ubx->fix.fix = (UbxFixMode) navmode;
 
-        /* If TIME data is aviable */
-        if(navmode != UBX_MODE_NOFIX)
-        {
-            tow = (uint32_t)getleu32(buf, 0);
-            gw =  (uint16_t)getles16(buf, 8);
+    /* If TIME data is aviable */
+    if (navmode != UbxMode_NOFIX)
+    {
+        tow = (uint32_t) getleu32(buf, 0); /* get Time-of-week */
+        ftow = (int32_t) getles32(buf, 4); /* get Fractonal part of week */
+        gw = (uint16_t) getleu16(buf, 8); /* get Number of weeks from navigational Epoch */
 
-                GNSS->t_FIX.UTCtime = gnss_gpstime_resolve(gw, tow);
-        }
+        ubx->fix.utc_usec = computeUtcUSec(gw, tow, ftow);
+    }
+
+    /* Update GNSS information due to FIX status */
+    fixStatDataUpdate(ubx, navmode);
 
     /* No of used satellites in solution */
-    GNSS->t_FIX.satqty = (uint8_t)getub(buf, 47);
+    ubx->fix.sats_used = (uint8_t) getub(buf, 47);
 
-        /* TODO: SETUP BIT FLAGS FOR NEW DATA */
-        return 1; /* NAV_DOP parsed OK */
+    return 1; /* NAV_DOP parsed OK */
 }
 
 /**
@@ -397,41 +521,36 @@ uint8_t ubx_msg_nav_sol(t_GNSS *GNSS,
  * @param[in] t_GNSS      GNSS generic struct
  * @param[in] buf*        pointer to buffer
  * @param[in] data_len    data len of buffer
- * @param[out] status     (status == 0 => ERROR; status == 1 => OK)
+ * @return    status      (status == 0 => ERROR; status == 1 => OK)
  */
-uint8_t ubx_msg_nav_posllh(t_GNSS *GNSS,
-                           uint8_t *buf,
-                           size_t data_len)
+static uint8_t ubxMsgNavPosllh(UbxState *ubx, uint8_t *buf, size_t len)
 {
     int32_t longitude;
     int32_t latitude;
-    int32_t height;
-    float hAcc;
-    float vAcc;
+    int32_t altitude;
+    float h_acc;
+    float v_acc;
 
-    if (data_len != 28) /* Corrupted message size */
+    if (len != 28) /* Corrupted message size */
         return 0;
 
-        /* Get Latitude and Longitude information */
+    /* Get Latitude and Longitude information */
     longitude = getles32(buf, 4);
     latitude = getles32(buf, 8);
-    height = getles32(buf, 12);
+    altitude = getles32(buf, 12);
 
-    /* TODO: check for NAN */
-    GNSS->t_FIX.longitude = ((double)longitude) / 10000000;
-    GNSS->t_FIX.latitude = ((double)latitude) / 10000000;
-    GNSS->t_FIX.height = ((float)height) / 1000;
+    ubx->fix.longitude = ((double)longitude) / 1e7;
+    ubx->fix.latitude = ((double)latitude)   / 1e7;
+    ubx->fix.altitude = ((float)altitude) / 1e3F;
 
-    /* Get Error covariation matrix */
-    hAcc = ((float)getleu32(buf, 20)) / 1000.0f;
-    vAcc = ((float)getleu32(buf, 24)) / 1000.0f;
+    /* Get Error covariance matrix */
+    h_acc = ((float)getleu32(buf, 20)) / 1e3F;
+    v_acc = ((float)getleu32(buf, 24)) / 1e3F;
 
-    /* TODO: check for INF */
-    GNSS->t_FIX.posCM[0] = hAcc * hAcc;
-    GNSS->t_FIX.posCM[4] = GNSS->t_FIX.posCM[0];
-    GNSS->t_FIX.posCM[8] = vAcc * vAcc;
+    ubx->fix.pos_cov[0] = h_acc * h_acc;
+    ubx->fix.pos_cov[4] = h_acc * h_acc;
+    ubx->fix.pos_cov[8] = v_acc * v_acc;
 
-    /* TODO: SETUP BIT FLAGS FOR NEW DATA */
     return 1; /* NAV_DOP parsed OK */
 }
 
@@ -441,39 +560,34 @@ uint8_t ubx_msg_nav_posllh(t_GNSS *GNSS,
  * @param[in] t_GNSS      GNSS generic struct
  * @param[in] buf*        pointer to buffer
  * @param[in] data_len    data len of buffer
- * @param[out] status     (status == 0 => ERROR; status == 1 => OK)
+ * @return    status      (status == 0 => ERROR; status == 1 => OK)
  */
-uint8_t ubx_msg_nav_pvt(t_GNSS *GNSS,
-                        uint8_t *buf,
-                        size_t data_len)
+static uint8_t ubxMsgNavPvt(UbxState *ubx, uint8_t *buf, size_t len)
 {
-    float sAcc;
-    float tAcc;
+    float s_acc;
+    float t_acc;
 
-    if (data_len != 84) /* Corrupted message size */
+    if (len != 84) /* Corrupted message size */
         return 0;
 
     /* Get time accuracy estimation */
-    tAcc = ((float)getleu32(buf, 12)) / 1000;
+    t_acc = ((float) getleu32(buf, 12)) / 1000;
 
-    /* TODO: check for INF */
-    GNSS->t_FIX.terrdisp = tAcc * tAcc;
+    ubx->fix.time_err_var = t_acc * t_acc;
 
     /* Speed in NORTH-EAST-DOWN coordinate frame */
-    GNSS->t_FIX.NEDspeed[0] = ((float)getles32(buf, 48)) / 1000;
-    GNSS->t_FIX.NEDspeed[1] = ((float)getles32(buf, 52)) / 1000;
-    GNSS->t_FIX.NEDspeed[2] = ((float)getles32(buf, 56)) / 1000;
+    ubx->fix.ned_speed[0] = ((float)getles32(buf, 48)) / 1000;
+    ubx->fix.ned_speed[1] = ((float)getles32(buf, 52)) / 1000;
+    ubx->fix.ned_speed[2] = ((float)getles32(buf, 56)) / 1000;
 
     /* Get estimation of speed accuracy */
-    sAcc = ((float)getleu32(buf, 68)) / 1000;
+    s_acc = ((float) getleu32(buf, 68)) / 1000;
 
-    /* Set speed covatioation matrix */
-    /* TODO: check for INF */
-    GNSS->t_FIX.speedCM[0] = sAcc * sAcc;
-    GNSS->t_FIX.speedCM[4] = GNSS->t_FIX.speedCM[0];
-    GNSS->t_FIX.speedCM[8] = GNSS->t_FIX.speedCM[0];
+    /* Set speed covariance matrix */
+    ubx->fix.speed_cov[0] = s_acc * s_acc;
+    ubx->fix.speed_cov[4] = s_acc * s_acc;
+    ubx->fix.speed_cov[8] = s_acc * s_acc;
 
-    /* TODO: SETUP BIT FLAGS FOR NEW DATA */
     return 1; /* NAV_DOP parsed OK */
 }
 
@@ -483,55 +597,157 @@ uint8_t ubx_msg_nav_pvt(t_GNSS *GNSS,
  * @param[in] t_GNSS      GNSS generic struct
  * @param[in] buf*        pointer to buffer
  * @param[in] data_len    data len of buffer
- * @param[out] status     (status == 0 => ERROR; status == 1 => OK)
+ * @return    status      (status == 0 => ERROR; status == 1 => OK)
  */
-uint8_t ubx_msg_nav_svinfo(t_GNSS *GNSS,
-                           uint8_t *buf,
-                           size_t data_len)
+static uint8_t ubxMsgNavSvinfo(UbxState *ubx, uint8_t *buf, size_t len)
 {
-    (void)data_len;
-    uint8_t numCh;        /* Number of channels */
-    uint8_t curCh;                /* Current channel */
-    uint8_t curMask;            /* Mask of current channel */
-    uint8_t i;            /* Counter  */
+    uint8_t num_ch; /* Number of channels */
+    uint8_t cur_ch; /* Current channel */
+    uint8_t cur_mask; /* Mask of current channel */
+    uint8_t i; /* Counter  */
 
-    numCh = getub(buf, 4);
+    (void)len;
+
+    num_ch = getub(buf, 4);
 
     /* Clear old information about SVs */
-    memset(&GNSS->t_SATS, 0x00, sizeof(t_GNSSsats));
+    memset(&ubx->sats, 0x00, sizeof(UbxSatsInfo));
+    ubx->fix.sats_used = 0;
 
-    /* TODO: input no check (for large no of SVs */
-    for(i = 0; i < numCh; i++) /* get aviability */
+    /* TODO: save information about actial SVs only */
+    for (i = 0; i < num_ch; i++) /* get aviability */
     {
         /* Get SV numbers and status flag */
-        curCh = getub(buf, 8 + 12*i);
-        curMask = getub(buf, 10 + 12*i);
+        cur_ch = getub(buf, 8 + 12*i);
+        cur_mask = getub(buf, 10 + 12*i);
 
-        if(curCh < NO_OF_GPS_CHANS)
+        if (cur_ch < NoOfGNSSch)
         {
             /* LSB => aviability of SV */
-            GNSS->t_SATS.sat[curCh].satStMask = curMask;
+            ubx->sats.sat[cur_ch].sat_stmask = cur_mask;
+            if (cur_mask & UbxSVM_SvUsed)
+            {
+                ubx->fix.sats_used++; /* Information is used in navitagion solution */
+            }
         }
     }
 
-    /* TODO: SETUP BIT FLAGS FOR NEW DATA */
     return 1; /* NAV_DOP parsed OK */
+}
+
+/**
+ * @brief   Update data in GNSS structure due to information about fix status
+ *
+ * @param[in] t_GNSS      GNSS generic struct
+ * @param[in] fixStatus   Fix status information (noFix,
+ */
+static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus)
+{
+    /* Reset 3D information */
+    if ((fixstatus & 0x03) < UbxMode_3D)
+    {
+        ubx->fix.altitude = NAN;     /* altitude is unknown */
+        ubx->fix.ned_speed[2] = NAN; /* climb rate is unknown */
+    }
+
+    /* Reset 2D information */
+    if ((fixstatus & 0x03) < UbxMode_2D)
+    {
+        ubx->fix.latitude = NAN;
+        ubx->fix.longitude = NAN;
+        ubx->fix.ned_speed[0] = NAN;
+        ubx->fix.ned_speed[1] = NAN;
+    }
+
+    /* Reset Time information */
+    if ((fixstatus & 0x03) < UbxMode_DR)
+    {
+        ubx->fix.utc_usec = 0;
+    }
 }
 
 /**
  * @brief   Calculate time (coupled with UNIX EPOCH)
  *
- * @param[in] week           weeks number [weeks]
- * @param[in] tow          time of week [s]
- * @param[out]             timestamp (UNIX EPOCH)
+ * @param[in] week         weeks number [weeks]
+ * @param[in] tow          time of week [ms]
+ * @param[in] ftow         fractional time of week [ns]
+ * @return                 UTC timestamp in microseconds
  */
-uint64_t gnss_gpstime_resolve(uint16_t week, uint32_t tow)
+static uint64_t computeUtcUSec(uint16_t week, uint32_t tow, int32_t ftow)
 {
-    uint64_t timestamp;
-
-    //timestamp as EPOCH + WEEK * SECS_PER_WEEK + TIME_OF_WEEK
-    timestamp = (uint64_t)GPS_EPOCH + (week * SECS_PER_WEEK) + tow;
+    uint64_t timestamp = UnixTimeEpoch * 1000000ULL;
+    timestamp += (week * SecsPerWeek * 1000000ULL) + (tow * 1000) + (ftow / 1000);
     return timestamp;
 }
 
-/** @} */
+/**
+ * @brief   Get informaton about GNSS information structures
+ *
+ * @param[in] t_GNSS       GNSS generic struct
+ * @param[in] st_bf        structure bitfield
+ * @return                 isReady ([0] = isNotReady; [1] = isReady)
+ */
+bool ubxGetStReadyStat(UbxState *ubx, uint16_t st_bf)
+{
+    uint16_t mask = 0;
+
+    switch (st_bf)
+    {
+    case FixSt:
+    {
+        mask = UbxNavSolUp | UbxNavPosllhUp | UbxNavPvtUp;
+        break;
+    }
+    case DopSt:
+    {
+        mask = UbxNavDopUp;
+        break;
+    }
+    case SatSt:
+    {
+        mask = UbxNavSvinfoUp;
+        break;
+    }
+    default:
+    {
+        assert(0);
+        break;
+    }
+    }
+    return (ubx->parse.packstat & mask) == mask;
+}
+
+/**
+ * @brief   Reset informaton about GNSS information structures
+ *
+ * @param[in] t_GNSS       GNSS generic struct
+ * @param[in] st_bf        structure bitfield
+ * @return                 isReady ([0] = isNotReady; [1] = isReady)
+ */
+void ubxResetStReadyStat(UbxState *ubx, uint16_t st_bf)
+{
+    switch (st_bf)
+    {
+    case FixSt:
+    {
+        ubx->parse.packstat &= ~(UbxNavSolUp | UbxNavPosllhUp | UbxNavPvtUp);
+        break;
+    }
+    case DopSt:
+    {
+        ubx->parse.packstat &= ~(UbxNavDopUp);
+        break;
+    }
+    case SatSt:
+    {
+        ubx->parse.packstat &= ~(UbxNavSvinfoUp);
+        break;
+    }
+    default:
+    {
+        assert(0);
+        break;
+    }
+    }
+}
