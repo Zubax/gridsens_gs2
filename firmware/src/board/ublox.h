@@ -185,7 +185,6 @@ enum
 #define Ubx_PrMask_UBX          0x01  /* UBX protocol mask: UBX */
 #define Ubx_PrMask_NMEA         0x02  /* UBX protocol mask: NMEA */
 #define Ubx_PrMask_RTCM         0x04  /* UBX protocol mask: RTCM */
-#define Ubx_CfgLen              36    /* Maximum congiguration packet lenght for UBX */
 
 typedef struct
 {
@@ -294,9 +293,9 @@ typedef struct
 
 typedef struct
 {
-    uint16_t meas_rate; /* Parameters bitmask */
-    uint16_t nav_rate;  /* Dynamic model */
-    uint16_t time_ref;  /* Position Fixing Mode */
+    uint16_t meas_rate;
+    uint16_t nav_rate;
+    uint16_t time_ref;
 } CfgRate;
 
 typedef struct

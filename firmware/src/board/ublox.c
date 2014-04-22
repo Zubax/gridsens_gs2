@@ -3,7 +3,12 @@
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Alexander Buraga <dtp-avb@yandex.ru>
  *         Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ *
+ * Fucking magic. Ugh.
+ * FIXME rewrite from scratch
  */
+
+#undef __cplusplus
 
 #include "ublox.h"
 #include <assert.h>
@@ -68,7 +73,7 @@ static uint8_t ubxMsgNavSvinfo(UbxState *ubx, uint8_t *buf, size_t len);
  */
 uint16_t ubxWrite(uint8_t msg_class, uint8_t msg_id, uint8_t *msg, uint16_t data_len)
 {
-    uint8_t msgbuf[Ubx_CfgLen];
+    uint8_t msgbuf[256];
     uint8_t CK_A, CK_B;
     uint16_t i;
 
@@ -280,43 +285,41 @@ static int16_t ubxParse(UbxState *ubx, uint8_t *Buf, uint16_t Len)
 static void ubxSetMSGtypes(void) /* u-Center UBX example */
 {
     uint8_t msg[8];
-
-    /* SETUP BINARY MODE OUTPUT RATES */
-
-    /* PRE HEADER */
-    msg[0] = 0x01; /* class */
-    msg[1] = 0x04; /* msg id  = UBX_NAV_DOP */
-
-    msg[2] = 0x01; /* rate I2C ? */
-    msg[3] = 0x01; /* rate UART1 */
-    msg[4] = 0x01; /* rate UART2 */
-    msg[5] = 0x01; /* rate USB */
-    msg[6] = 0x01; /* rate SPI */
-    msg[7] = 0x00; /* ??? */
-    ubxWrite(0x06, 0x01, msg, 8);
-
-    msg[0] = 0x01; /* class */
-    msg[1] = 0x06; /* msg id  = NAV_SOL */
-    ubxWrite(0x06, 0x01, msg, 8);
-
-    msg[0] = 0x01; /* class */
-    msg[1] = 0x02; /* msg id  = UBX_NAV_POSLLH */
-    ubxWrite(0x06, 0x01, msg, 8);
-
-    msg[0] = 0x01; /* class */
-    msg[1] = 0x07; /* msg id  = UBX_NAV_PVT */
-    ubxWrite(0x06, 0x01, msg, 8);
-
-    msg[0] = 0x01; /* class */
-    msg[1] = 0x30; /* msg id  = NAV-SVINFO */
-
-    msg[2] = 0x0a; /* rate I2C ? */
-    msg[3] = 0x0a; /* rate UART1 */
-    msg[4] = 0x0a; /* rate UART2 */
-    msg[5] = 0x0a; /* rate USB */
-    msg[6] = 0x0a; /* rate SPI */
-
-    ubxWrite(0x06, 0x01, msg, 8);
+    /*
+     * UBX_NAV_DOP
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x04;
+    msg[2] = 10;
+    ubxWrite(0x06, 0x01, msg, 3);
+    /*
+     * NAV_SOL
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x06;
+    msg[2] = 1;
+    ubxWrite(0x06, 0x01, msg, 3);
+    /*
+     * UBX_NAV_POSLLH
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x02;
+    msg[2] = 1;
+    ubxWrite(0x06, 0x01, msg, 3);
+    /*
+     * UBX_NAV_PVT
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x07;
+    msg[2] = 1;
+    ubxWrite(0x06, 0x01, msg, 3);
+    /*
+     * NAV-SVINFO
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x30;
+    msg[2] = 10;
+    ubxWrite(0x06, 0x01, msg, 3);
 }
 
 /**
@@ -326,8 +329,6 @@ static void ubxSetMSGtypes(void) /* u-Center UBX example */
  */
 void ubxInit(UbxState *ubx, uint32_t baudrate)
 {
-    ubxSetMSGtypes();
-
     /* GNSS FIX */
     ubx->fix.fix = GNSSfix_NoFix;
     ubx->fix.latitude = NAN;
@@ -357,42 +358,56 @@ void ubxInit(UbxState *ubx, uint32_t baudrate)
     ubx->dop.tdop = INFINITY;
 
     /* GNSS SATS */
-    memset(&ubx->sats, sizeof(ubx->sats), 0x00);
+    memset(&ubx->sats, 0, sizeof(ubx->sats));
 
     /* === COMM INTERFACE SETUP === */
     /* Messages and transmitting modes */
 
-    /* SETUP UBX GFG-RATE */
-    CfgRate RateCfg;
+    /*
+     * CFG-RATE
+     */
+    CfgRate RateCfg __attribute__((aligned(8)));
+    assert(sizeof(RateCfg) == 6);
+    memset(&RateCfg, 0, sizeof(RateCfg));
+
     RateCfg.meas_rate = 200; /* 200 ms for measurement @5 Hz measurement rate */
     RateCfg.nav_rate = 1; /* default navigation rate (cannot be changed) */
-    RateCfg.time_ref = 0; /* UTC reference time */
+    RateCfg.time_ref = 0; /* align to UTC reference time */
 
     ubxWrite(0x06, 0x08, (uint8_t*)&RateCfg, sizeof(RateCfg));
 
-    /* SETUP UBX GFG-NAV5 */
-    CfgNav5 Nav5Cfg;
-    Nav5Cfg.dyn_model = 0x07;
+    /*
+     * GFG-NAV5
+     */
+    CfgNav5 Nav5Cfg __attribute__((aligned(8)));
+    assert(sizeof(Nav5Cfg) == 36);
+    memset(&Nav5Cfg, 0, sizeof(Nav5Cfg));
+
     Nav5Cfg.mask = NAV5_dyn;
+    Nav5Cfg.dyn_model = 7;         // Airborne 2g
 
     ubxWrite(0x06, 0x24, (uint8_t*)&Nav5Cfg, sizeof(Nav5Cfg));
 
-    /* SETUP BINARY MODE OUTPUT RATES */
-    /* ubxSetMSGtypes(); */
-
-    /* SETUP UBX CONFIG */
-    CfgPrt PrtCfg;
-    memset(&PrtCfg, sizeof(PrtCfg), 0);
+    /*
+     * CFG-PRT
+     */
+    CfgPrt PrtCfg __attribute__((aligned(8)));
+    assert(sizeof(PrtCfg) == 20);
+    memset(&PrtCfg, 0, sizeof(PrtCfg));
 
     PrtCfg.portid = Ubx_Usart1_id;
     PrtCfg.mode = 0x000008D0; /* 8bit, 1stop, no parity check */
     PrtCfg.baudrate = baudrate;
-    PrtCfg.inprotomask = Ubx_PrMask_NMEA | Ubx_PrMask_UBX | Ubx_PrMask_RTCM;
+    PrtCfg.inprotomask  = Ubx_PrMask_UBX | Ubx_PrMask_RTCM;
     PrtCfg.outprotomask = Ubx_PrMask_UBX;
-    PrtCfg.flags = 0;
-    PrtCfg.resv5 = 0;
 
     ubxWrite(0x06, 0x00, (uint8_t*)&PrtCfg, sizeof(PrtCfg));
+
+    /*
+     * Configure msg rates
+     */
+    (void)ubxSetMSGtypes;
+    ubxSetMSGtypes();
 }
 
 void ubxPoll(UbxState *ubx)
