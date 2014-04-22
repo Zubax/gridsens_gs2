@@ -22,7 +22,7 @@ namespace
 
 const unsigned PeriodUSec = 100000;
 
-auto sens = ::MS5611_t();
+auto sens = ::Ms5611();
 
 void publish(float pressure_pa, float temperature_degc)
 {
@@ -31,7 +31,7 @@ void publish(float pressure_pa, float temperature_degc)
         return;
     }
 
-    uavcan::equipment::airdata::StaticAirData air_data;
+    static uavcan::equipment::airdata::StaticAirData air_data;
     air_data.timestamp = uavcan_stm32::clock::getUtc();
     air_data.static_pressure = pressure_pa;
     air_data.static_pressure_variance = 10.0;

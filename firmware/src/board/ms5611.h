@@ -43,7 +43,7 @@ typedef enum
 /*
  * Calibration PROM as reported by the device.
  */
-typedef struct prom_s
+typedef struct
 {
     uint16_t resv;                      /* reserved */
     uint16_t c1_pressure_sens;          /* Pressure sensitivity coef. */
@@ -53,39 +53,30 @@ typedef struct prom_s
     uint16_t c5_reference_temp;         /* Reference temperature coef. */
     uint16_t c6_temp_coeff_temp;        /* Temperature coefficient of the temperature */
     uint16_t serial_and_crc;            /* CRC and serial */
-} prom_s;
+} Ms5611Prom;
 
 /*
- * Union representation of prom_s struct as array of uint16_t
+ * Union representation of Ms5611Prom struct as array of uint16_t
  */
-typedef union prom_u
+typedef union
 {
     uint16_t c[8];
-    prom_s s;
-} prom_u;
+    Ms5611Prom s;
+} Ms5611PromUnion;
 
 /*
  * Aux struct for MS5611 control
  */
-typedef struct MS5611_t
+typedef struct
 {
-    prom_u ms5611prom;   /* PROM union for MS5611 */
-} MS5611_t;
-
-/*
- * Temperature and pressure measurement structure
- */
-typedef struct TP_t
-{
-    float p;  /* Atmospheric pressure [Pa] */
-    float t;  /* Temperature [Deg C] */
-} TP_t;
+    Ms5611PromUnion ms5611prom;   /* PROM union for MS5611 */
+} Ms5611;
 
 #pragma pack(pop)
 
-bool ms5611ReadPT(MS5611_t* MS5611, int32_t* pressure, int32_t* temperature);
-bool ms5611Reset(MS5611_t* MS5611);
-bool ms5611GetProm(MS5611_t* MS5611);
+bool ms5611ReadPT(Ms5611* MS5611, int32_t* pressure, int32_t* temperature);
+bool ms5611Reset(Ms5611* MS5611);
+bool ms5611GetProm(Ms5611* MS5611);
 
 #if __cplusplus
 }
