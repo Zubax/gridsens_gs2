@@ -8,8 +8,6 @@
  * FIXME rewrite from scratch
  */
 
-#undef __cplusplus
-
 #include "ublox.h"
 #include <assert.h>
 #include <math.h>
@@ -406,7 +404,6 @@ void ubxInit(UbxState *ubx, uint32_t baudrate)
     /*
      * Configure msg rates
      */
-    (void)ubxSetMSGtypes;
     ubxSetMSGtypes();
 }
 
