@@ -101,7 +101,9 @@ public:
                 continue;
             }
 
+            node::setWarning(node::WarningSource::AirSensor, false);
             tryRun();
+            node::setWarning(node::WarningSource::AirSensor, true);
             lowsyslog("Air sensor is about to restart...\n");
         }
         return msg_t();

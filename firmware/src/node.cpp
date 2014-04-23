@@ -25,6 +25,8 @@ uavcan_stm32::CanInitHelper<> can;
 
 uavcan_stm32::Mutex node_mutex;
 
+uint32_t warning_mask = 0;
+
 void configureNode()
 {
     Node& node = getNode();
@@ -70,17 +72,28 @@ public:
             }
             ::sleep(3);
         }
-        getNode().setStatusOk();
+        assert(getNode().isStarted());
 
         /*
          * Main loop
          */
         lowsyslog("UAVCAN node started\n");
+        auto& node = getNode();
         while (true)
         {
             {
                 Lock locker;
-                const int spin_res = getNode().spin(uavcan::MonotonicDuration::fromUSec(500));
+
+                if (warning_mask == 0)
+                {
+                    node.setStatusOk();
+                }
+                else
+                {
+                    node.setStatusWarning();
+                }
+
+                const int spin_res = node.spin(uavcan::MonotonicDuration::fromUSec(500));
                 if (spin_res < 0)
                 {
                     lowsyslog("UAVCAN spin failure: %i\n", spin_res);
@@ -117,6 +130,19 @@ Node& getNode()
 {
     static Node node(can.driver, uavcan_stm32::SystemClock::instance());
     return node;
+}
+
+void setWarning(WarningSource source, bool active)
+{
+    const uint32_t mask = 1UL << unsigned(source);
+    if (active)
+    {
+        warning_mask |= mask;
+    }
+    else
+    {
+        warning_mask &= ~mask;
+    }
 }
 
 int init()

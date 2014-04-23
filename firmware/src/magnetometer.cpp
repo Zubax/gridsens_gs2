@@ -126,11 +126,17 @@ void transformToNEDFrame(float inout_mag_vector[3])
 
 class MagThread : public chibios_rt::BaseStaticThread<1024>
 {
+    static void setWarning(bool active)
+    {
+        node::setWarning(node::WarningSource::Magnetometer, active);
+    }
+
 public:
     msg_t main() override
     {
         while (!tryInit())
         {
+            setWarning(true);
             lowsyslog("Mag init failed, will retry...\n");
             ::sleep(1);
         }
@@ -147,8 +153,13 @@ public:
             float vector[3] = {0, 0, 0};
             if (tryRead(vector))
             {
+                setWarning(false);
                 transformToNEDFrame(vector);
                 publish(vector, variance);
+            }
+            else
+            {
+                setWarning(true);
             }
 
             chibios_rt::BaseThread::sleepUntil(sleep_until);

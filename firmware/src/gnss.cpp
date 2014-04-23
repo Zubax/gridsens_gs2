@@ -127,21 +127,6 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
     }
 
-    void updateNodeStatus() const
-    {
-        if (node::isStarted())
-        {
-            if (state.fix.sats_used < 6)
-            {
-                node::getNode().setStatusWarning();
-            }
-            else
-            {
-                node::getNode().setStatusOk();
-            }
-        }
-    }
-
     void tryRun() const
     {
         const unsigned ReportTimeoutMSec = 1100;
@@ -173,14 +158,11 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
                 ; // Nothing to do
             }
 
-            updateNodeStatus();
+            node::setWarning(node::WarningSource::Gnss, state.fix.sats_used < 6);
 
             if ((ts - prev_fix_report_at).toMSec() > ReportTimeoutMSec)
             {
-                if (node::isStarted())
-                {
-                    node::getNode().setStatusWarning();
-                }
+                node::setWarning(node::WarningSource::Gnss, true);
                 break;
             }
         }
