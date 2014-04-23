@@ -11,7 +11,6 @@
 #include <uavcan/equipment/gnss/RtcmStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
 #include <uavcan/equipment/gnss/Aux.hpp>
-#include <uavcan/protocol/global_time_sync_master.hpp>
 
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
@@ -23,57 +22,8 @@ namespace gnss
 namespace
 {
 
-const unsigned GlobalTimeSyncPubPeriodMSec = 800;
-
 crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 0.5, 0.1, 1.0);
 
-
-uavcan::GlobalTimeSyncMaster& getTimeSyncMaster()
-{
-    static uavcan::GlobalTimeSyncMaster master(node::getNode());
-    return master;
-}
-
-void handleTimeSync(const uavcan::MonotonicTime& ts_mono, const uavcan::UtcTime& ts_utc, const UbxState& state)
-{
-    static uavcan::MonotonicTime prev_publication_at;
-
-    node::Lock locker;
-
-    auto& slave = node::getTimeSyncSlave();
-
-    // Check whether we actually have time from GPS
-    if (state.fix.fix < GNSSfix_Time || state.fix.utc_usec == 0)
-    {
-        slave.suppress(false);
-        return;
-    }
-
-    bool i_am_master = true;
-    if (slave.isActive())
-    {
-        const auto master_node = slave.getMasterNodeID();
-        assert(master_node.isValid());
-        i_am_master = node::getNode().getNodeID() < master_node;
-    }
-
-    // Don't forget to disable slave adjustments if we're master
-    slave.suppress(i_am_master);
-
-    // Adjust the local clock manually before publication
-    if (i_am_master)
-    {
-        const auto adj = uavcan::UtcTime::fromUSec(state.fix.utc_usec) - ts_utc;
-        uavcan_stm32::clock::adjustUtc(adj);
-    }
-
-    // Publish even if the current node is not master. Slaves will select the appropriate master automatically.
-    if ((ts_mono - prev_publication_at).toMSec() >= GlobalTimeSyncPubPeriodMSec)
-    {
-        prev_publication_at = ts_mono;
-        (void)getTimeSyncMaster().publish();
-    }
-}
 
 void publishFix(const uavcan::UtcTime& ts_utc, const UbxState& state)
 {
@@ -161,6 +111,7 @@ auto* const serial_port = &SD2;
 class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
     unsigned aux_rate_usec;
+
     mutable UbxState state;
 
     void tryInit() const
@@ -183,15 +134,17 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         const unsigned ReportTimeoutMSec = 1100;
         auto prev_fix_report_at = uavcan_stm32::clock::getMonotonic();
         auto prev_aux_report_at = prev_fix_report_at;
+
         while (true)
         {
+            // TODO: Proper ublox packet timestamping. Requires adequate parser.
             const auto ts_mono = uavcan_stm32::clock::getMonotonic();
             const auto ts_utc = uavcan_stm32::clock::getUtc();
             ubxPoll(&state);
 
             if (ubxGetStReadyStat(&state, FixSt))
             {
-                handleTimeSync(ts_mono, ts_utc, state);
+                node::adjustUtcTimeFromLocalSource(uavcan::UtcTime::fromUSec(state.fix.utc_usec) - ts_utc);
                 publishFix(ts_utc, state);
                 prev_fix_report_at = ts_mono;
                 ubxResetStReadyStat(&state, FixSt);
@@ -231,12 +184,6 @@ public:
     msg_t main() override
     {
         aux_rate_usec = 1e6F / param_gnss_aux_rate.get();
-
-        while (getTimeSyncMaster().init() < 0)
-        {
-            lowsyslog("Time sync master init failed, will retry\n");
-            ::sleep(1);
-        }
 
         while (true)
         {

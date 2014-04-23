@@ -10,6 +10,9 @@
 #include <ch.hpp>
 #include <unistd.h>
 
+#include <uavcan/protocol/global_time_sync_master.hpp>
+#include <uavcan/protocol/global_time_sync_slave.hpp>
+
 #include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/sys/sys.h>
 
@@ -18,8 +21,12 @@ namespace node
 namespace
 {
 
-crdr_chibios::config::Param<unsigned> can_bitrate("can_bitrate", 1000000, 20000, 1000000);
-crdr_chibios::config::Param<unsigned> node_id("uavcan_node_id", 42, 1, 120);
+const unsigned TimeSyncPubPeriodMSec = 1000;
+const unsigned IfaceLedUpdatePeriodMSec = 25;
+
+crdr_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
+crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 42, 1, 120);
+crdr_chibios::config::Param<bool> param_time_sync_master_on("time_sync_master_on", true);
 
 uavcan_stm32::CanInitHelper<> can;
 
@@ -33,7 +40,7 @@ void configureNode()
 {
     Node& node = getNode();
 
-    node.setNodeID(node_id.get());
+    node.setNodeID(param_node_id.get());
     node.setName("com.courierdrone.gps");
 
     uavcan::protocol::SoftwareVersion swver;
@@ -46,21 +53,64 @@ void configureNode()
     node.setHardwareVersion(hwver);
 }
 
+uavcan::GlobalTimeSyncMaster& getTimeSyncMaster()
+{
+    static uavcan::GlobalTimeSyncMaster master(getNode());
+    return master;
+}
+
+uavcan::GlobalTimeSyncSlave& getTimeSyncSlave()
+{
+    static uavcan::GlobalTimeSyncSlave ts(getNode());
+    return ts;
+}
+
+void publishTimeSync(const uavcan::TimerEvent&)
+{
+    if (!started)
+    {
+        return;
+    }
+
+    /*
+     * We cannot act as master if UTC is not set. Definitely.
+     */
+    if (uavcan_stm32::clock::getUtc().isZero())
+    {
+        getTimeSyncSlave().suppress(false);
+        return;
+    }
+
+    /*
+     * UTC is set, so we WILL publish anyway.
+     * The question is: are we primary master or not.
+     * If we are, the slave must be suppressed to prevent interference with local UTC time source.
+     * If we are not the primary master (i.e. there's another higher priority master that we must sync with),
+     * slave will not be suppressed. In this case we will effectively relay the same time from the primary master.
+     * TODO: config option to suppress master if the local UTC source is unavailable.
+     */
+    bool suppress_slave = true;
+    if (getTimeSyncSlave().isActive())
+    {
+        const auto master_node = getTimeSyncSlave().getMasterNodeID();
+        assert(master_node.isValid());
+        suppress_slave = getNode().getNodeID() < master_node;
+    }
+    getTimeSyncSlave().suppress(suppress_slave);
+
+    (void)getTimeSyncMaster().publish();
+}
+
 /*
  * UAVCAN spin loop
  */
 class : public chibios_rt::BaseStaticThread<3000>
 {
-    uavcan::MonotonicTime prev_led_update;
-
-public:
-    msg_t main() override
+    void init() const
     {
         configureNode();
 
-        /*
-         * Starting the UAVCAN node - this may take a few seconds
-         */
+        // Starting the UAVCAN node - this may take a few seconds
         while (true)
         {
             {
@@ -76,9 +126,7 @@ public:
         }
         assert(getNode().isStarted());
 
-        /*
-         * Starting the time sync slave
-         */
+        // Starting the time sync slave
         while (true)
         {
             const int res = getTimeSyncSlave().start();
@@ -86,16 +134,41 @@ public:
             {
                 break;
             }
-            lowsyslog("Time sync init failure: %i, will retry\n", res);
+            lowsyslog("Time sync slave init failure: %i, will retry\n", res);
             ::sleep(1);
         }
 
-        /*
-         * Main loop
-         */
+        // Time sync master - if enabled
+        if (param_time_sync_master_on.get())
+        {
+            while (true)
+            {
+                const int res = getTimeSyncMaster().init();
+                if (res >= 0)
+                {
+                    break;
+                }
+                lowsyslog("Time sync master init failure: %i, will retry\n", res);
+                ::sleep(1);
+            }
+
+            static uavcan::Timer tsm_timer(getNode());
+            tsm_timer.setCallback(&publishTimeSync);
+            tsm_timer.startPeriodic(uavcan::MonotonicDuration::fromMSec(TimeSyncPubPeriodMSec));
+        }
+
         started = true;
         lowsyslog("UAVCAN node started\n");
+    }
+
+public:
+    msg_t main() override
+    {
+        init();
+
+        static uavcan::MonotonicTime prev_led_update;
         auto& node = getNode();
+
         while (true)
         {
             {
@@ -112,7 +185,7 @@ public:
 
             // Iface LED update
             const auto ts = uavcan_stm32::clock::getMonotonic();
-            if ((ts - prev_led_update).toMSec() >= 25)
+            if ((ts - prev_led_update).toMSec() >= IfaceLedUpdatePeriodMSec)
             {
                 prev_led_update = ts;
                 for (unsigned i = 0; i < can.driver.getNumIfaces(); i++)
@@ -142,10 +215,13 @@ Node& getNode()
     return node;
 }
 
-uavcan::GlobalTimeSyncSlave& getTimeSyncSlave()
+void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
 {
-    static uavcan::GlobalTimeSyncSlave ts(getNode());
-    return ts;
+    Lock locker;
+    if (getTimeSyncSlave().isSuppressed() || uavcan_stm32::clock::getUtc().isZero())
+    {
+        uavcan_stm32::clock::adjustUtc(adjustment);
+    }
 }
 
 void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status)
@@ -156,7 +232,7 @@ void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode sta
 
 int init()
 {
-    const int can_res = can.init(can_bitrate.get());
+    const int can_res = can.init(param_can_bitrate.get());
     if (can_res < 0)
     {
         return can_res;
