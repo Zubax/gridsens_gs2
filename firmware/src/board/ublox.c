@@ -694,7 +694,10 @@ static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus)
 static uint64_t computeUtcUSec(uint16_t week, uint32_t tow, int32_t ftow)
 {
     uint64_t timestamp = UnixTimeEpoch * 1000000ULL;
-    timestamp += (week * SecsPerWeek * 1000000ULL) + (tow * 1000) + (ftow / 1000);
+    timestamp +=
+        (((uint64_t)week) * SecsPerWeek * 1000000ULL) +
+        (((uint64_t)tow) * 1000ULL) +
+        (((uint64_t)ftow) / 1000ULL);
     return timestamp;
 }
 

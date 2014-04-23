@@ -18,7 +18,7 @@ extern "C" {
 
 #define UbxInBufSize      512        /**< @brief Temp buffer (to hold ubx message tail) size   */
 #define NoOfGNSSch        128        /**< @brief Number of satellites to track   */
-#define UnixTimeEpoch     315964800  /**< @brief Difference (in seconds) between Unix time epoch and Gps time epoch  */
+#define UnixTimeEpoch     315964784  /**< @brief Difference (in seconds) between Unix time epoch and Gps time epoch  */
 
 /*
  *        UBX MACROS AND DATA
