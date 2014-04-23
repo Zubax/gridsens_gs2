@@ -14,12 +14,15 @@
 
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
+#include <crdr_chibios/config/config.hpp>
 #include <unistd.h>
 
 namespace gnss
 {
 namespace
 {
+
+crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 0.5, 0.1, 1.0);
 
 void publishFix(const UbxState& state)
 {
@@ -32,9 +35,9 @@ void publishFix(const UbxState& state)
     msg.timestamp = uavcan_stm32::clock::getUtc();
 
     // Position
-    msg.alt_1e2 = static_cast<uint32_t>(data.altitude  * 1e2);
-    msg.lat_1e7 = static_cast<uint32_t>(data.latitude  * 1e7);
-    msg.lon_1e7 = static_cast<uint32_t>(data.longitude * 1e7);
+    msg.alt_1e2 = static_cast<uint32_t>(data.altitude  * 1e2F);
+    msg.lat_1e7 = static_cast<uint32_t>(data.latitude  * 1e7F);
+    msg.lon_1e7 = static_cast<uint32_t>(data.longitude * 1e7F);
 
     // Velocity
     for (int i = 0; i < 3; i++)
@@ -106,9 +109,10 @@ auto* const serial_port = &SD2;
 
 class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
-    UbxState state;
+    unsigned aux_rate_usec;
+    mutable UbxState state;
 
-    void tryInit()
+    void tryInit() const
     {
         state = UbxState();
 
@@ -123,25 +127,35 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
     }
 
-    void tryRun()
+    void tryRun() const
     {
         const unsigned ReportTimeoutMSec = 1100;
         auto prev_fix_report_at = uavcan_stm32::clock::getMonotonic();
+        auto prev_aux_report_at = prev_fix_report_at;
         while (true)
         {
-            const auto ts = uavcan_stm32::clock::getMonotonic();
-
             ubxPoll(&state);
+            const auto ts = uavcan_stm32::clock::getMonotonic();
 
             if (ubxGetStReadyStat(&state, FixSt))
             {
+                publishFix(state);
                 prev_fix_report_at = ts;
                 ubxResetStReadyStat(&state, FixSt);
-                publishFix(state);
             }
-            else  // Fix and Aux will never be published within the same poll, that's intentional.
+            else if (ubxGetStReadyStat(&state, DopSt))
             {
-                // TODO: Publish AUX at fixed rate 0.5 Hz
+                // Fix and Aux will never be published within the same poll, that's intentional.
+                ubxResetStReadyStat(&state, DopSt);
+                if ((ts - prev_aux_report_at).toUSec() >= (aux_rate_usec - 10000))
+                {
+                    prev_aux_report_at = ts;
+                    publishAux(state);
+                }
+            }
+            else
+            {
+                ; // Nothing to do
             }
 
             // TODO: update node status
@@ -157,6 +171,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 public:
     msg_t main() override
     {
+        aux_rate_usec = 1e6F / param_gnss_aux_rate.get();
         while (true)
         {
             ::sleep(1);

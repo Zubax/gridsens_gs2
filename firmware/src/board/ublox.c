@@ -75,7 +75,7 @@ uint16_t ubxWrite(uint8_t msg_class, uint8_t msg_id, uint8_t *msg, uint16_t data
     uint8_t CK_A, CK_B;
     uint16_t i;
 
-    memset(&msgbuf, sizeof(msgbuf), 0x00);
+    memset(&msgbuf, 0, sizeof(msgbuf));
 
     /*@ -type @*/
     msgbuf[0] = 0xb5;
@@ -206,7 +206,9 @@ static int16_t ubxParse(UbxState *ubx, uint8_t *Buf, uint16_t Len)
     CRCc = ubxCalcCRC(&Buf[2], data_len + 4); /* Calc CRC for packet body */
 
     if (CRCp != CRCc)
+    {
         return -2; /* CRC ERROR: calculated CRC not equal with packet CRC */
+    }
 
     /* Decode packet & update GNSS data */
     switch (msg_id)
@@ -282,13 +284,13 @@ static int16_t ubxParse(UbxState *ubx, uint8_t *Buf, uint16_t Len)
  */
 static void ubxSetMSGtypes(void) /* u-Center UBX example */
 {
-    uint8_t msg[8];
+    uint8_t msg[4];
     /*
      * UBX_NAV_DOP
      */
     msg[0] = 0x01;
     msg[1] = 0x04;
-    msg[2] = 10;
+    msg[2] = 5;
     ubxWrite(0x06, 0x01, msg, 3);
     /*
      * NAV_SOL
@@ -672,7 +674,7 @@ static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus)
     }
 
     /* Reset Time information */
-    if ((fixstatus & 0x03) < UbxMode_DR)
+    if ((fixstatus & 0x03) <= UbxMode_DR)
     {
         ubx->fix.utc_usec = 0;
     }
