@@ -158,12 +158,18 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
                 ; // Nothing to do
             }
 
-            node::setWarning(node::WarningSource::Gnss, state.fix.sats_used < 6);
-
             if ((ts - prev_fix_report_at).toMSec() > ReportTimeoutMSec)
             {
-                node::setWarning(node::WarningSource::Gnss, true);
+                node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
                 break;
+            }
+            else if (state.fix.sats_used < 6)
+            {
+                node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_WARNING);
+            }
+            else
+            {
+                node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_OK);
             }
         }
     }

@@ -7,15 +7,17 @@
 #pragma once
 
 #include <uavcan_stm32/uavcan_stm32.hpp>
+#include <uavcan/helpers/component_status_manager.hpp>
 
 namespace node
 {
 
-enum class WarningSource
+enum class ComponentID
 {
     Gnss,
     AirSensor,
-    Magnetometer
+    Magnetometer,
+    NumComponents_
 };
 
 struct Lock : uavcan_stm32::MutexLocker
@@ -24,12 +26,13 @@ struct Lock : uavcan_stm32::MutexLocker
 };
 
 typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 64> Node;
+typedef uavcan::ComponentStatusManager<unsigned(ComponentID::NumComponents_)> ComponentStatusManager;
 
 bool isStarted();
 
 Node& getNode();
 
-void setWarning(WarningSource source, bool active);
+void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status);
 
 int init();
 

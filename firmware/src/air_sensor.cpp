@@ -101,9 +101,9 @@ public:
                 continue;
             }
 
-            node::setWarning(node::WarningSource::AirSensor, false);
+            node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
             tryRun();
-            node::setWarning(node::WarningSource::AirSensor, true);
+            node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
             lowsyslog("Air sensor is about to restart...\n");
         }
         return msg_t();

@@ -25,7 +25,7 @@ uavcan_stm32::CanInitHelper<> can;
 
 uavcan_stm32::Mutex node_mutex;
 
-uint32_t warning_mask = 0;
+ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIALIZING);
 
 void configureNode()
 {
@@ -84,14 +84,7 @@ public:
             {
                 Lock locker;
 
-                if (warning_mask == 0)
-                {
-                    node.setStatusOk();
-                }
-                else
-                {
-                    node.setStatusWarning();
-                }
+                node.getNodeStatusProvider().setStatusCode(comp_stat_mgr.getWorstStatusCode());
 
                 const int spin_res = node.spin(uavcan::MonotonicDuration::fromUSec(500));
                 if (spin_res < 0)
@@ -132,17 +125,9 @@ Node& getNode()
     return node;
 }
 
-void setWarning(WarningSource source, bool active)
+void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status)
 {
-    const uint32_t mask = 1UL << unsigned(source);
-    if (active)
-    {
-        warning_mask |= mask;
-    }
-    else
-    {
-        warning_mask &= ~mask;
-    }
+    comp_stat_mgr.setComponentStatus(comp, status);
 }
 
 int init()
