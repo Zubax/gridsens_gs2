@@ -35,6 +35,7 @@ uavcan_stm32::Mutex node_mutex;
 ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIALIZING);
 
 bool started = false;
+bool local_utc_updated = false;
 
 void configureNode()
 {
@@ -67,38 +68,46 @@ uavcan::GlobalTimeSyncSlave& getTimeSyncSlave()
 
 void publishTimeSync(const uavcan::TimerEvent&)
 {
-    if (!started)
-    {
-        return;
-    }
-
+    auto& slave = getTimeSyncSlave();
     /*
      * We cannot act as master if UTC is not set. Definitely.
      */
     if (uavcan_stm32::clock::getUtc().isZero())
     {
-        getTimeSyncSlave().suppress(false);
+        slave.suppress(false);
         return;
     }
 
-    /*
-     * UTC is set, so we WILL publish anyway.
-     * The question is: are we primary master or not.
-     * If we are, the slave must be suppressed to prevent interference with local UTC time source.
-     * If we are not the primary master (i.e. there's another higher priority master that we must sync with),
-     * slave will not be suppressed. In this case we will effectively relay the same time from the primary master.
-     * TODO: config option to suppress master if the local UTC source is unavailable.
-     */
-    bool suppress_slave = true;
-    if (getTimeSyncSlave().isActive())
+    if (local_utc_updated)
     {
-        const auto master_node = getTimeSyncSlave().getMasterNodeID();
-        assert(master_node.isValid());
-        suppress_slave = getNode().getNodeID() < master_node;
-    }
-    getTimeSyncSlave().suppress(suppress_slave);
+        local_utc_updated = false;  // Assuming that the local clock will be updated at 1 Hz or more frequently
+        /*
+         * If we are the primary master, the slave must be suppressed to prevent interference with local UTC source.
+         * If we are not the primary master (i.e. there's another higher priority master that we must sync with),
+         * the slave will not be suppressed. In this case we will effectively relay the same time from the primary
+         * master.
+         */
+        bool suppress_slave = true;
+        if (slave.isActive())
+        {
+            suppress_slave = getNode().getNodeID() < slave.getMasterNodeID();
+        }
+        slave.suppress(suppress_slave);
 
-    (void)getTimeSyncMaster().publish();
+        (void)getTimeSyncMaster().publish();
+    }
+    else
+    {
+        /*
+         * Local UTC source is not available.
+         * Will publish only if there is no other masters available.
+         */
+        slave.suppress(false);
+        if (!slave.isActive())
+        {
+            (void)getTimeSyncMaster().publish();
+        }
+    }
 }
 
 /*
@@ -110,7 +119,7 @@ class : public chibios_rt::BaseStaticThread<3000>
     {
         configureNode();
 
-        // Starting the UAVCAN node - this may take a few seconds
+        // Starting the UAVCAN node
         while (true)
         {
             {
@@ -221,6 +230,7 @@ void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
     if (getTimeSyncSlave().isSuppressed() || uavcan_stm32::clock::getUtc().isZero())
     {
         uavcan_stm32::clock::adjustUtc(adjustment);
+        local_utc_updated = true;
     }
 }
 
