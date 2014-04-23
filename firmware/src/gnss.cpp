@@ -129,6 +129,14 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
     }
 
+    void handleTimeSync(const uavcan::UtcTime& ts_utc) const
+    {
+        if (state.fix.fix >= GNSSfix_Time)
+        {
+            node::adjustUtcTimeFromLocalSource(uavcan::UtcTime::fromUSec(state.fix.utc_usec) - ts_utc);
+        }
+    }
+
     void tryRun() const
     {
         const unsigned ReportTimeoutMSec = 1100;
@@ -144,7 +152,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
             if (ubxGetStReadyStat(&state, FixSt))
             {
-                node::adjustUtcTimeFromLocalSource(uavcan::UtcTime::fromUSec(state.fix.utc_usec) - ts_utc);
+                handleTimeSync(ts_utc);
                 publishFix(ts_utc, state);
                 prev_fix_report_at = ts_mono;
                 ubxResetStReadyStat(&state, FixSt);
