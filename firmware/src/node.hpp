@@ -26,7 +26,7 @@ struct Lock : uavcan_stm32::MutexLocker
     Lock();
 };
 
-typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 64> Node;
+typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 128> Node;
 typedef uavcan::ComponentStatusManager<unsigned(ComponentID::NumComponents_)> ComponentStatusManager;
 
 bool isStarted();
