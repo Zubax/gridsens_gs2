@@ -50,7 +50,7 @@ static int16_t ubxFindheader(uint8_t *buf, uint16_t len, uint16_t stpos);
 static int16_t ubxParse(UbxState *ubx, uint8_t *buf, uint16_t len);
 static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus);
 
-static uint64_t computeUtcUSec(uint16_t week, uint32_t tow, int32_t ftow);
+static uint64_t computeUtcUSec(int16_t week, uint32_t tow, int32_t ftow);
 static void ubxSetMSGtypes(void);
 
 /* PACKET TYPE PARSING */
@@ -500,9 +500,6 @@ static uint8_t ubxMsgNavDop(UbxState *ubx, uint8_t *buf, size_t len)
 static uint8_t ubxNsgNavSol(UbxState *ubx, uint8_t *buf, size_t len)
 {
     uint8_t navmode; /* Navigation mode: none, time only, 2D, 3D */
-    uint16_t gw; /* GNSS current week from beginning of year [w] */
-    uint32_t tow; /* GNSS current time of week [ms] */
-    int32_t ftow; /* GNSS current fractional time of week [ns] */
 
     if (len != 52)
         return 0;
@@ -516,10 +513,11 @@ static uint8_t ubxNsgNavSol(UbxState *ubx, uint8_t *buf, size_t len)
     /* If TIME data is aviable */
     if (navmode != UbxMode_NOFIX)
     {
-        tow = (uint32_t) getleu32(buf, 0); /* get Time-of-week */
-        ftow = (int32_t) getles32(buf, 4); /* get Fractonal part of week */
-        gw = (uint16_t) getleu16(buf, 8); /* get Number of weeks from navigational Epoch */
+        const uint32_t tow = getleu32(buf, 0); /* get Time-of-week */
+        const int32_t ftow = getles32(buf, 4); /* get Fractonal part of week */
+        const int16_t gw   = getles16(buf, 8); /* get Number of weeks from navigational Epoch */
 
+        // TODO FUCK IT USE UTC FROM THE RECEIVER
         ubx->fix.utc_usec = computeUtcUSec(gw, tow, ftow);
     }
 
@@ -685,20 +683,26 @@ static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus)
 
 /**
  * @brief   Calculate time (coupled with UNIX EPOCH)
- *
- * @param[in] week         weeks number [weeks]
- * @param[in] tow          time of week [ms]
- * @param[in] ftow         fractional time of week [ns]
  * @return                 UTC timestamp in microseconds
  */
-static uint64_t computeUtcUSec(uint16_t week, uint32_t tow, int32_t ftow)
+static uint64_t computeUtcUSec(int16_t week, uint32_t tow, int32_t ftow)
 {
-    uint64_t timestamp = UnixTimeEpoch * 1000000ULL;
+    int64_t timestamp = UnixTimeEpoch * 1000000LL;
+
     timestamp +=
-        (((uint64_t)week) * SecsPerWeek * 1000000ULL) +
-        (((uint64_t)tow) * 1000ULL) +
-        (((uint64_t)ftow) / 1000ULL);
-    return timestamp;
+        (((int64_t)week) * SecsPerWeek * 1000000LL) +
+        (((int64_t)tow) * 1000LL) +
+        (((int64_t)ftow) / 1000LL);
+
+    if (timestamp > 0)
+    {
+        return (uint64_t)timestamp;
+    }
+    else
+    {
+        assert(0);
+        return 0;
+    }
 }
 
 /**
