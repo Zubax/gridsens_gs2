@@ -320,6 +320,13 @@ static void ubxSetMSGtypes(void) /* u-Center UBX example */
     msg[1] = 0x30;
     msg[2] = 10;
     ubxWrite(0x06, 0x01, msg, 3);
+    /*
+     * UBX_NAV_DOP
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x04;
+    msg[2] = 5;
+    ubxWrite(0x06, 0x01, msg, 3);
 }
 
 /**
