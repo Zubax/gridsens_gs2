@@ -512,15 +512,16 @@ static uint8_t ubxMsgNavTimeGps(UbxState *ubx, uint8_t *buf, size_t len)
     // Subtract leap seconds
     utc_usec -= leap_secs * 1000000LL;
 
-    if (utc_usec > 0)
+    if (utc_usec < 1398426084000000 || utc_usec > 9999999999000000)
     {
-        ubx->time.utc_usec = utc_usec;
+        ubx->time.utc_usec = 0;
+        ubx->time.valid = false;
     }
     else
     {
-        ubx->time.utc_usec = 0;
+        ubx->time.utc_usec = utc_usec;
+        ubx->time.valid = (valid & 0b111) == 0b111;
     }
-    ubx->time.valid = (valid & 0b111) == 0b111;
 
     return 1;
 }
