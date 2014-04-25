@@ -50,10 +50,10 @@ static int16_t ubxFindheader(uint8_t *buf, uint16_t len, uint16_t stpos);
 static int16_t ubxParse(UbxState *ubx, uint8_t *buf, uint16_t len);
 static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus);
 
-static uint64_t computeUtcUSec(int16_t week, uint32_t tow, int32_t ftow);
 static void ubxSetMSGtypes(void);
 
 /* PACKET TYPE PARSING */
+static uint8_t ubxMsgNavTimeGps(UbxState *ubx, uint8_t *buf, size_t len);
 static uint8_t ubxMsgNavDop(UbxState *ubx, uint8_t *buf, size_t len);
 static uint8_t ubxNsgNavSol(UbxState *ubx, uint8_t *buf, size_t len);
 static uint8_t ubxMsgNavPosllh(UbxState *ubx, uint8_t *buf, size_t len);
@@ -213,6 +213,12 @@ static int16_t ubxParse(UbxState *ubx, uint8_t *Buf, uint16_t Len)
     /* Decode packet & update GNSS data */
     switch (msg_id)
     {
+    case UbxNavTimegps:
+    {
+        (void)ubxMsgNavTimeGps(ubx, &Buf[6], data_len);
+        ubx->parse.packstat |= UbxNavTimeGpsUp;
+        break;
+    }
     case UbxNavDop: /* UBX_NAV_DOP */
     {
         if (ubxMsgNavDop(ubx, &Buf[6], data_len) != 0)
@@ -273,10 +279,18 @@ static int16_t ubxParse(UbxState *ubx, uint8_t *Buf, uint16_t Len)
         }
         break;
     }
-    default:
+    case UbxAckAck:
+    {
+        assert(data_len == 2);
         break;
     }
-    return (data_len + 8); /* Parsing of packet is complete */
+    default:
+    {
+        assert(0);
+        break;
+    }
+    }
+    return (data_len + 8);
 }
 
 /**
@@ -327,6 +341,13 @@ static void ubxSetMSGtypes(void) /* u-Center UBX example */
     msg[1] = 0x04;
     msg[2] = 5;
     ubxWrite(0x06, 0x01, msg, 3);
+    /*
+     * UBX_NAV_TIMEGPS
+     */
+    msg[0] = 0x01;
+    msg[1] = 0x20;
+    msg[2] = 1;
+    ubxWrite(0x06, 0x01, msg, 3);
 }
 
 /**
@@ -353,8 +374,6 @@ void ubxInit(UbxState *ubx, uint32_t baudrate)
         ubx->fix.speed_cov[i] = 0.0;
     }
 
-    ubx->fix.utc_usec = 0;
-    ubx->fix.time_err_var = INFINITY;
     ubx->fix.sats_used = 0;
 
     /* GNSS DOP */
@@ -396,6 +415,11 @@ void ubxInit(UbxState *ubx, uint32_t baudrate)
     ubxWrite(0x06, 0x24, (uint8_t*)&Nav5Cfg, sizeof(Nav5Cfg));
 
     /*
+     * Configure msg rates
+     */
+    ubxSetMSGtypes();
+
+    /*
      * CFG-PRT
      */
     CfgPrt PrtCfg __attribute__((aligned(8)));
@@ -409,11 +433,6 @@ void ubxInit(UbxState *ubx, uint32_t baudrate)
     PrtCfg.outprotomask = Ubx_PrMask_UBX;
 
     ubxWrite(0x06, 0x00, (uint8_t*)&PrtCfg, sizeof(PrtCfg));
-
-    /*
-     * Configure msg rates
-     */
-    ubxSetMSGtypes();
 }
 
 void ubxPoll(UbxState *ubx)
@@ -474,6 +493,38 @@ void ubxPoll(UbxState *ubx)
     }
 }
 
+static uint8_t ubxMsgNavTimeGps(UbxState *ubx, uint8_t *buf, size_t len)
+{
+    if (len != 16)
+        return 0;
+
+    const int64_t gps_tow_ms = getleu32(buf, 0);
+    const int64_t gps_tow_ns = getles32(buf, 4);
+    const int64_t gps_week   = getles16(buf, 8);
+    const int64_t leap_secs  = getsb(buf, 10);
+
+    const uint8_t valid = getub(buf, 11);
+
+    // Base UTC offset
+    int64_t utc_usec = 315964800LL * 1000000LL;
+    // Uncorrected UTC time
+    utc_usec += (gps_week * SecsPerWeek * 1000000LL) + (gps_tow_ms * 1000LL) + (gps_tow_ns / 1000LL);
+    // Subtract leap seconds
+    utc_usec -= leap_secs * 1000000LL;
+
+    if (utc_usec > 0)
+    {
+        ubx->time.utc_usec = utc_usec;
+    }
+    else
+    {
+        ubx->time.utc_usec = 0;
+    }
+    ubx->time.valid = (valid & 0b111) == 0b111;
+
+    return 1;
+}
+
 /**
  * @brief   Get and parse NAV_DOP message
  *
@@ -516,17 +567,6 @@ static uint8_t ubxNsgNavSol(UbxState *ubx, uint8_t *buf, size_t len)
     navmode &= 0x3; /* release only 2 LSBs */
 
     ubx->fix.fix = (UbxFixMode) navmode;
-
-    /* If TIME data is aviable */
-    if (navmode != UbxMode_NOFIX)
-    {
-        const uint32_t tow = getleu32(buf, 0); /* get Time-of-week */
-        const int32_t ftow = getles32(buf, 4); /* get Fractonal part of week */
-        const int16_t gw   = getles16(buf, 8); /* get Number of weeks from navigational Epoch */
-
-        // TODO FUCK IT USE UTC FROM THE RECEIVER
-        ubx->fix.utc_usec = computeUtcUSec(gw, tow, ftow);
-    }
 
     /* Update GNSS information due to FIX status */
     fixStatDataUpdate(ubx, navmode);
@@ -586,16 +626,8 @@ static uint8_t ubxMsgNavPosllh(UbxState *ubx, uint8_t *buf, size_t len)
  */
 static uint8_t ubxMsgNavPvt(UbxState *ubx, uint8_t *buf, size_t len)
 {
-    float s_acc;
-    float t_acc;
-
     if (len != 84) /* Corrupted message size */
         return 0;
-
-    /* Get time accuracy estimation */
-    t_acc = ((float) getleu32(buf, 12)) / 1000;
-
-    ubx->fix.time_err_var = t_acc * t_acc;
 
     /* Speed in NORTH-EAST-DOWN coordinate frame */
     ubx->fix.ned_speed[0] = ((float)getles32(buf, 48)) / 1000;
@@ -603,7 +635,7 @@ static uint8_t ubxMsgNavPvt(UbxState *ubx, uint8_t *buf, size_t len)
     ubx->fix.ned_speed[2] = ((float)getles32(buf, 56)) / 1000;
 
     /* Get estimation of speed accuracy */
-    s_acc = ((float) getleu32(buf, 68)) / 1000;
+    const float s_acc = ((float) getleu32(buf, 68)) / 1000;
 
     /* Set speed covariance matrix */
     ubx->fix.speed_cov[0] = s_acc * s_acc;
@@ -680,36 +712,6 @@ static void fixStatDataUpdate(UbxState *ubx, uint8_t fixstatus)
         ubx->fix.ned_speed[0] = NAN;
         ubx->fix.ned_speed[1] = NAN;
     }
-
-    /* Reset Time information */
-    if ((fixstatus & 0x03) <= UbxMode_DR)
-    {
-        ubx->fix.utc_usec = 0;
-    }
-}
-
-/**
- * @brief   Calculate time (coupled with UNIX EPOCH)
- * @return                 UTC timestamp in microseconds
- */
-static uint64_t computeUtcUSec(int16_t week, uint32_t tow, int32_t ftow)
-{
-    int64_t timestamp = UnixTimeEpoch * 1000000LL;
-
-    timestamp +=
-        (((int64_t)week) * SecsPerWeek * 1000000LL) +
-        (((int64_t)tow) * 1000LL) +
-        (((int64_t)ftow) / 1000LL);
-
-    if (timestamp > 0)
-    {
-        return (uint64_t)timestamp;
-    }
-    else
-    {
-        assert(0);
-        return 0;
-    }
 }
 
 /**
@@ -725,6 +727,11 @@ bool ubxGetStReadyStat(UbxState *ubx, uint16_t st_bf)
 
     switch (st_bf)
     {
+    case TimeSt:
+    {
+        mask = UbxNavTimeGpsUp;
+        break;
+    }
     case FixSt:
     {
         mask = UbxNavSolUp | UbxNavPosllhUp | UbxNavPvtUp;
@@ -760,6 +767,11 @@ void ubxResetStReadyStat(UbxState *ubx, uint16_t st_bf)
 {
     switch (st_bf)
     {
+    case TimeSt:
+    {
+        ubx->parse.packstat &= ~UbxNavTimeGpsUp;
+        break;
+    }
     case FixSt:
     {
         ubx->parse.packstat &= ~(UbxNavSolUp | UbxNavPosllhUp | UbxNavPvtUp);

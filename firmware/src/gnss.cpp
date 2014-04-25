@@ -131,9 +131,9 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
     void handleTimeSync(const uavcan::UtcTime& ts_utc) const
     {
-        if (state.fix.fix >= GNSSfix_Time)
+        if (state.time.valid && state.time.utc_usec > 0)
         {
-            node::adjustUtcTimeFromLocalSource(uavcan::UtcTime::fromUSec(state.fix.utc_usec) - ts_utc);
+            node::adjustUtcTimeFromLocalSource(uavcan::UtcTime::fromUSec(state.time.utc_usec) - ts_utc);
         }
     }
 
@@ -150,9 +150,14 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
             const auto ts_utc = uavcan_stm32::clock::getUtc();
             ubxPoll(&state);
 
-            if (ubxGetStReadyStat(&state, FixSt))
+            if (ubxGetStReadyStat(&state, TimeSt))
             {
                 handleTimeSync(ts_utc);
+                ubxResetStReadyStat(&state, TimeSt);
+            }
+
+            if (ubxGetStReadyStat(&state, FixSt))
+            {
                 publishFix(ts_utc, state);
                 prev_fix_report_at = ts_mono;
                 ubxResetStReadyStat(&state, FixSt);

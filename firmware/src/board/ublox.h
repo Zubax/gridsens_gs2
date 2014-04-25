@@ -18,7 +18,6 @@ extern "C" {
 
 #define UbxInBufSize      512        /**< @brief Temp buffer (to hold ubx message tail) size   */
 #define NoOfGNSSch        128        /**< @brief Number of satellites to track   */
-#define UnixTimeEpoch     315964784  /**< @brief Difference (in seconds) between Unix time epoch and Gps time epoch  */
 
 /*
  *        UBX MACROS AND DATA
@@ -195,10 +194,14 @@ typedef struct
     float ned_speed[3]; /**< @brief North-East-Down velocity        */
     float pos_cov[9];   /**< @brief Cov matrix of position          */
     float speed_cov[9]; /**< @brief Cov matrix of speed             */
-    uint64_t utc_usec;  /**< @brief UTC time (UNIX epoch)           */
-    float time_err_var; /**< @brief Time error variance             */
     uint8_t sats_used;   /**< @brief Qty of sats in NAV solution     */
 } UbxFix;
+
+typedef struct
+{
+    uint64_t utc_usec;
+    bool valid;
+} UbxTime;
 
 typedef struct
 {
@@ -233,13 +236,15 @@ typedef struct
     UbxFix fix;
     UbxDop dop;
     UbxSatsInfo sats;
+    UbxTime time;
 } UbxState;
 
 enum
 {
     FixSt = 1 << 0, /* FIX structure */
     DopSt = 1 << 1, /* DOP structure */
-    SatSt = 1 << 2  /* SATS structure */
+    SatSt = 1 << 2, /* SATS structure */
+    TimeSt = 1 << 3
 };
 
 /**
@@ -252,7 +257,8 @@ enum
     UbxNavSolUp = 1 << 1,    /* NavSol message is successfully updated */
     UbxNavPosllhUp = 1 << 2, /* NavPosllh message is successfully updated */
     UbxNavPvtUp = 1 << 3,    /* NavPvt message is successfully updated */
-    UbxNavSvinfoUp = 1 << 4  /* NavSvinfo message is successfully updated */
+    UbxNavSvinfoUp = 1 << 4, /* NavSvinfo message is successfully updated */
+    UbxNavTimeGpsUp = 1 << 5
 };
 
 enum
@@ -310,6 +316,21 @@ typedef struct
     uint16_t flags;        /* Flags bitfield */
     uint16_t resv5;        /* Reserved 5 */
 } CfgPrt;
+
+typedef struct
+{
+    uint8_t tp_idx;
+    uint8_t reserved0;
+    uint16_t reserved1;
+    int16_t ant_cable_delay;
+    int16_t rf_group_delay;
+    uint32_t freq_period;
+    uint32_t freq_period_lock;
+    uint32_t pulse_len_ratio;
+    uint32_t pulse_len_ratio_lock;
+    int32_t user_config_delay;
+    uint32_t flags;
+} CfgTP5;
 
 #pragma pack(pop)
 
