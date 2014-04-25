@@ -102,7 +102,7 @@ class : public chibios_rt::BaseStaticThread<3000>
     {
         configureNode();
 
-        uavcan_stm32::clock::setMinJump(uavcan::UtcDuration::fromMSec(MinClockSyncJumpMSec));
+        uavcan_stm32::clock::setMinUtcJump(uavcan::UtcDuration::fromMSec(MinClockSyncJumpMSec));
 
         // Starting the UAVCAN node
         while (true)
