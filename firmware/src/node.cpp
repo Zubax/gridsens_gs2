@@ -24,6 +24,7 @@ namespace
 const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 const unsigned MinClockSyncJumpMSec = 500;
+const unsigned MaxClockSpeedCorrectionPPM = 80;
 
 crdr_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
 crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 125, 1, 125);
@@ -103,6 +104,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         configureNode();
 
         uavcan_stm32::clock::setMinUtcJump(uavcan::UtcDuration::fromMSec(MinClockSyncJumpMSec));
+        uavcan_stm32::clock::setMaxUtcSpeedCorrectionPPM(MaxClockSpeedCorrectionPPM);
 
         // Starting the UAVCAN node
         while (true)
