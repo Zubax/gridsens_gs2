@@ -55,6 +55,24 @@ void configureNode()
     node.setHardwareVersion(hwver);
 }
 
+void configureClockSync()
+{
+    // TODO: Hardware support for clock sync via PPS line
+    // STM32 driver needs better clock speed adjustment algorithm
+    auto params = uavcan_stm32::clock::getUtcSyncParams();
+
+    params.p     = 0.00001;
+    params.i_fwd = 0.000001;
+    params.i_rev = 0.00001;
+
+    params.rate_error_corner_freq = 0.000001;
+    params.max_rate_correction_ppm = 70;
+
+    params.min_jump = uavcan::UtcDuration::fromMSec(400);
+
+    uavcan_stm32::clock::setUtcSyncParams(params);
+}
+
 uavcan::GlobalTimeSyncMaster& getTimeSyncMaster()
 {
     static uavcan::GlobalTimeSyncMaster master(getNode());
@@ -102,9 +120,7 @@ class : public chibios_rt::BaseStaticThread<3000>
     void init() const
     {
         configureNode();
-
-        uavcan_stm32::clock::setMinUtcJump(uavcan::UtcDuration::fromMSec(MinClockSyncJumpMSec));
-        uavcan_stm32::clock::setMaxUtcSpeedCorrectionPPM(MaxClockSpeedCorrectionPPM);
+        configureClockSync();
 
         // Starting the UAVCAN node
         while (true)
