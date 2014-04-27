@@ -152,9 +152,10 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         // Time sync master - if enabled
-        time_sync_master_on = param_time_sync_master_on.get();
-        if (time_sync_master_on)
+        if (param_time_sync_master_on.get())
         {
+            time_sync_master_on = true;
+            lowsyslog("Time sync enabled\n");
             while (true)
             {
                 const int res = getTimeSyncMaster().init();
@@ -169,6 +170,11 @@ class : public chibios_rt::BaseStaticThread<3000>
             static uavcan::Timer tsm_timer(getNode());
             tsm_timer.setCallback(&publishTimeSync);
             tsm_timer.startPeriodic(uavcan::MonotonicDuration::fromMSec(TimeSyncPubPeriodMSec));
+        }
+        else
+        {
+            time_sync_master_on = false;
+            lowsyslog("Time sync disabled\n");
         }
 
         started = true;
