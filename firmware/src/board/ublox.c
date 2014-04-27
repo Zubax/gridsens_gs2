@@ -520,7 +520,8 @@ static uint8_t ubxMsgNavTimeGps(UbxState *ubx, uint8_t *buf, size_t len)
     else
     {
         ubx->time.utc_usec = utc_usec;
-        ubx->time.valid = (valid & 0b111) == 0b111;
+        // TODO: do something with the leap seconds
+        ubx->time.valid = (valid & 0b011) == 0b011;
     }
 
     return 1;
