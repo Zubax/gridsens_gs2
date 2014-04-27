@@ -70,6 +70,8 @@ void configureClockSync()
 
     params.min_jump = uavcan::UtcDuration::fromMSec(100);
 
+    params.lock_thres_offset = params.min_jump;
+
     uavcan_stm32::clock::setUtcSyncParams(params);
 }
 
