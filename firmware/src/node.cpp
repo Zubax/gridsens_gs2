@@ -23,8 +23,6 @@ namespace
 
 const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
-const unsigned MinClockSyncJumpMSec = 500;
-const unsigned MaxClockSpeedCorrectionPPM = 80;
 
 crdr_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
 crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 125, 1, 125);
@@ -37,6 +35,7 @@ uavcan_stm32::Mutex node_mutex;
 ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIALIZING);
 
 bool started = false;
+bool local_utc_updated = false;
 
 void configureNode()
 {
@@ -68,7 +67,7 @@ void configureClockSync()
     params.rate_error_corner_freq = 0.000001;
     params.max_rate_correction_ppm = 70;
 
-    params.min_jump = uavcan::UtcDuration::fromMSec(400);
+    params.min_jump = uavcan::UtcDuration::fromMSec(100);
 
     uavcan_stm32::clock::setUtcSyncParams(params);
 }
@@ -85,31 +84,31 @@ uavcan::GlobalTimeSyncSlave& getTimeSyncSlave()
     return ts;
 }
 
+bool isLocalUtcSourceEnabled()
+{
+    if (getTimeSyncSlave().isActive())
+    {
+        return getNode().getNodeID() < getTimeSyncSlave().getMasterNodeID();
+    }
+    return true;
+}
+
 void publishTimeSync(const uavcan::TimerEvent&)
 {
-    auto& slave = getTimeSyncSlave();
-    /*
-     * We cannot act as master if UTC is not set. Definitely.
-     */
-    if (uavcan_stm32::clock::getUtc().isZero())
+    if (isLocalUtcSourceEnabled())
     {
-        slave.suppress(false);
-        return;
+        getTimeSyncSlave().suppress(local_utc_updated);
     }
-    /*
-     * If we are the primary master, the slave must be suppressed to prevent interference with local UTC source.
-     * If we are not the primary master (i.e. there's another higher priority master that we must sync with),
-     * the slave will not be suppressed. In this case we will effectively relay the same time from the primary
-     * master.
-     */
-    bool suppress_slave = true;
-    if (slave.isActive())
+    else
     {
-        suppress_slave = getNode().getNodeID() < slave.getMasterNodeID();
+        getTimeSyncSlave().suppress(false);
     }
-    slave.suppress(suppress_slave);
+    local_utc_updated = false;
 
-    (void)getTimeSyncMaster().publish();
+    if (uavcan_stm32::clock::isUtcLocked())
+    {
+        (void)getTimeSyncMaster().publish();
+    }
 }
 
 /*
@@ -230,9 +229,11 @@ Node& getNode()
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
 {
     Lock locker;
-    if (getTimeSyncSlave().isSuppressed() || uavcan_stm32::clock::getUtc().isZero())
+    if (isLocalUtcSourceEnabled())
     {
+        getTimeSyncSlave().suppress(true);
         uavcan_stm32::clock::adjustUtc(adjustment);
+        local_utc_updated = true;
     }
 }
 
