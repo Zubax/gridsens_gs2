@@ -12,6 +12,7 @@
 
 #include <uavcan/protocol/global_time_sync_master.hpp>
 #include <uavcan/protocol/global_time_sync_slave.hpp>
+#include <uavcan/protocol/param_server.hpp>
 
 #include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/sys/sys.h>
@@ -71,6 +72,12 @@ void configureClockSync()
     uavcan_stm32::clock::setUtcSyncParams(params);
 }
 
+uavcan::ParamServer& getParamServer()
+{
+    static uavcan::ParamServer server(getNode());
+    return server;
+}
+
 uavcan::GlobalTimeSyncMaster& getTimeSyncMaster()
 {
     static uavcan::GlobalTimeSyncMaster master(getNode());
@@ -112,6 +119,94 @@ void publishTimeSync(const uavcan::TimerEvent&)
 }
 
 /*
+ * Param access server
+ */
+class ParamManager : public uavcan::IParamManager
+{
+    void convert(float native_value, ConfigDataType native_type, uavcan::protocol::param::Value& out_value) const
+    {
+        if (native_type == CONFIG_TYPE_BOOL)
+        {
+            out_value.value_bool.push_back(native_value != 0);
+        }
+        else if (native_type == CONFIG_TYPE_INT)
+        {
+            out_value.value_int.push_back(native_value);
+        }
+        else if (native_type == CONFIG_TYPE_FLOAT)
+        {
+            out_value.value_float.push_back(native_value);
+        }
+        else
+        {
+            ; // Deep shit
+        }
+    }
+
+    void getParamNameByIndex(ParamIndex index, ParamName& out_name) const override
+    {
+        const char* name = configNameByIndex(index);
+        if (name != nullptr)
+        {
+            out_name = name;
+        }
+    }
+
+    void assignParamValue(const ParamName& name, const ParamValue& value) override
+    {
+        const float native_value = (!value.value_bool.empty()) ? (value.value_bool[0] ? 1 : 0) :
+                                   (!value.value_int.empty()) ? value.value_int[0] : value.value_float[0];
+        (void)configSet(name.c_str(), native_value);
+    }
+
+    void readParamValue(const ParamName& name, ParamValue& out_value) const override
+    {
+        ConfigParam descr;
+        const int res = configGetDescr(name.c_str(), &descr);
+        if (res >= 0)
+        {
+            convert(configGet(name.c_str()), descr.type, out_value);
+        }
+    }
+
+    void readParamDefaultMaxMin(const ParamName& name, ParamValue& out_default,
+                                        ParamValue& out_max, ParamValue& out_min) const override
+    {
+        ConfigParam descr;
+        const int res = configGetDescr(name.c_str(), &descr);
+        if (res >= 0)
+        {
+            convert(descr.default_, descr.type, out_default);
+            convert(descr.max, descr.type, out_max);
+            convert(descr.min, descr.type, out_min);
+        }
+    }
+
+    int saveAllParams() override
+    {
+        return configSave();
+    }
+
+    int eraseAllParams() override
+    {
+        return configErase();
+    }
+} param_manager;
+
+/*
+ * Restart handler
+ */
+class RestartRequestHandler : public uavcan::IRestartRequestHandler
+{
+    bool handleRestartRequest(uavcan::NodeID request_source) override
+    {
+        lowsyslog("Restarting by request from %i\n", int(request_source.get()));
+        NVIC_SystemReset();
+        return true;         // Will never be executed BTW
+    }
+} restart_request_handler;
+
+/*
  * UAVCAN spin loop
  */
 class : public chibios_rt::BaseStaticThread<3000>
@@ -120,6 +215,8 @@ class : public chibios_rt::BaseStaticThread<3000>
     {
         configureNode();
         configureClockSync();
+
+        getNode().setRestartRequestHandler(&restart_request_handler);
 
         // Starting the UAVCAN node
         while (true)
@@ -136,6 +233,11 @@ class : public chibios_rt::BaseStaticThread<3000>
             ::sleep(3);
         }
         assert(getNode().isStarted());
+
+        while (getParamServer().start(&param_manager) < 0)
+        {
+            ; // That's impossible to fail
+        }
 
         // Starting the time sync slave
         while (true)
@@ -176,7 +278,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         started = true;
-        lowsyslog("UAVCAN node started\n");
+        lowsyslog("UAVCAN node started, ID %i\n", int(getNode().getNodeID().get()));
     }
 
 public:
