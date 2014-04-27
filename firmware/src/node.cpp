@@ -36,6 +36,7 @@ ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIA
 
 bool started = false;
 bool local_utc_updated = false;
+bool time_sync_master_on = false;
 
 void configureNode()
 {
@@ -95,6 +96,7 @@ bool isLocalUtcSourceEnabled()
 
 void publishTimeSync(const uavcan::TimerEvent&)
 {
+    assert(time_sync_master_on);
     if (isLocalUtcSourceEnabled())
     {
         getTimeSyncSlave().suppress(local_utc_updated);
@@ -150,7 +152,8 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         // Time sync master - if enabled
-        if (param_time_sync_master_on.get())
+        time_sync_master_on = param_time_sync_master_on.get();
+        if (time_sync_master_on)
         {
             while (true)
             {
@@ -229,7 +232,7 @@ Node& getNode()
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
 {
     Lock locker;
-    if (isLocalUtcSourceEnabled())
+    if (time_sync_master_on && isLocalUtcSourceEnabled())
     {
         getTimeSyncSlave().suppress(true);
         uavcan_stm32::clock::adjustUtc(adjustment);
