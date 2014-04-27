@@ -63,10 +63,10 @@ void configureClockSync()
     auto params = uavcan_stm32::clock::getUtcSyncParams();
 
     params.offset_p = 0.0001;
-    params.rate_i = 0.0002;
+    params.rate_i = 0.001;
     params.rate_error_corner_freq = 0.00005;
     params.max_rate_correction_ppm = 70;
-    params.min_jump = uavcan::UtcDuration::fromMSec(150);
+    params.min_jump = uavcan::UtcDuration::fromMSec(250);
     params.lock_thres_offset = params.min_jump;
 
     uavcan_stm32::clock::setUtcSyncParams(params);
