@@ -36,6 +36,6 @@ void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment);
 
 void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status);
 
-int init();
+void init();
 
 }

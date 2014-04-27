@@ -35,13 +35,7 @@ std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 void init()
 {
     board::init();
-
-    const int uavcan_res = node::init();
-    if (uavcan_res != 0)
-    {
-        board::die(uavcan_res);
-    }
-
+    node::init();
     air_sensor::init();
     gnss::init();
     magnetometer::init();

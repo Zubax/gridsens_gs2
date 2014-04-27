@@ -250,16 +250,26 @@ void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode sta
     comp_stat_mgr.setComponentStatus(comp, status);
 }
 
-int init()
+void init()
 {
-    const int can_res = can.init(param_can_bitrate.get());
-    if (can_res < 0)
+    while (true)
     {
-        return can_res;
+        int can_res = can.init(param_can_bitrate.get());
+        if (can_res >= 0)
+        {
+            lowsyslog("CAN bitrate %u\n", unsigned(param_can_bitrate.get()));
+            break;
+        }
+        lowsyslog("CAN init failed [%i], trying default bitrate...\n", can_res);
+        can_res = can.init(param_can_bitrate.default_);
+        if (can_res >= 0)
+        {
+            lowsyslog("CAN bitrate %u\n", unsigned(param_can_bitrate.default_));
+            break;
+        }
     }
 
     (void)node_thread.start(LOWPRIO);
-    return 0;
 }
 
 }
