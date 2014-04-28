@@ -15,6 +15,7 @@
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
 #include <crdr_chibios/config/config.hpp>
+#include <crdr_chibios/watchdog/watchdog.hpp>
 #include <unistd.h>
 
 namespace gnss
@@ -112,18 +113,26 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
     unsigned aux_rate_usec;
 
+    mutable crdr_chibios::watchdog::Timer watchdog_;
     mutable UbxState state;
+
+    void pause() const
+    {
+        watchdog_.reset();
+        ::usleep(500000);
+        watchdog_.reset();
+    }
 
     void tryInit() const
     {
         state = UbxState();
 
-        ::sleep(1);
+        pause();
         sdStop(serial_port);
         sdStart(serial_port, &SerialConfig9600);   // Default serial port config
         ubxInit(&state, 115200);
 
-        ::sleep(1);
+        pause();
         sdStop(serial_port);
         sdStart(serial_port, &SerialConfig115200); // New serial port config
         ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
@@ -147,6 +156,8 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
         while (true)
         {
+            watchdog_.reset();
+
             // TODO: Proper ublox packet timestamping. Requires adequate parser.
             const auto ts_mono = uavcan_stm32::clock::getMonotonic();
             const auto ts_utc = uavcan_stm32::clock::getUtc();
@@ -198,11 +209,13 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 public:
     msg_t main() override
     {
+        watchdog_.startMSec(1000);
+
         aux_rate_usec = 1e6F / param_gnss_aux_rate.get();
 
         while (true)
         {
-            ::sleep(1);
+            pause();
             lowsyslog("GNSS init...\n");
             tryInit();
             tryRun();

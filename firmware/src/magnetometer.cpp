@@ -14,6 +14,7 @@
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
 #include <crdr_chibios/config/config.hpp>
+#include <crdr_chibios/watchdog/watchdog.hpp>
 #include <unistd.h>
 
 namespace magnetometer
@@ -135,11 +136,15 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
+        crdr_chibios::watchdog::Timer wdt;
+        wdt.startMSec(1000);
+
         while (!tryInit())
         {
             updateErrorState(true);
             lowsyslog("Mag init failed, will retry...\n");
-            ::sleep(1);
+            ::usleep(500000);
+            wdt.reset();
         }
 
         const float variance = param_variance.get();
@@ -164,6 +169,7 @@ public:
             }
 
             chibios_rt::BaseThread::sleepUntil(sleep_until);
+            wdt.reset();
         }
         return msg_t();
     }

@@ -15,6 +15,7 @@
 #include <uavcan/protocol/param_server.hpp>
 
 #include <crdr_chibios/config/config.hpp>
+#include <crdr_chibios/watchdog/watchdog.hpp>
 #include <crdr_chibios/sys/sys.h>
 
 namespace node
@@ -286,6 +287,9 @@ public:
     {
         init();
 
+        crdr_chibios::watchdog::Timer wdt;
+        wdt.startMSec(100);
+
         static uavcan::MonotonicTime prev_led_update;
         auto& node = getNode();
 
@@ -315,6 +319,7 @@ public:
             }
 
             ::usleep(1000);
+            wdt.reset();
         }
         return msg_t();
     }

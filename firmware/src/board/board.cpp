@@ -44,10 +44,15 @@ void init()
 
     crdr_chibios::watchdog::init();
 
-    const int config_res = crdr_chibios::config::init();
-    if (config_res != 0)
+    while (true)
     {
-        die(config_res);
+        const int res = crdr_chibios::config::init();
+        if (res >= 0)
+        {
+            break;
+        }
+        lowsyslog("Config init failed %i\n", res);
+        ::sleep(1);
     }
 }
 

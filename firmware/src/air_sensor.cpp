@@ -13,6 +13,7 @@
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
 #include <crdr_chibios/config/config.hpp>
+#include <crdr_chibios/watchdog/watchdog.hpp>
 #include <unistd.h>
 
 namespace air_sensor
@@ -30,6 +31,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
     float pressure_variance = 0;
     float temperature_variance = 0;
 
+    mutable crdr_chibios::watchdog::Timer watchdog_;
     mutable ::Ms5611 sens = ::Ms5611();
 
     void publish(const uavcan::UtcTime& timestamp, float pressure_pa, float temperature_degc) const
@@ -60,6 +62,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         systime_t sleep_until = chibios_rt::System::getTime();
         while (true)
         {
+            watchdog_.reset();
             sleep_until += US2ST(PeriodUSec);
 
             const uavcan::UtcTime timestamp = uavcan_stm32::clock::getUtc();
@@ -82,12 +85,16 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
+        watchdog_.startMSec(1000);
+
         pressure_variance = param_pressure_variance.get();
         temperature_variance = param_temperature_variance.get();
 
         while (true)
         {
-            ::sleep(1);
+            watchdog_.reset();
+            ::usleep(500000);
+            watchdog_.reset();
 
             if (!ms5611Reset(&sens))
             {

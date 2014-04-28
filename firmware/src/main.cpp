@@ -10,7 +10,6 @@
 #include <cassert>
 
 #include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/config/config.hpp>
 #include <crdr_chibios/watchdog/watchdog.hpp>
 
 #include "board/board.hpp"
@@ -32,28 +31,28 @@ std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
     return {100, 100};  // CRITICAL and all
 }
 
-void init()
+}
+
+int main()
 {
     board::init();
     node::init();
     air_sensor::init();
     gnss::init();
     magnetometer::init();
-}
 
-}
-
-int main()
-{
-    init();
+    crdr_chibios::watchdog::Timer wdt;
+    wdt.startMSec(1100);
 
     while (1)
     {
         const auto on_off = getStatusLedOnOffMSecDurations();
         board::setStatusLed(true);
-        usleep(on_off.first * 1000);
+        ::usleep(on_off.first * 1000);
+        wdt.reset();
         board::setStatusLed(false);
-        usleep(on_off.second * 1000);
+        ::usleep(on_off.second * 1000);
+        wdt.reset();
     }
     return 0;
 }
