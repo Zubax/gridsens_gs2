@@ -27,8 +27,8 @@ const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
 crdr_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
-crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 125, 1, 125);
-crdr_chibios::config::Param<bool> param_time_sync_master_on("time_sync_master_on", true);
+crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
+crdr_chibios::config::Param<bool> param_time_sync_master_on("time_sync_master_on", false);
 
 uavcan_stm32::CanInitHelper<> can;
 
