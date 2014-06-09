@@ -17,6 +17,7 @@
 #include "air_sensor.hpp"
 #include "magnetometer.hpp"
 #include "gnss.hpp"
+#include "cli.hpp"
 
 namespace
 {
@@ -43,6 +44,8 @@ int main()
 
     crdr_chibios::watchdog::Timer wdt;
     wdt.startMSec(1100);
+
+    cli::init();
 
     while (1)
     {
