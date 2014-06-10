@@ -16,8 +16,8 @@ build
 __pycache__
 
 # Eclipse
-.metadata/*
-.settings/*
+.metadata
+.settings
 .project
 .cproject
 .pydevproject

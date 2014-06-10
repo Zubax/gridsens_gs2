@@ -8,6 +8,7 @@
 #include <hal.h>
 #include <unistd.h>
 #include <cassert>
+#include <utility>
 
 #include <crdr_chibios/sys/sys.h>
 #include <crdr_chibios/watchdog/watchdog.hpp>
