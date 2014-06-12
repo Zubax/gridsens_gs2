@@ -22,7 +22,7 @@ namespace
 {
 
 crdr_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
-crdr_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 10.0, 1.0, 100.0);
+crdr_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
