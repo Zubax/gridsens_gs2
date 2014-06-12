@@ -5,7 +5,7 @@
  */
 
 #include "gnss.hpp"
-#include "board/ublox.h"
+#include "board/ublox.hpp"
 #include "node.hpp"
 
 #include <uavcan/equipment/gnss/RtcmStream.hpp>
@@ -23,42 +23,36 @@ namespace gnss
 namespace
 {
 
-crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 0.5, 0.1, 1.0);
+crdr_chibios::config::Param<float> param_gnss_fix_rate("gnss_fix_rate_hz", 10.0, 0.5, 15.0);
+crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 1.0,  0.1, 1.0);
 
 
-void publishFix(const uavcan::UtcTime& ts_utc, const UbxState& state)
+void publishFix(const ublox::Fix& data)
 {
-    const auto& data = state.fix;
-
     static uavcan::equipment::gnss::Fix msg;
     msg = uavcan::equipment::gnss::Fix();
 
     // Timestamp - Network clock, not GPS clock
-    msg.timestamp = ts_utc;
+    msg.timestamp = uavcan::UtcTime::fromUSec(data.ts.real_usec);
 
     // Position
-    msg.alt_1e2 = static_cast<uint32_t>(data.altitude  * 1e2F);
-    msg.lat_1e7 = static_cast<uint32_t>(data.latitude  * 1e7F);
-    msg.lon_1e7 = static_cast<uint32_t>(data.longitude * 1e7F);
+    msg.alt_1e2 = static_cast<std::uint32_t>(data.alt * 1e2F);
+    msg.lat_1e7 = static_cast<std::uint32_t>(data.lat * 1e7F);
+    msg.lon_1e7 = static_cast<std::uint32_t>(data.lon * 1e7F);
 
     // Velocity
-    for (int i = 0; i < 3; i++)
-    {
-        msg.ned_velocity[i] = data.ned_speed[i];
-    }
+    std::copy(std::begin(data.ned_velocity), std::end(data.ned_velocity), std::begin(msg.ned_velocity));
 
-    // Uncertainty
-    msg.sats_used = data.sats_used;
-
-    if (data.fix == GNSSfix_Time)
+    // Mode
+    if (data.mode == ublox::Fix::Mode::Time)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY;
     }
-    else if (data.fix == GNSSfix_2D)
+    else if (data.mode == ublox::Fix::Mode::Fix2D)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_2D_FIX;
     }
-    else if (data.fix == GNSSfix_3D)
+    else if (data.mode == ublox::Fix::Mode::Fix3D)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_3D_FIX;
     }
@@ -67,11 +61,16 @@ void publishFix(const uavcan::UtcTime& ts_utc, const UbxState& state)
         msg.status = uavcan::equipment::gnss::Fix::STATUS_NO_FIX;
     }
 
+    // Uncertainty
     if (msg.status > uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY)
     {
-        msg.velocity_covariance.packSquareMatrix(data.speed_cov);
-        msg.position_covariance.packSquareMatrix(data.pos_cov);
+        msg.velocity_covariance.packSquareMatrix(data.velocity_covariance);
+        msg.position_covariance.packSquareMatrix(data.position_covariance);
     }
+
+    // Misc
+    msg.sats_used = data.sats_used;
+    msg.pdop = data.pdop;
 
     // Publishing
     node::Lock locker;
@@ -79,23 +78,24 @@ void publishFix(const uavcan::UtcTime& ts_utc, const UbxState& state)
     (void)pub.broadcast(msg);
 }
 
-void publishAux(const UbxState& state)
+void publishAux(const ublox::Fix& fix, const ublox::Aux& aux)
 {
     static uavcan::equipment::gnss::Aux msg;
+    msg = uavcan::equipment::gnss::Aux();
 
-    msg.gdop = state.dop.gdop;
-    msg.hdop = state.dop.hdop;
-    msg.pdop = state.dop.pdop;
-    msg.tdop = state.dop.tdop;
-    msg.vdop = state.dop.vdop;
+    // DOP
+    msg.gdop = aux.gdop;
+    msg.hdop = aux.hdop;
+    msg.pdop = aux.pdop;
+    msg.tdop = aux.tdop;
+    msg.vdop = aux.vdop;
 
-    msg.sats_used = 0;
-    msg.sats_visible = 0;
-    for (const auto sat : state.sats.sat)
-    {
-        msg.sats_visible += (sat.sat_stmask == 0) ? 0 : 1;
-        msg.sats_used += (sat.sat_stmask & UbxSat_Used) ? 1 : 0;
-    }
+    // Satellite stats
+    msg.sats_used = fix.sats_used;
+    msg.sats_visible = aux.num_sats;
+
+    // Flags
+    msg.differential_corrections_applied = (fix.flags & ublox::Fix::Flags::DifferentialSolution) != 0;
 
     // Publishing
     node::Lock locker;
@@ -104,17 +104,49 @@ void publishAux(const UbxState& state)
 }
 
 
-const SerialConfig SerialConfig9600   = { 9600,   0, USART_CR2_STOP1_BITS, 0 };
-const SerialConfig SerialConfig115200 = { 115200, 0, USART_CR2_STOP1_BITS, 0 };
+class Platform : public ublox::IPlatform
+{
+    SerialDriver* const serial_port = &SD2;
 
-auto* const serial_port = &SD2;
+public:
+    void portWrite(const std::uint8_t* data, unsigned len) override
+    {
+        sdWrite(serial_port, data, len);
+    }
+
+    unsigned portRead(std::uint8_t* out_data, unsigned max_len, unsigned timeout_ms) override
+    {
+        return sdReadTimeout(serial_port, out_data, max_len, MS2ST(timeout_ms));
+    }
+
+    void portSetBaudRate(unsigned new_baudrate) override
+    {
+        static SerialConfig serial_cfg;
+        serial_cfg = SerialConfig();
+        serial_cfg.speed = new_baudrate;
+        serial_cfg.cr2 = USART_CR2_STOP1_BITS;
+
+        sdStop(serial_port);
+        sdStart(serial_port, &serial_cfg);
+    }
+
+    std::uint64_t getMonotonicUSec() const override
+    {
+        return uavcan_stm32::clock::getMonotonic().toUSec();
+    }
+
+    std::uint64_t getRealUSec() const override
+    {
+        return uavcan_stm32::clock::getUtc().toUSec();
+    }
+};
+
 
 class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
-    unsigned aux_rate_usec;
-
     mutable crdr_chibios::watchdog::Timer watchdog_;
-    mutable UbxState state;
+    mutable Platform platform_;
+    mutable ublox::Driver driver_ = ublox::Driver(platform_);
 
     void pause() const
     {
@@ -125,84 +157,42 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
     void tryInit() const
     {
-        state = UbxState();
+        auto cfg = ublox::Config();
+        cfg.fix_rate_hz = param_gnss_fix_rate.get();
+        cfg.aux_rate_hz = param_gnss_aux_rate.get();
 
-        pause();
-        sdStop(serial_port);
-        sdStart(serial_port, &SerialConfig9600);   // Default serial port config
-        ubxInit(&state, 115200);
-
-        pause();
-        sdStop(serial_port);
-        sdStart(serial_port, &SerialConfig115200); // New serial port config
-        ubxInit(&state, 115200);                   // Reinit again in case if the port was configured at 115200
-    }
-
-    void handleTimeSync(const uavcan::MonotonicTime& ts_mono, const uavcan::UtcTime& ts_utc) const
-    {
-        if (state.time.valid &&
-            state.time.utc_usec > 0 &&
-            ts_mono.toMSec() > 5000)
+        while (!driver_.configure(cfg, watchdog_))
         {
-            node::adjustUtcTimeFromLocalSource(uavcan::UtcTime::fromUSec(state.time.utc_usec) - ts_utc);
+            lowsyslog("GNSS driver init failed\n");
+            pause();
         }
     }
 
     void tryRun() const
     {
-        const unsigned ReportTimeoutMSec = 1100;
-        auto prev_fix_report_at = uavcan_stm32::clock::getMonotonic();
-        auto prev_aux_report_at = prev_fix_report_at;
-
-        while (true)
+        do
         {
             watchdog_.reset();
+            driver_.spin(100);
+        }
+        while (driver_.areRatesValid());
+    }
 
-            // TODO: Proper ublox packet timestamping. Requires adequate parser.
-            const auto ts_mono = uavcan_stm32::clock::getMonotonic();
-            const auto ts_utc = uavcan_stm32::clock::getUtc();
-            ubxPoll(&state);
+    void handleFix(const ublox::Fix& fix) const
+    {
+        // Publish the new GNSS solution onto the bus
+        publishFix(fix);
 
-            if (ubxGetStReadyStat(&state, TimeSt))
-            {
-                handleTimeSync(ts_mono, ts_utc);
-                ubxResetStReadyStat(&state, TimeSt);
-            }
+        // Update component status - OK if the fix is good, Warning otherwise
+        const bool good_fix = (fix.mode != ublox::Fix::Mode::Fix3D) || (fix.sats_used < 6);
+        auto stat = good_fix ? uavcan::protocol::NodeStatus::STATUS_WARNING : uavcan::protocol::NodeStatus::STATUS_OK;
+        node::setComponentStatus(node::ComponentID::Gnss, stat);
 
-            if (ubxGetStReadyStat(&state, FixSt))
-            {
-                publishFix(ts_utc, state);
-                prev_fix_report_at = ts_mono;
-                ubxResetStReadyStat(&state, FixSt);
-            }
-            else if (ubxGetStReadyStat(&state, DopSt))
-            {
-                // Fix and Aux will never be published within the same poll, that's intentional.
-                ubxResetStReadyStat(&state, DopSt);
-                if ((ts_mono - prev_aux_report_at).toUSec() >= (aux_rate_usec - 10000))
-                {
-                    prev_aux_report_at = ts_mono;
-                    publishAux(state);
-                }
-            }
-            else
-            {
-                ; // Nothing to do
-            }
-
-            if ((ts_mono - prev_fix_report_at).toMSec() > ReportTimeoutMSec)
-            {
-                node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
-                break;
-            }
-            else if (state.fix.sats_used < 6)
-            {
-                node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_WARNING);
-            }
-            else
-            {
-                node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_OK);
-            }
+        // Adjust the local time (locked to the global UTC)
+        if (fix.utc_valid)
+        {
+            auto adj = uavcan::UtcTime::fromUSec(fix.utc_usec) - uavcan::UtcTime::fromUSec(fix.ts.real_usec);
+            node::adjustUtcTimeFromLocalSource(adj);
         }
     }
 
@@ -211,7 +201,8 @@ public:
     {
         watchdog_.startMSec(1000);
 
-        aux_rate_usec = 1e6F / param_gnss_aux_rate.get();
+        driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
+        driver_.on_aux = [this](const ublox::Aux& aux) { publishAux(driver_.getFix(), aux); };
 
         while (true)
         {
@@ -219,6 +210,7 @@ public:
             lowsyslog("GNSS init...\n");
             tryInit();
             tryRun();
+            node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
         }
         return msg_t();
     }

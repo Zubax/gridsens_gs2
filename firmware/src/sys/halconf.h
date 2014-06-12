@@ -29,6 +29,6 @@
 #define HAL_USE_USB                 FALSE
 
 #define SERIAL_DEFAULT_BITRATE      115200
-#define SERIAL_BUFFERS_SIZE         256
+#define SERIAL_BUFFERS_SIZE         512
 
 #include <crdr_chibios/sys/halconf_tail.h>
