@@ -384,24 +384,26 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
         fix_.flags |= Fix::Flags::DifferentialSolution;
     }
 
-    // UTC timestamp computation
-    auto tm = ::tm();
-    tm.tm_year = pvt.year;
-    tm.tm_mon  = pvt.month;
-    tm.tm_mday = pvt.day;
-    tm.tm_hour = pvt.hour;
-    tm.tm_min  = pvt.min;
-    tm.tm_sec  = pvt.sec;
-    tm.tm_isdst = 0;
-
-    std::int64_t signed_usec = static_cast<std::int64_t>(std::mktime(&tm)) * 1000000LL;
-    signed_usec += pvt.nano / 1000;      // nano may be negative
-
-    fix_.utc_usec = signed_usec;
-
     // UTC validness flag
     static const auto UtcValidFlags = msg::NAV_PVT::ValidMask::validDate | msg::NAV_PVT::ValidMask::validTime;
-    fix_.utc_valid = (signed_usec > 0) && ((pvt.valid & UtcValidFlags) == UtcValidFlags);
+    fix_.utc_valid = (pvt.valid & UtcValidFlags) == UtcValidFlags;
+
+    // UTC timestamp computation
+    if (fix_.utc_valid)
+    {
+        auto tm = ::tm();
+        tm.tm_year = pvt.year - 1900;
+        tm.tm_mon  = pvt.month - 1;
+        tm.tm_mday = pvt.day;
+        tm.tm_hour = pvt.hour;
+        tm.tm_min  = pvt.min;
+        tm.tm_sec  = pvt.sec;
+        tm.tm_isdst = 0;
+
+        std::int64_t signed_usec = static_cast<std::int64_t>(std::mktime(&tm)) * 1000000LL;
+        signed_usec += pvt.nano / 1000;      // nano may be negative, hence the timestamp is signed
+        fix_.utc_usec = signed_usec;
+    }
 
     // Report update
     if (on_fix)
