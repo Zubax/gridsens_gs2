@@ -162,7 +162,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         cfg.fix_rate_hz = param_gnss_fix_rate.get();
         cfg.aux_rate_hz = param_gnss_aux_rate.get();
 
-        while (!driver_.configure(cfg, watchdog_))
+        while (keep_going_ && !driver_.configure(cfg, watchdog_))
         {
             lowsyslog("GNSS driver init failed\n");
             pause();
