@@ -23,6 +23,8 @@ namespace gnss
 namespace
 {
 
+SerialDriver* const serial_port = &SD2;
+
 crdr_chibios::config::Param<float> param_gnss_fix_rate("gnss_fix_rate_hz", 10.0, 0.5, 15.0);
 crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 1.0,  0.1, 1.0);
 
@@ -106,8 +108,6 @@ void publishAux(const ublox::Fix& fix, const ublox::Aux& aux)
 
 class Platform : public ublox::IPlatform
 {
-    SerialDriver* const serial_port = &SD2;
-
 public:
     void portWrite(const std::uint8_t* data, unsigned len) override
     {
@@ -144,6 +144,7 @@ public:
 
 class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
+    bool keep_going_ = true;
     mutable crdr_chibios::watchdog::Timer watchdog_;
     mutable Platform platform_;
     mutable ublox::Driver driver_ = ublox::Driver(platform_);
@@ -175,7 +176,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
             watchdog_.reset();
             driver_.spin(100);
         }
-        while (driver_.areRatesValid());
+        while (keep_going_ && driver_.areRatesValid());
     }
 
     void handleFix(const ublox::Fix& fix) const
@@ -204,7 +205,7 @@ public:
         driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
         driver_.on_aux = [this](const ublox::Aux& aux) { publishAux(driver_.getFix(), aux); };
 
-        while (true)
+        while (keep_going_)
         {
             pause();
             lowsyslog("GNSS init...\n");
@@ -212,7 +213,15 @@ public:
             tryRun();
             node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
         }
+
+        lowsyslog("GNSS driver terminated\n");
+        while (true) { pause(); }
         return msg_t();
+    }
+
+    void stop() override
+    {
+        keep_going_ = false;
     }
 } gnss_thread;
 
@@ -221,6 +230,16 @@ public:
 void init()
 {
     (void)gnss_thread.start(HIGHPRIO);
+}
+
+void stop()
+{
+    gnss_thread.stop();
+}
+
+SerialDriver& getSerialPort()
+{
+    return *serial_port;
 }
 
 }

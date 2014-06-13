@@ -6,9 +6,16 @@
 
 #pragma once
 
+#include <ch.hpp>
+#include <hal.h>
+
 namespace gnss
 {
 
 void init();
+
+void stop();
+
+SerialDriver& getSerialPort();
 
 }

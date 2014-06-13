@@ -5,11 +5,13 @@
  */
 
 #include "cli.hpp"
+#include "gnss.hpp"
 #include <unistd.h>
 #include <crdr_chibios/sys/sys.h>
 #include <crdr_chibios/sys/assert_always.h>
 #include <crdr_chibios/config/cli.hpp>
 #include <ch.hpp>
+#include <hal.h>
 #include <shell.h>
 
 namespace cli
@@ -30,10 +32,37 @@ void cmd_reset(BaseSequentialStream*, int, char**)
     ::NVIC_SystemReset();
 }
 
+void cmd_gnssbridge(BaseSequentialStream*, int, char**)
+{
+    lowsyslog("\nRESET THE BOARD TO RESUME NORMAL OPERATION\n\n");
+    gnss::stop();
+    ::sleep(1);
+
+    SerialDriver& gnss_port = gnss::getSerialPort();
+    SerialDriver& cli_port = STDOUT_SD;
+
+    static const auto copy_once = [](SerialDriver* src, SerialDriver* dst)
+    {
+        uint8_t buffer[128];
+        const unsigned sz = sdReadTimeout(src, buffer, sizeof(buffer), TIME_IMMEDIATE);
+        if (sz > 0)
+        {
+            sdWrite(dst, buffer, sz);
+        }
+    };
+
+    while (true)
+    {
+        copy_once(&gnss_port, &cli_port);
+        copy_once(&cli_port, &gnss_port);
+    }
+}
+
 const ::ShellCommand HandlerTable[] =
 {
-    "cfg",   &cmd_cfg,
-    "reset", &cmd_reset,
+    "cfg",        &cmd_cfg,
+    "reset",      &cmd_reset,
+    "gnssbridge", &cmd_gnssbridge,
     {nullptr, nullptr}
 };
 
