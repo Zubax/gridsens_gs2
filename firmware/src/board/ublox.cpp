@@ -386,7 +386,7 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
 
     // UTC validness flag
     static const auto UtcValidFlags = msg::NAV_PVT::ValidMask::validDate | msg::NAV_PVT::ValidMask::validTime;
-    fix_.utc_valid = (pvt.valid & UtcValidFlags) == UtcValidFlags;
+    fix_.utc_valid = ((pvt.valid & UtcValidFlags) == UtcValidFlags) && (pvt.year > 1900) && (pvt.month > 0);
 
     // UTC timestamp computation
     if (fix_.utc_valid)
