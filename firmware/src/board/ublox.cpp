@@ -391,7 +391,7 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
     // UTC timestamp computation
     if (fix_.utc_valid)
     {
-        auto tm = ::tm();
+        auto tm = std::tm();
         tm.tm_year = pvt.year - 1900;
         tm.tm_mon  = pvt.month - 1;
         tm.tm_mday = pvt.day;
@@ -514,7 +514,7 @@ bool Driver::configureGnss(crdr_chibios::watchdog::Timer& wdt)
               unsigned(mon_gnss.supported), unsigned(mon_gnss.default_),
               unsigned(mon_gnss.enabled), unsigned(mon_gnss.simultaneous));
     /*
-     * Here we could set-up the new configuration, but we won't because the
+     * Here we could set-up the new configuration, but we won't because
      * receivers are properly configured by default.
      */
 
