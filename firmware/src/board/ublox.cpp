@@ -487,8 +487,12 @@ bool Driver::configureGnss(crdr_chibios::watchdog::Timer& wdt)
     // Nav rate
     wdt.reset();
     {
+        float meas_rate = 1000.F / cfg_.fix_rate_hz;
+        meas_rate = std::max(meas_rate, 1.F);
+        meas_rate = std::min(meas_rate, 65534.F);
+
         auto rate = io_.allocateMessage<msg::CFG_RATE>();
-        rate->measRate = 1000 / cfg_.fix_rate_hz;
+        rate->measRate = static_cast<std::uint16_t>(meas_rate);
         rate->navRate = 1;                           // Required by the spec
         rate->timeRef = msg::CFG_RATE::TimeRef::UTC;
         if (!io_.sendAndWaitAck(Message::make(*rate)))
