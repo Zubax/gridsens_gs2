@@ -28,6 +28,9 @@ SerialDriver* const serial_port = &SD2;
 crdr_chibios::config::Param<float> param_gnss_fix_rate("gnss_fix_rate_hz", 10.0, 0.5, 15.0);
 crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 1.0,  0.1, 1.0);
 
+crdr_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_warn_min_fix_dimensions", 0, 0, 3);
+crdr_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
+
 
 void publishFix(const ublox::Fix& data)
 {
@@ -145,6 +148,10 @@ public:
 class GnssThread : public chibios_rt::BaseStaticThread<3000>
 {
     bool keep_going_ = true;
+
+    unsigned warn_min_fix_dimensions_ = 0;
+    unsigned warn_min_sats_used_ = 0;
+
     mutable crdr_chibios::watchdog::Timer watchdog_;
     mutable Platform platform_;
     mutable ublox::Driver driver_ = ublox::Driver(platform_);
@@ -184,9 +191,10 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         // Publish the new GNSS solution onto the bus
         publishFix(fix);
 
-        // Update component status - OK if the fix is good, Warning otherwise
-        const bool good_fix = (fix.mode != ublox::Fix::Mode::Fix3D) || (fix.sats_used < 6);
-        auto stat = good_fix ? uavcan::protocol::NodeStatus::STATUS_WARNING : uavcan::protocol::NodeStatus::STATUS_OK;
+        // Update component status
+        const bool warn = (static_cast<unsigned>(fix.mode) < warn_min_fix_dimensions_) ||
+                          (fix.sats_used < warn_min_sats_used_);
+        auto stat = warn ? uavcan::protocol::NodeStatus::STATUS_WARNING : uavcan::protocol::NodeStatus::STATUS_OK;
         node::setComponentStatus(node::ComponentID::Gnss, stat);
 
         // Adjust the local time (locked to the global UTC)
@@ -201,6 +209,9 @@ public:
     msg_t main() override
     {
         watchdog_.startMSec(1000);
+
+        warn_min_fix_dimensions_ = param_gnss_warn_min_fix_dimensions.get();
+        warn_min_sats_used_ = param_gnss_warn_min_sats_used.get();
 
         driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
         driver_.on_aux = [this](const ublox::Aux& aux) { publishAux(driver_.getFix(), aux); };
