@@ -19,6 +19,11 @@ cd firmware/crdr_chibios
 cd ..
 git clone https://github.com/pavel-kirienko/uavcan  # Or make a symlink instead
 ```
+* Install the libuavcan dependencies:
+```shell
+# Python packages for DSDL compiler:
+pip install mako
+```
 * Build:
 ```shell
 make RELEASE=1 # RELEASE is optional; omit to build the debug version
