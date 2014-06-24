@@ -8,7 +8,7 @@
 #include "board/ublox.hpp"
 #include "node.hpp"
 
-#include <uavcan/equipment/gnss/RtcmStream.hpp>
+#include <uavcan/equipment/gnss/RTCMStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
 #include <uavcan/equipment/gnss/Aux.hpp>
 
