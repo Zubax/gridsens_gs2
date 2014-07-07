@@ -37,8 +37,11 @@ void publishFix(const ublox::Fix& data)
     static uavcan::equipment::gnss::Fix msg;
     msg = uavcan::equipment::gnss::Fix();
 
-    // Timestamp - Network clock, not GPS clock
+    // Timestamp - Network clock
     msg.timestamp = uavcan::UtcTime::fromUSec(data.ts.real_usec);
+
+    // Timestamp - GNSS clock
+    msg.gnss_timestamp = data.utc_valid ? uavcan::UtcTime::fromUSec(data.utc_usec) : uavcan::UtcTime();
 
     // Position
     msg.alt_1e2 = static_cast<std::uint32_t>(data.alt * 1e2F);
@@ -94,6 +97,8 @@ void publishAux(const ublox::Fix& fix, const ublox::Aux& aux)
     msg.pdop = aux.pdop;
     msg.tdop = aux.tdop;
     msg.vdop = aux.vdop;
+    msg.ndop = aux.ndop;
+    msg.edop = aux.edop;
 
     // Satellite stats
     msg.sats_used = fix.sats_used;
