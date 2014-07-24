@@ -87,7 +87,7 @@ struct Fix
     unsigned sats_used;
 };
 
-struct Aux
+struct Auxiliary
 {
     struct Sat
     {
@@ -264,7 +264,7 @@ class Driver
     std::uint64_t configured_at_mono_usec_ = 0;
 
     Fix fix_ = Fix();
-    Aux aux_ = Aux();
+    Auxiliary aux_ = Auxiliary();
 
     void handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt);
     void handleDOP(const Timestamps& ts, const msg::NAV_DOP& dop);
@@ -286,10 +286,10 @@ public:
     void spin(unsigned timeout_ms);
 
     std::function<void (const Fix&)> on_fix;
-    std::function<void (const Aux&)> on_aux;
+    std::function<void (const Auxiliary&)> on_aux;
 
     const Fix& getFix() const { return fix_; }
-    const Aux& getAux() const { return aux_; }
+    const Auxiliary& getAuxiliary() const { return aux_; }
 
     bool areRatesValid() const;
 };

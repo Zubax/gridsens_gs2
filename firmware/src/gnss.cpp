@@ -10,7 +10,7 @@
 
 #include <uavcan/equipment/gnss/RTCMStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
-#include <uavcan/equipment/gnss/Aux.hpp>
+#include <uavcan/equipment/gnss/Auxiliary.hpp>
 
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
@@ -86,10 +86,10 @@ void publishFix(const ublox::Fix& data)
     (void)pub.broadcast(msg);
 }
 
-void publishAux(const ublox::Fix& fix, const ublox::Aux& aux)
+void publishAuxiliary(const ublox::Fix& fix, const ublox::Auxiliary& aux)
 {
-    static uavcan::equipment::gnss::Aux msg;
-    msg = uavcan::equipment::gnss::Aux();
+    static uavcan::equipment::gnss::Auxiliary msg;
+    msg = uavcan::equipment::gnss::Auxiliary();
 
     // DOP
     msg.gdop = aux.gdop;
@@ -109,7 +109,7 @@ void publishAux(const ublox::Fix& fix, const ublox::Aux& aux)
 
     // Publishing
     node::Lock locker;
-    static uavcan::Publisher<uavcan::equipment::gnss::Aux> pub(node::getNode());
+    static uavcan::Publisher<uavcan::equipment::gnss::Auxiliary> pub(node::getNode());
     (void)pub.broadcast(msg);
 }
 
@@ -219,7 +219,7 @@ public:
         warn_min_sats_used_ = param_gnss_warn_min_sats_used.get();
 
         driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
-        driver_.on_aux = [this](const ublox::Aux& aux) { publishAux(driver_.getFix(), aux); };
+        driver_.on_aux = [this](const ublox::Auxiliary& aux) { publishAuxiliary(driver_.getFix(), aux); };
 
         while (keep_going_)
         {

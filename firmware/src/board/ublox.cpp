@@ -440,7 +440,7 @@ void Driver::handleSAT(const Timestamps& ts, const msg::NAV_SAT& sat)
 
     aux_.num_sats = sat.numSvs;
 
-    for (unsigned i = 0; i < std::min(static_cast<unsigned>(sat.numSvs), Aux::MaxSats); i++)
+    for (unsigned i = 0; i < std::min(static_cast<unsigned>(sat.numSvs), Auxiliary::MaxSats); i++)
     {
         const auto src = sat.svs[i];
         auto& dst = aux_.sats[i];
@@ -626,7 +626,7 @@ bool Driver::areRatesValid() const
         return true;
     };
 
-    return validate(getFix().ts, cfg_.fix_rate_hz) && validate(getAux().ts, cfg_.aux_rate_hz);
+    return validate(getFix().ts, cfg_.fix_rate_hz) && validate(getAuxiliary().ts, cfg_.aux_rate_hz);
 }
 
 }
