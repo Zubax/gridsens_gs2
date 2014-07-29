@@ -3,6 +3,8 @@
  * Distributed under the MIT License, available in the file LICENSE.
  * Author: Alexander Buraga <dtp-avb@yandex.ru>
  *         Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ *
+ * TODO: Full rewrite in C++.
  */
 
 /**
