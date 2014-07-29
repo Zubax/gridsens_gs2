@@ -22,6 +22,9 @@ namespace magnetometer
 namespace
 {
 
+const float AbsMaxValidGauss = 1.3;                                             ///< For the default gain
+const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   ///< Should be OK
+
 const float GaussScale = 0.92e-03;
 
 crdr_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
@@ -127,10 +130,50 @@ void transformToNEDFrame(float inout_mag_vector[3])
 
 class MagThread : public chibios_rt::BaseStaticThread<1024>
 {
-    static void updateErrorState(bool error)
+    uavcan::MonotonicTime last_nonzero_vector_ts_;
+
+    static void setStatus(unsigned status)
     {
-        auto status = error ? uavcan::protocol::NodeStatus::STATUS_CRITICAL : uavcan::protocol::NodeStatus::STATUS_OK;
         node::setComponentStatus(node::ComponentID::Magnetometer, status);
+    }
+
+    unsigned estimateStatusFromMeasurement(const float (&vector)[3])
+    {
+        // Checking if measured vector is a zero vector. Zero vectors are suspicious.
+        bool zero_vector = true;
+        for (float v : vector)
+        {
+            if (std::abs(v) > 1e-9)
+            {
+                zero_vector = false;
+                break;
+            }
+        }
+
+        // If the measured vector is zero-length, we need to make sure it wasn't this way for too long.
+        if (zero_vector && !last_nonzero_vector_ts_.isZero())
+        {
+            auto zero_vector_duration = uavcan_stm32::clock::getMonotonic() - last_nonzero_vector_ts_;
+            if (zero_vector_duration > MaxZeroVectorDuration)
+            {
+                return uavcan::protocol::NodeStatus::STATUS_WARNING;
+            }
+        }
+        else
+        {
+            last_nonzero_vector_ts_ = uavcan_stm32::clock::getMonotonic();
+        }
+
+        // Check if the vector components are within valid range.
+        for (float v : vector)
+        {
+            if (std::abs(v) > AbsMaxValidGauss)
+            {
+                return uavcan::protocol::NodeStatus::STATUS_WARNING;
+            }
+        }
+
+        return uavcan::protocol::NodeStatus::STATUS_OK;
     }
 
 public:
@@ -141,7 +184,7 @@ public:
 
         while (!tryInit())
         {
-            updateErrorState(true);
+            setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
             lowsyslog("Mag init failed, will retry...\n");
             ::usleep(500000);
             wdt.reset();
@@ -159,13 +202,13 @@ public:
             float vector[3] = {0, 0, 0};
             if (tryRead(vector))
             {
-                updateErrorState(false);
                 transformToNEDFrame(vector);
                 publish(vector, variance);
+                setStatus(estimateStatusFromMeasurement(vector));
             }
             else
             {
-                updateErrorState(true);
+                setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
             }
 
             chibios_rt::BaseThread::sleepUntil(sleep_until);
