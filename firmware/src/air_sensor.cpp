@@ -21,6 +21,9 @@ namespace air_sensor
 namespace
 {
 
+const float ValidPressureRange[] = { 1000, 120000 };
+const float ValidTemperatureRange[] = { -40, 85 };
+
 crdr_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
 crdr_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
@@ -33,6 +36,11 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 
     mutable crdr_chibios::watchdog::Timer watchdog_;
     mutable ::Ms5611 sens = ::Ms5611();
+
+    static bool isInRange(float value, const float range_min_max[2])
+    {
+        return (value >= range_min_max[0]) && (value <= range_min_max[1]);
+    }
 
     void publish(const uavcan::UtcTime& timestamp, float pressure_pa, float temperature_degc) const
     {
@@ -77,6 +85,16 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             const float temperature = raw_temperature / 100.F;
 
             publish(timestamp, pressure, temperature);
+
+            if (!isInRange(pressure, ValidPressureRange) ||
+                !isInRange(temperature, ValidTemperatureRange))
+            {
+                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+            }
+            else
+            {
+                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
+            }
 
             chibios_rt::BaseThread::sleepUntil(sleep_until);
         }
