@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace board
 {
 
@@ -16,5 +18,10 @@ void die(int error);
 
 void setCANLed(unsigned iface_index, bool state);
 void setStatusLed(bool state);
+
+
+constexpr unsigned UniqueIDSize = 12;
+
+void readUniqueID(std::uint8_t bytes[UniqueIDSize]);
 
 }

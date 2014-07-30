@@ -47,14 +47,28 @@ void configureNode()
     node.setNodeID(param_node_id.get());
     node.setName("com.courierdrone.gps");
 
+    // Software version
     uavcan::protocol::SoftwareVersion swver;
     swver.major = FW_VERSION_MAJOR;
     swver.minor = FW_VERSION_MINOR;
     node.setSoftwareVersion(swver);
 
+    // Hardware version
     uavcan::protocol::HardwareVersion hwver;
     hwver.major = HW_VERSION;
+
+    std::uint8_t uid[board::UniqueIDSize] = {};
+    board::readUniqueID(uid);
+    std::copy(std::begin(uid), std::end(uid), std::begin(hwver.unique_id));
+
     node.setHardwareVersion(hwver);
+
+    lowsyslog("UDID:");
+    for (auto b : hwver.unique_id)
+    {
+        lowsyslog(" %02x", unsigned(b));
+    }
+    lowsyslog("\n");
 }
 
 void configureClockSync()

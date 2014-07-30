@@ -5,6 +5,7 @@
  */
 
 #include "board.hpp"
+#include <cstring>
 #include <ch.hpp>
 #include <hal.h>
 #include <crdr_chibios/sys/sys.h>
@@ -93,6 +94,11 @@ void setCANLed(unsigned iface_index, bool state)
 void setStatusLed(bool state)
 {
     palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, state);
+}
+
+void readUniqueID(std::uint8_t bytes[UniqueIDSize])
+{
+    std::memcpy(bytes, reinterpret_cast<const void*>(0x1FFFF7E8), UniqueIDSize);
 }
 
 }
