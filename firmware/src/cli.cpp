@@ -115,10 +115,10 @@ void cmd_bootloader(BaseSequentialStream*, int, char**)
 
 const ::ShellCommand HandlerTable[] =
 {
-    "cfg",        &cmd_cfg,
-    "reset",      &cmd_reset,
-    "gnssbridge", &cmd_gnssbridge,
-    "bootloader", &cmd_bootloader,
+    {"cfg",        &cmd_cfg},
+    {"reset",      &cmd_reset},
+    {"gnssbridge", &cmd_gnssbridge},
+    {"bootloader", &cmd_bootloader},
     {nullptr, nullptr}
 };
 
