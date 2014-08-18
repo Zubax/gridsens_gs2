@@ -49,8 +49,13 @@ void configureNode()
 
     // Software version
     uavcan::protocol::SoftwareVersion swver;
+
     swver.major = FW_VERSION_MAJOR;
     swver.minor = FW_VERSION_MINOR;
+
+    swver.vcs_commit = GIT_HASH;
+    swver.optional_field_mask |= swver.OPTIONAL_FIELD_MASK_VCS_COMMIT;
+
     node.setSoftwareVersion(swver);
 
     // Hardware version
@@ -62,6 +67,9 @@ void configureNode()
     std::copy(std::begin(uid), std::end(uid), std::begin(hwver.unique_id));
 
     node.setHardwareVersion(hwver);
+
+    // Printing identification to CLI
+    lowsyslog("Git commit hash: 0x%08x\n", GIT_HASH);
 
     lowsyslog("UDID:");
     for (auto b : hwver.unique_id)

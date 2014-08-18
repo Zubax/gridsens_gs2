@@ -40,6 +40,13 @@ $(info $(shell $(LIBUAVCAN_DSDLC) $(UAVCAN_DSDL_DIR)))
 UINCDIR += dsdlc_generated
 
 #
+# Git commit hash
+#
+
+GIT_HASH := $(shell git rev-parse --short HEAD)
+UDEFS += -DGIT_HASH=0x$(GIT_HASH)
+
+#
 # ChibiOS
 #
 
