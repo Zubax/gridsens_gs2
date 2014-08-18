@@ -13,7 +13,7 @@ The documentation provided below is preliminary and likely to be changed in futu
 git clone https://github.com/Courierdrone/crdr_gps
 cd crdr_gps/
 git submodule update --init --recursive
-cd ..
+cd firmware
 git clone https://github.com/pavel-kirienko/uavcan  # Or make a symlink instead
 ```
 * Install the libuavcan dependencies:
