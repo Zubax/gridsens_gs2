@@ -8,10 +8,8 @@ The documentation provided below is preliminary and likely to be changed in futu
 ## Building the firmware
 
 * Install ARM GCC toolchain version 4.8 or newer
-* Obtain the sources:
+* Init the sources:
 ```shell
-git clone https://github.com/Courierdrone/crdr_gps
-cd crdr_gps/
 git submodule update --init --recursive
 cd firmware
 git clone https://github.com/pavel-kirienko/uavcan  # Or make a symlink instead
