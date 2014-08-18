@@ -12,10 +12,7 @@ The documentation provided below is preliminary and likely to be changed in futu
 ```shell
 git clone https://github.com/Courierdrone/crdr_gps
 cd crdr_gps/
-git submodule init
-git submodule update
-cd firmware/crdr_chibios
-./fetch_chibios.sh
+git submodule update --init --recursive
 cd ..
 git clone https://github.com/pavel-kirienko/uavcan  # Or make a symlink instead
 ```
