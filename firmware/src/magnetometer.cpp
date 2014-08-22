@@ -28,7 +28,7 @@ const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   
 const float GaussScale = 0.92e-03;
 
 crdr_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
-crdr_chibios::config::Param<unsigned> param_rate("mag_rate_hz", 10, 1, 30);
+crdr_chibios::config::Param<unsigned> param_rate("mag_rate_hz", 20, 1, 50);
 
 void publish(float field[3], float variance)
 {
