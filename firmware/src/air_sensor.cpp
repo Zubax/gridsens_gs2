@@ -42,7 +42,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         return (value >= range_min_max[0]) && (value <= range_min_max[1]);
     }
 
-    void publish(const uavcan::UtcTime& timestamp, float pressure_pa, float temperature_degc) const
+    void publish(float pressure_pa, float temperature_degc) const
     {
         if (!node::isStarted())
         {
@@ -50,8 +50,6 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         }
 
         static uavcan::equipment::air_data::StaticAirData air_data;
-        air_data.timestamp = timestamp;
-
         air_data.static_pressure = pressure_pa;
         air_data.static_pressure_variance = pressure_variance;
 
@@ -73,7 +71,6 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             watchdog_.reset();
             sleep_until += US2ST(PeriodUSec);
 
-            const uavcan::UtcTime timestamp = uavcan_stm32::clock::getUtc();
             int32_t raw_pressure = 0;
             int32_t raw_temperature = 0;
             if (!ms5611ReadPT(&sens, &raw_pressure, &raw_temperature))
@@ -84,7 +81,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             const float pressure = static_cast<float>(raw_pressure);
             const float temperature = raw_temperature / 100.F;
 
-            publish(timestamp, pressure, temperature);
+            publish(pressure, temperature);
 
             if (!isInRange(pressure, ValidPressureRange) ||
                 !isInRange(temperature, ValidTemperatureRange))
