@@ -7,8 +7,7 @@
 #include <iostream>
 #include <cassert>
 #include <uavcan_linux/uavcan_linux.hpp>
-#include <uavcan/equipment/airdata/StaticAirData.hpp>
-#include <uavcan/equipment/airdata/AltitudeAndClimbRate.hpp>
+#include <uavcan/equipment/air_data/StaticAirData.hpp>
 #include <uavcan/equipment/ahrs/Magnetometer.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
 #include <uavcan/equipment/gnss/Auxiliary.hpp>
@@ -51,7 +50,7 @@ makePrintingSubscriber(const uavcan_linux::NodePtr& node)
 static void runForever(const uavcan_linux::NodePtr& node)
 {
     auto sub_log      = makePrintingSubscriber<uavcan::protocol::debug::LogMessage>(node);
-    auto sub_air_data = makePrintingSubscriber<uavcan::equipment::airdata::StaticAirData>(node);
+    auto sub_air_data = makePrintingSubscriber<uavcan::equipment::air_data::StaticAirData>(node);
     auto sub_mag      = makePrintingSubscriber<uavcan::equipment::ahrs::Magnetometer>(node);
     auto sub_gnss_fix = makePrintingSubscriber<uavcan::equipment::gnss::Fix>(node);
     auto sub_gnss_aux = makePrintingSubscriber<uavcan::equipment::gnss::Auxiliary>(node);

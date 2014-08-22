@@ -8,7 +8,7 @@
 #include "board/ms5611.h"
 #include "node.hpp"
 
-#include <uavcan/equipment/airdata/StaticAirData.hpp>
+#include <uavcan/equipment/air_data/StaticAirData.hpp>
 
 #include <ch.hpp>
 #include <crdr_chibios/sys/sys.h>
@@ -49,7 +49,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             return;
         }
 
-        static uavcan::equipment::airdata::StaticAirData air_data;
+        static uavcan::equipment::air_data::StaticAirData air_data;
         air_data.timestamp = timestamp;
 
         air_data.static_pressure = pressure_pa;
@@ -61,7 +61,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         node::Lock locker;
         auto& node = node::getNode();
 
-        static uavcan::Publisher<uavcan::equipment::airdata::StaticAirData> air_data_pub(node);
+        static uavcan::Publisher<uavcan::equipment::air_data::StaticAirData> air_data_pub(node);
         (void)air_data_pub.broadcast(air_data);
     }
 
