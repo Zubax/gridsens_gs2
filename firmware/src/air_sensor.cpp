@@ -24,6 +24,7 @@ namespace
 const float ValidPressureRange[] = { 1000, 120000 };
 const float ValidTemperatureRange[] = { -40, 85 };
 
+crdr_chibios::config::Param<bool> param_enabled("air_data_enabled", true);
 crdr_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
 crdr_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
@@ -136,7 +137,15 @@ public:
 
 void init()
 {
-    (void)air_sensor_thread.start(HIGHPRIO - 10);
+    if (param_enabled)
+    {
+        (void)air_sensor_thread.start(HIGHPRIO - 10);
+    }
+    else
+    {
+        node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
+        lowsyslog("Air sensor disabled\n");
+    }
 }
 
 }
