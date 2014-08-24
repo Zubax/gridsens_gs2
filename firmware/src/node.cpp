@@ -28,7 +28,7 @@ const unsigned IfaceLedUpdatePeriodMSec = 25;
 
 crdr_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
 crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
-crdr_chibios::config::Param<bool> param_time_sync_master_on("time_sync_master_on", false);
+crdr_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
 
 uavcan_stm32::CanInitHelper<> can;
 
@@ -38,7 +38,7 @@ ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIA
 
 bool started = false;
 bool local_utc_updated = false;
-bool time_sync_master_on = false;
+bool time_sync_master_enabled = false;
 
 void configureNode()
 {
@@ -124,7 +124,7 @@ bool isLocalUtcSourceEnabled()
 
 void publishTimeSync(const uavcan::TimerEvent&)
 {
-    assert(time_sync_master_on);
+    assert(time_sync_master_enabled);
     if (isLocalUtcSourceEnabled())
     {
         getTimeSyncSlave().suppress(local_utc_updated);
@@ -275,9 +275,9 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         // Time sync master - if enabled
-        if (param_time_sync_master_on.get())
+        if (param_time_sync_master_enabled.get())
         {
-            time_sync_master_on = true;
+            time_sync_master_enabled = true;
             lowsyslog("Time sync enabled\n");
             while (true)
             {
@@ -296,7 +296,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
         else
         {
-            time_sync_master_on = false;
+            time_sync_master_enabled = false;
             lowsyslog("Time sync disabled\n");
         }
 
@@ -365,7 +365,7 @@ Node& getNode()
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
 {
     Lock locker;
-    if (time_sync_master_on && isLocalUtcSourceEnabled())
+    if (time_sync_master_enabled && isLocalUtcSourceEnabled())
     {
         getTimeSyncSlave().suppress(true);
         uavcan_stm32::clock::adjustUtc(adjustment);
