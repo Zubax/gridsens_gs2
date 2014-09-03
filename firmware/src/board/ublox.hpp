@@ -77,7 +77,8 @@ struct Fix
     bool utc_valid;
     double lat;                   ///< deg
     double lon;                   ///< deg
-    float alt;                    ///< meters
+    float height_wgs84;           ///< meters
+    float height_amsl;            ///< meters
     float ned_velocity[3];        ///< North-east-down, m/s
     float pdop;
     float position_covariance[9]; ///< Lat-lon-alt, row major, m^2

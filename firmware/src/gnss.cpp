@@ -44,9 +44,11 @@ void publishFix(const ublox::Fix& data)
     msg.gnss_timestamp = data.utc_valid ? uavcan::UtcTime::fromUSec(data.utc_usec) : uavcan::UtcTime();
 
     // Position
-    msg.alt_1e2 = static_cast<std::uint32_t>(data.alt * 1e2F);
-    msg.lat_1e7 = static_cast<std::uint32_t>(data.lat * 1e7F);
-    msg.lon_1e7 = static_cast<std::uint32_t>(data.lon * 1e7F);
+    msg.latitude_deg_1e8  = static_cast<std::int64_t>(data.lat * 1e8);
+    msg.longitude_deg_1e8 = static_cast<std::int64_t>(data.lon * 1e8);
+
+    msg.height_ellipsoid_mm = static_cast<std::int32_t>(data.height_wgs84 * 1e3F);
+    msg.height_msl_mm       = static_cast<std::int32_t>(data.height_amsl * 1e3F);
 
     // Velocity
     std::copy(std::begin(data.ned_velocity), std::end(data.ned_velocity), std::begin(msg.ned_velocity));

@@ -334,7 +334,8 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
     // Position
     fix_.lat = pvt.lat / 1e7;
     fix_.lon = pvt.lon / 1e7;
-    fix_.alt = pvt.height / 1e3F;
+    fix_.height_wgs84 = pvt.height / 1e3F;
+    fix_.height_amsl  = pvt.hMSL / 1e3F;
 
     // Velocity
     fix_.ned_velocity[0] = pvt.velN / 1e3F;
