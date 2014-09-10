@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include <ch.hpp>
@@ -10,8 +10,8 @@
 #include <cassert>
 #include <utility>
 
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 
 #include "board/board.hpp"
 #include "node.hpp"
@@ -43,7 +43,7 @@ int main()
     gnss::init();
     magnetometer::init();
 
-    crdr_chibios::watchdog::Timer wdt;
+    zubax_chibios::watchdog::Timer wdt;
     wdt.startMSec(1100);
 
     cli::init();

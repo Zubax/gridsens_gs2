@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "gnss.hpp"
@@ -13,9 +13,9 @@
 #include <uavcan/equipment/gnss/Auxiliary.hpp>
 
 #include <ch.hpp>
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/config/config.hpp>
-#include <crdr_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/config/config.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <unistd.h>
 
 namespace gnss
@@ -25,11 +25,11 @@ namespace
 
 SerialDriver* const serial_port = &SD2;
 
-crdr_chibios::config::Param<float> param_gnss_fix_rate("gnss_fix_rate_hz", 10.0, 0.5, 15.0);
-crdr_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 1.0,  0.1, 1.0);
+zubax_chibios::config::Param<float> param_gnss_fix_rate("gnss_fix_rate_hz", 10.0, 0.5, 15.0);
+zubax_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 1.0,  0.1, 1.0);
 
-crdr_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_warn_min_fix_dimensions", 0, 0, 3);
-crdr_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
+zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_warn_min_fix_dimensions", 0, 0, 3);
+zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
 
 
 void publishFix(const ublox::Fix& data)
@@ -159,7 +159,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     unsigned warn_min_fix_dimensions_ = 0;
     unsigned warn_min_sats_used_ = 0;
 
-    mutable crdr_chibios::watchdog::Timer watchdog_;
+    mutable zubax_chibios::watchdog::Timer watchdog_;
     mutable Platform platform_;
     mutable ublox::Driver driver_ = ublox::Driver(platform_);
 

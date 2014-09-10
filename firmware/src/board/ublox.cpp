@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "ublox.hpp"
 #include <ctime>
-#include <crdr_chibios/sys/sys.h>
+#include <zubax_chibios/sys/sys.h>
 
 namespace ublox
 {
@@ -201,7 +201,7 @@ void IOManager::handleReceivedMessage(const RxMessage& raw_msg)
     }
 }
 
-bool IOManager::configure(crdr_chibios::watchdog::Timer& wdt)
+bool IOManager::configure(zubax_chibios::watchdog::Timer& wdt)
 {
     auto prt_uart = msg::CFG_PRT_UART();
     prt_uart.portID = msg::CFG_PRT_UART::PortID::UART1;
@@ -483,7 +483,7 @@ bool Driver::configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_
     return io_.sendAndWaitAck(Message::make(msg));
 }
 
-bool Driver::configureGnss(crdr_chibios::watchdog::Timer& wdt)
+bool Driver::configureGnss(zubax_chibios::watchdog::Timer& wdt)
 {
     // Nav rate
     wdt.reset();
@@ -566,7 +566,7 @@ bool Driver::configureMessages()
     return true;
 }
 
-bool Driver::configure(const Config& cfg, crdr_chibios::watchdog::Timer& wdt)
+bool Driver::configure(const Config& cfg, zubax_chibios::watchdog::Timer& wdt)
 {
     wdt.reset();
     if (!io_.on_message)

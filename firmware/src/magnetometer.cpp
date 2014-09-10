@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "magnetometer.hpp"
@@ -12,9 +12,9 @@
 #include <uavcan/equipment/ahrs/Magnetometer.hpp>
 
 #include <ch.hpp>
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/config/config.hpp>
-#include <crdr_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/config/config.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <unistd.h>
 
 namespace magnetometer
@@ -27,8 +27,8 @@ const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   
 
 const float GaussScale = 0.92e-03;
 
-crdr_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
-crdr_chibios::config::Param<unsigned> param_rate("mag_rate_hz", 20, 1, 50);
+zubax_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
+zubax_chibios::config::Param<unsigned> param_rate("mag_rate_hz", 20, 1, 50);
 
 void publish(float field[3], float variance)
 {
@@ -179,7 +179,7 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
-        crdr_chibios::watchdog::Timer wdt;
+        zubax_chibios::watchdog::Timer wdt;
         wdt.startMSec(1000);
 
         while (!tryInit())

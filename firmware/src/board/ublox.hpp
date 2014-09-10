@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #pragma once
@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <functional>
 #include <algorithm>
-#include <crdr_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 
 namespace ublox
 {
@@ -204,7 +204,7 @@ public:
         : platform_(arg_platform)
     { }
 
-    bool configure(crdr_chibios::watchdog::Timer& wdt);
+    bool configure(zubax_chibios::watchdog::Timer& wdt);
 
     void spin(unsigned timeout_ms);
 
@@ -274,7 +274,7 @@ class Driver
     void handleReceivedMessage(const RxMessage& msg);
 
     bool configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_t rate);
-    bool configureGnss(crdr_chibios::watchdog::Timer& wdt);
+    bool configureGnss(zubax_chibios::watchdog::Timer& wdt);
     bool configureMessages();
 
 public:
@@ -282,7 +282,7 @@ public:
         : io_(arg_platform)
     { }
 
-    bool configure(const Config& cfg, crdr_chibios::watchdog::Timer& wdt);
+    bool configure(const Config& cfg, zubax_chibios::watchdog::Timer& wdt);
 
     void spin(unsigned timeout_ms);
 

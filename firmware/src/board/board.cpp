@@ -1,16 +1,16 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "board.hpp"
 #include <cstring>
 #include <ch.hpp>
 #include <hal.h>
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/watchdog/watchdog.hpp>
-#include <crdr_chibios/config/config.hpp>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/config/config.hpp>
 #include <unistd.h>
 
 /**
@@ -43,11 +43,11 @@ void init()
     sdStart(&STDOUT_SD, NULL);
     i2cStart(&I2CD2, &I2CCfg2);
 
-    crdr_chibios::watchdog::init();
+    zubax_chibios::watchdog::init();
 
     while (true)
     {
-        const int res = crdr_chibios::config::init();
+        const int res = zubax_chibios::config::init();
         if (res >= 0)
         {
             break;

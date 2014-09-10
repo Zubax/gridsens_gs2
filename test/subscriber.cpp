@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include <iostream>
@@ -78,7 +78,7 @@ int main(int argc, const char** argv)
     {
         iface_names.emplace_back(argv[i]);
     }
-    uavcan_linux::NodePtr node = initNode(iface_names, self_node_id, "com.courierdrone.gps.test");
+    uavcan_linux::NodePtr node = initNode(iface_names, self_node_id, "com.zubax.gnss.test");
     runForever(node);
     return 0;
 }

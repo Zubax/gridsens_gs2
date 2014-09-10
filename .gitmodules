@@ -1,3 +1,3 @@
-[submodule "firmware/crdr_chibios"]
-	path = firmware/crdr_chibios
-	url = https://github.com/Courierdrone/crdr_chibios
+[submodule "firmware/zubax_chibios"]
+	path = firmware/zubax_chibios
+	url = https://github.com/Zubax/zubax_chibios

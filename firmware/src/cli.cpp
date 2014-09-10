@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "cli.hpp"
 #include "gnss.hpp"
 #include "board/board.hpp"
 #include <unistd.h>
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/sys/assert_always.h>
-#include <crdr_chibios/config/cli.hpp>
-#include <crdr_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/sys/assert_always.h>
+#include <zubax_chibios/config/cli.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <ch.hpp>
 #include <hal.h>
 #include <shell.h>
@@ -24,7 +24,7 @@ namespace
 
 void cmd_cfg(BaseSequentialStream*, int argc, char* argv[])
 {
-    crdr_chibios::config::executeCliCommand(argc, argv);
+    zubax_chibios::config::executeCliCommand(argc, argv);
 }
 
 void cmd_reset(BaseSequentialStream*, int, char**)
@@ -66,7 +66,7 @@ void cmd_bootloader(BaseSequentialStream*, int, char**)
     ::usleep(100000);
 
     // Suppress the watchdog - set the maximum possible interval
-    crdr_chibios::watchdog::Timer().startMSec(1000000);
+    zubax_chibios::watchdog::Timer().startMSec(1000000);
 
     board::enterBootloader();
 }

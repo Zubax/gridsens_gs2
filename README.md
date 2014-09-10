@@ -1,5 +1,5 @@
-Courierdrone GPS
-================
+Zubax GNSS module
+=================
 
 Under construction.
 
@@ -20,8 +20,8 @@ make RELEASE=1 # RELEASE is optional; omit to build the debug version
 ```
 * Flash the board using any available flash loader. For instance:
 ```shell
-./crdr_chibios/tools/blackmagic_flash.sh   # Black Magic Debug Probe
-./crdr_chibios/tools/stlink_flash.sh       # ST-Link v2
+./zubax_chibios/tools/blackmagic_flash.sh   # Black Magic Debug Probe
+./zubax_chibios/tools/stlink_flash.sh       # ST-Link v2
 ```
 
 ## Configuring the board

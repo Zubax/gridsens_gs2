@@ -1,10 +1,10 @@
 #
-# Copyright (c) 2014 Courierdrone, courierdrone.com
+# Copyright (c) 2014 Zubax, zubax.com
 # Distributed under the MIT License, available in the file LICENSE.
-# Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+# Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
-PROJECT = crdr_gps
+PROJECT = zubax_gnss
 
 #
 # Application
@@ -55,4 +55,4 @@ SERIAL_CLI_PORT_NUMBER = 1
 RELEASE_OPT = -Os -fomit-frame-pointer
 DEBUG_OPT = -Os -g3
 
-include crdr_chibios/rules_stm32f105_107.mk
+include zubax_chibios/rules_stm32f105_107.mk

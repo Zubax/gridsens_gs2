@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "node.hpp"
@@ -14,9 +14,9 @@
 #include <uavcan/protocol/global_time_sync_slave.hpp>
 #include <uavcan/protocol/param_server.hpp>
 
-#include <crdr_chibios/config/config.hpp>
-#include <crdr_chibios/watchdog/watchdog.hpp>
-#include <crdr_chibios/sys/sys.h>
+#include <zubax_chibios/config/config.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/sys/sys.h>
 
 namespace node
 {
@@ -26,9 +26,9 @@ namespace
 const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
-crdr_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
-crdr_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
-crdr_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
+zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
+zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
+zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
 
 uavcan_stm32::CanInitHelper<> can;
 
@@ -45,7 +45,7 @@ void configureNode()
     Node& node = getNode();
 
     node.setNodeID(param_node_id.get());
-    node.setName("com.courierdrone.gps");
+    node.setName("com.zubax.gnss");
 
     // Software version
     uavcan::protocol::SoftwareVersion swver;
@@ -309,7 +309,7 @@ public:
     {
         init();
 
-        crdr_chibios::watchdog::Timer wdt;
+        zubax_chibios::watchdog::Timer wdt;
         wdt.startMSec(100);
 
         static uavcan::MonotonicTime prev_led_update;

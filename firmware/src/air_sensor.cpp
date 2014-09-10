@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2014 Courierdrone, courierdrone.com
+ * Copyright (c) 2014 Zubax, zubax.com
  * Distributed under the MIT License, available in the file LICENSE.
- * Author: Pavel Kirienko <pavel.kirienko@courierdrone.com>
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
 #include "air_sensor.hpp"
@@ -11,9 +11,9 @@
 #include <uavcan/equipment/air_data/StaticAirData.hpp>
 
 #include <ch.hpp>
-#include <crdr_chibios/sys/sys.h>
-#include <crdr_chibios/config/config.hpp>
-#include <crdr_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/config/config.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <unistd.h>
 
 namespace air_sensor
@@ -24,9 +24,9 @@ namespace
 const float ValidPressureRange[] = { 1000, 120000 };
 const float ValidTemperatureRange[] = { -40, 85 };
 
-crdr_chibios::config::Param<bool> param_enabled("air_data_enabled", true);
-crdr_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
-crdr_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
+zubax_chibios::config::Param<bool> param_enabled("air_data_enabled", true);
+zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
+zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
@@ -35,7 +35,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
     float pressure_variance = 0;
     float temperature_variance = 0;
 
-    mutable crdr_chibios::watchdog::Timer watchdog_;
+    mutable zubax_chibios::watchdog::Timer watchdog_;
     mutable ::Ms5611 sens = ::Ms5611();
 
     static bool isInRange(float value, const float range_min_max[2])
