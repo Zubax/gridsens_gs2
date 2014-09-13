@@ -24,7 +24,7 @@ namespace
 const float ValidPressureRange[] = { 1000, 120000 };
 const float ValidTemperatureRange[] = { -40, 85 };
 
-zubax_chibios::config::Param<bool> param_enabled("air_data_enabled", true);
+zubax_chibios::config::Param<bool> param_enabled("air_data_enabled", false);
 zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
 zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
