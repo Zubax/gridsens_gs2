@@ -29,6 +29,9 @@ const unsigned IfaceLedUpdatePeriodMSec = 25;
 zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
 zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
 zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
+zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_ms("node_status_pub_interval_ms", 200,
+                                                            uavcan::protocol::NodeStatus::MIN_PUBLICATION_PERIOD_MS,
+                                                            uavcan::protocol::NodeStatus::MAX_PUBLICATION_PERIOD_MS);
 
 uavcan_stm32::CanInitHelper<> can;
 
@@ -162,7 +165,7 @@ class ParamManager : public uavcan::IParamManager
         }
         else
         {
-            ; // Deep shit
+            ; // Invalid type
         }
     }
 
@@ -256,6 +259,9 @@ class : public chibios_rt::BaseStaticThread<3000>
             ::sleep(3);
         }
         assert(getNode().isStarted());
+
+        getNode().getNodeStatusProvider().setStatusPublishingPeriod(
+            uavcan::MonotonicDuration::fromMSec(param_node_status_pub_interval_ms.get()));
 
         while (getParamServer().start(&param_manager) < 0)
         {
