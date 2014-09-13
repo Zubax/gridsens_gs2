@@ -6,13 +6,18 @@
 
 #include <iostream>
 #include <cassert>
+#include <stdexcept>
 #include <uavcan_linux/uavcan_linux.hpp>
 #include <uavcan/equipment/air_data/StaticAirData.hpp>
 #include <uavcan/equipment/ahrs/Magnetometer.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
 #include <uavcan/equipment/gnss/Auxiliary.hpp>
-#include "debug.hpp"
 
+#ifndef STRINGIZE
+#  define STRINGIZE2(x)   #x
+#  define STRINGIZE(x)    STRINGIZE2(x)
+#endif
+#define ENFORCE(x) if (!(x)) { throw std::runtime_error(__FILE__ ":" STRINGIZE(__LINE__) ": " #x); }
 
 static uavcan_linux::NodePtr initNode(const std::vector<std::string>& ifaces, uavcan::NodeID nid,
                                       const std::string& name)
