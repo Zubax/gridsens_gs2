@@ -34,7 +34,6 @@ void publish(float field[3], float variance)
 {
     if (!node::isStarted())
     {
-        lowsyslog("Magnetometer publication skipped: Node is not started\n");
         return;
     }
 
