@@ -29,7 +29,7 @@ std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
     using uavcan::protocol::NodeStatus;
     if (self_status == NodeStatus::STATUS_INITIALIZING) { return {500, 500}; }
     if (self_status == NodeStatus::STATUS_OK)           { return {100, 900}; }
-    if (self_status == NodeStatus::STATUS_WARNING)      { return {100, 200}; }
+    if (self_status == NodeStatus::STATUS_WARNING)      { return {100, 300}; }
     return {100, 100};  // CRITICAL and all
 }
 
