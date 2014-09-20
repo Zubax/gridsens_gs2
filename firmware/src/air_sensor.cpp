@@ -24,14 +24,12 @@ namespace
 const float ValidPressureRange[] = { 1000, 120000 };
 const float ValidTemperatureRange[] = { -40, 85 };
 
-zubax_chibios::config::Param<bool> param_enabled("air_data_enabled", false);
+zubax_chibios::config::Param<unsigned> param_rate("air_data_rate_hz", 0, 0, 30);
 zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
 zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
-    const unsigned PeriodUSec = 100000;
-
     float pressure_variance = 0;
     float temperature_variance = 0;
 
@@ -67,10 +65,14 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
     void tryRun() const
     {
         systime_t sleep_until = chibios_rt::System::getTime();
+
+        assert(param_rate.get() > 0);
+        const unsigned period_usec = 1000000U / param_rate.get();
+
         while (true)
         {
             watchdog_.reset();
-            sleep_until += US2ST(PeriodUSec);
+            sleep_until += US2ST(period_usec);
 
             int32_t raw_pressure = 0;
             int32_t raw_temperature = 0;
@@ -101,7 +103,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
-        watchdog_.startMSec(1000);
+        watchdog_.startMSec(1100);
 
         pressure_variance = param_pressure_variance.get();
         temperature_variance = param_temperature_variance.get();
@@ -137,7 +139,7 @@ public:
 
 void init()
 {
-    if (param_enabled)
+    if (param_rate.get() > 0)
     {
         (void)air_sensor_thread.start(HIGHPRIO - 10);
     }
