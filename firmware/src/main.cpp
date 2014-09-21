@@ -48,6 +48,8 @@ int main()
 
     cli::init();
 
+    chibios_rt::BaseThread::setPriority(LOWPRIO);
+
     while (1)
     {
         const auto on_off = getStatusLedOnOffMSecDurations();

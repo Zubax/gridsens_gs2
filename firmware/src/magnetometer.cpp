@@ -180,6 +180,7 @@ public:
     {
         zubax_chibios::watchdog::Timer wdt;
         wdt.startMSec(1000);
+        setName("mag");
 
         while (!tryInit())
         {
@@ -210,7 +211,7 @@ public:
                 setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
             }
 
-            chibios_rt::BaseThread::sleepUntil(sleep_until);
+            sysSleepUntilChTime(sleep_until);
             wdt.reset();
         }
         return msg_t();

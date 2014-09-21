@@ -218,6 +218,7 @@ public:
     msg_t main() override
     {
         watchdog_.startMSec(1000);
+        setName("gnss");
 
         warn_min_fix_dimensions_ = param_gnss_warn_min_fix_dimensions.get();
         warn_min_sats_used_ = param_gnss_warn_min_sats_used.get();

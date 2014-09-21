@@ -101,7 +101,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
                 node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
             }
 
-            chibios_rt::BaseThread::sleepUntil(sleep_until);
+            sysSleepUntilChTime(sleep_until);
         }
     }
 
@@ -109,6 +109,7 @@ public:
     msg_t main() override
     {
         watchdog_.startMSec(1100);
+        setName("air_sensor");
 
         pressure_variance = param_pressure_variance.get();
         temperature_variance = param_temperature_variance.get();

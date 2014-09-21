@@ -313,6 +313,7 @@ class : public chibios_rt::BaseStaticThread<3000>
 public:
     msg_t main() override
     {
+        setName("uavcan");
         init();
 
         zubax_chibios::watchdog::Timer wdt;
@@ -404,7 +405,7 @@ void init()
         }
     }
 
-    (void)node_thread.start(LOWPRIO);
+    (void)node_thread.start(LOWPRIO + 10);
 }
 
 }
