@@ -21,8 +21,9 @@ namespace air_sensor
 namespace
 {
 
-const float ValidPressureRange[] = { 1000, 120000 };
-const float ValidTemperatureRange[] = { -40, 85 };
+const float ValidPressureRange[] = { 1000, 120000 };          ///< Sensor range
+const float ValidTemperatureRange[] = { -40, 85 };            ///< Sensor range
+const float OperatingTemperatureRange[] = { -30, 60 };        ///< Operating temperature, by specification
 
 zubax_chibios::config::Param<unsigned> param_rate("air_data_rate_hz", 0, 0, 30);
 zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
@@ -90,6 +91,10 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
                 !isInRange(temperature, ValidTemperatureRange))
             {
                 node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+            }
+            else if (!isInRange(temperature, OperatingTemperatureRange))
+            {
+                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_WARNING);
             }
             else
             {
