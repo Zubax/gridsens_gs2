@@ -23,5 +23,4 @@ __pycache__
 .pydevproject
 
 # Libs
-uavcan
 dsdlc_generated
