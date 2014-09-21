@@ -163,8 +163,10 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     mutable Platform platform_;
     mutable ublox::Driver driver_ = ublox::Driver(platform_);
 
-    void pause() const
+    void pauseOneSec() const
     {
+        watchdog_.reset();
+        ::usleep(500000);
         watchdog_.reset();
         ::usleep(500000);
         watchdog_.reset();
@@ -179,7 +181,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         while (keep_going_ && !driver_.configure(cfg, watchdog_))
         {
             lowsyslog("GNSS driver init failed\n");
-            pause();
+            pauseOneSec();
         }
     }
 
@@ -223,9 +225,11 @@ public:
         driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
         driver_.on_aux = [this](const ublox::Auxiliary& aux) { publishAuxiliary(driver_.getFix(), aux); };
 
+        pauseOneSec();  // Waiting for the receiver to boot
+
         while (keep_going_)
         {
-            pause();
+            pauseOneSec();
             lowsyslog("GNSS init...\n");
             tryInit();
             tryRun();
@@ -233,7 +237,7 @@ public:
         }
 
         lowsyslog("GNSS driver terminated\n");
-        while (true) { pause(); }
+        while (true) { pauseOneSec(); }
         return msg_t();
     }
 
