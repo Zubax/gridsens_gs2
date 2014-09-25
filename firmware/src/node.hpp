@@ -30,6 +30,8 @@ typedef uavcan::ComponentStatusManager<unsigned(ComponentID::NumComponents_)> Co
 
 bool isStarted();
 
+bool hasPendingRestartRequest();
+
 Node& getNode();
 
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment);

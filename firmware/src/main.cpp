@@ -50,7 +50,7 @@ int main()
 
     chibios_rt::BaseThread::setPriority(LOWPRIO);
 
-    while (1)
+    while (!node::hasPendingRestartRequest())
     {
         const auto on_off = getStatusLedOnOffMSecDurations();
         board::setStatusLed(true);
@@ -60,5 +60,10 @@ int main()
         ::usleep(on_off.second * 1000);
         wdt.reset();
     }
+
+    board::setStatusLed(true);
+    ::usleep(500000);                   // Let threads terminate properly
+    board::restart();                   // Then reset anyway
+
     return 0;
 }

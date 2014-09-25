@@ -21,6 +21,8 @@ void setStatusLed(bool state);
 
 void enterBootloader();
 
+void restart();
+
 constexpr unsigned UniqueIDSize = 12;
 
 void readUniqueID(std::uint8_t bytes[UniqueIDSize]);

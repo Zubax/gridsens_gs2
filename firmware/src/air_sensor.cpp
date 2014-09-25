@@ -70,7 +70,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         assert(param_rate.get() > 0);
         const unsigned period_usec = 1000000U / param_rate.get();
 
-        while (true)
+        while (!node::hasPendingRestartRequest())
         {
             watchdog_.reset();
             sleep_until += US2ST(period_usec);
@@ -114,7 +114,7 @@ public:
         pressure_variance = param_pressure_variance.get();
         temperature_variance = param_temperature_variance.get();
 
-        while (true)
+        while (!node::hasPendingRestartRequest())
         {
             watchdog_.reset();
             ::usleep(500000);
@@ -134,9 +134,14 @@ public:
 
             node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
             tryRun();
-            node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
-            lowsyslog("Air sensor is about to restart...\n");
+            if (!node::hasPendingRestartRequest())
+            {
+                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+                lowsyslog("Air sensor is about to restart...\n");
+            }
         }
+
+        lowsyslog("Air sensor driver terminated\n");
         return msg_t();
     }
 } air_sensor_thread;

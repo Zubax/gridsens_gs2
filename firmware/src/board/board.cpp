@@ -140,6 +140,11 @@ void enterBootloader()
     while (true) { }
 }
 
+void restart()
+{
+    NVIC_SystemReset();
+}
+
 void readUniqueID(std::uint8_t bytes[UniqueIDSize])
 {
     std::memcpy(bytes, reinterpret_cast<const void*>(0x1FFFF7E8), UniqueIDSize);

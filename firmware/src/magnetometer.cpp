@@ -182,7 +182,7 @@ public:
         wdt.startMSec(1000);
         setName("mag");
 
-        while (!tryInit())
+        while (!tryInit() && !node::hasPendingRestartRequest())
         {
             setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
             lowsyslog("Mag init failed, will retry...\n");
@@ -195,7 +195,7 @@ public:
 
         systime_t sleep_until = chibios_rt::System::getTime();
 
-        while (true)
+        while (!node::hasPendingRestartRequest())
         {
             sleep_until += US2ST(period_usec);
 
@@ -214,6 +214,8 @@ public:
             sysSleepUntilChTime(sleep_until);
             wdt.reset();
         }
+
+        lowsyslog("Mag driver terminated\n");
         return msg_t();
     }
 } mag_thread;

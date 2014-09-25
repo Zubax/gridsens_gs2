@@ -40,6 +40,7 @@ uavcan_stm32::Mutex node_mutex;
 ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIALIZING);
 
 bool started = false;
+bool pending_restart_request = false;
 bool local_utc_updated = false;
 bool time_sync_master_enabled = false;
 
@@ -226,9 +227,9 @@ class RestartRequestHandler : public uavcan::IRestartRequestHandler
 {
     bool handleRestartRequest(uavcan::NodeID request_source) override
     {
-        lowsyslog("Restarting by request from %i\n", int(request_source.get()));
-        NVIC_SystemReset();
-        return true;         // Will never be executed BTW
+        lowsyslog("Restart request from %i\n", int(request_source.get()));
+        pending_restart_request = true;
+        return true;
     }
 } restart_request_handler;
 
@@ -322,7 +323,7 @@ public:
         static uavcan::MonotonicTime prev_led_update;
         auto& node = getNode();
 
-        while (true)
+        while (!hasPendingRestartRequest())
         {
             {
                 Lock locker;
@@ -350,6 +351,8 @@ public:
             ::usleep(1000);
             wdt.reset();
         }
+
+        lowsyslog("UAVCAN terminated\n");
         return msg_t();
     }
 } node_thread;
@@ -361,6 +364,11 @@ Lock::Lock() : uavcan_stm32::MutexLocker(node_mutex) { }
 bool isStarted()
 {
     return started;
+}
+
+bool hasPendingRestartRequest()
+{
+    return pending_restart_request;
 }
 
 Node& getNode()

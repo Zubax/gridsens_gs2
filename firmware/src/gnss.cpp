@@ -163,6 +163,11 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     mutable Platform platform_;
     mutable ublox::Driver driver_ = ublox::Driver(platform_);
 
+    bool shouldKeepGoing() const
+    {
+        return keep_going_ && !node::hasPendingRestartRequest();
+    }
+
     void pauseOneSec() const
     {
         watchdog_.reset();
@@ -178,7 +183,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         cfg.fix_rate_hz = param_gnss_fix_rate.get();
         cfg.aux_rate_hz = param_gnss_aux_rate.get();
 
-        while (keep_going_ && !driver_.configure(cfg, watchdog_))
+        while (shouldKeepGoing() && !driver_.configure(cfg, watchdog_))
         {
             lowsyslog("GNSS driver init failed\n");
             pauseOneSec();
@@ -192,7 +197,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
             watchdog_.reset();
             driver_.spin(100);
         }
-        while (keep_going_ && driver_.areRatesValid());
+        while (shouldKeepGoing() && driver_.areRatesValid());
     }
 
     void handleFix(const ublox::Fix& fix) const
@@ -228,7 +233,7 @@ public:
 
         pauseOneSec();  // Waiting for the receiver to boot
 
-        while (keep_going_)
+        while (shouldKeepGoing())
         {
             pauseOneSec();
             lowsyslog("GNSS init...\n");
@@ -238,7 +243,10 @@ public:
         }
 
         lowsyslog("GNSS driver terminated\n");
-        while (true) { pauseOneSec(); }
+        while (true)
+        {
+            pauseOneSec();   // We don't exit the thread because GNSS driver termination is not fatal
+        }
         return msg_t();
     }
 
