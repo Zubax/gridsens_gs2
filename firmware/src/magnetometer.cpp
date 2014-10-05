@@ -59,15 +59,10 @@ bool io(const std::array<uint8_t, TxSize>& tx, std::array<uint8_t, RxSize>& rx)
     return status == RDY_OK;
 }
 
-bool tryInit()
+bool writeCraCrbMode(uint8_t cra, uint8_t crb, uint8_t mode)
 {
-    const uint8_t cfg_registers[] =
-    {
-        0b01111000, // Reg A: Averaging 8x, Update rate 75Hz, Normal mode
-        0b00100000, // Reg B: Default gain
-        0b00000000  // Mode: Continuous measurement
-    };
-    // Config write
+    const uint8_t cfg_registers[] = { cra, crb, mode };
+    // Write
     {
         std::array<uint8_t, 4> tx;
         tx[0] = 0;
@@ -78,7 +73,7 @@ bool tryInit()
             return false;
         }
     }
-    // Config readback - make sure it was written correctly
+    // Readback - make sure it was written correctly
     {
         std::array<uint8_t, 1> tx;
         tx[0] = 0;
@@ -92,27 +87,119 @@ bool tryInit()
             return false;
         }
     }
-    // TODO: Sensor self-test
     return true;
 }
 
-bool tryRead(float out_gauss[3])
+bool tryReadRawData(int16_t out_xyz[3])
 {
     std::array<uint8_t, 1> tx;
     tx[0] = 3;
     std::array<uint8_t, 6> rx;
     if (!io(tx, rx))
     {
+        ::lowsyslog("Mag read failed\n");
+        return false;
+    }
+    out_xyz[0] = (((int16_t)rx[0]) << 8) | rx[1];  // X
+    out_xyz[2] = (((int16_t)rx[2]) << 8) | rx[3];  // Z
+    out_xyz[1] = (((int16_t)rx[4]) << 8) | rx[5];  // Y
+    return true;
+}
+
+bool trySelfTest(const bool polarity)
+{
+    static const int16_t LowLimit  = 143;     // For gain 7
+    static const int16_t HighLimit = 339;
+
+    /*
+     * Enable self test mode (pos/neg)
+     */
+    if (!writeCraCrbMode(polarity ? 0x71 : 0x72,    // Reg A: 8-average, 15 Hz default, positive/negative self test
+                         0xE0,                      // Reg B: Gain=7
+                         0x00))                     // Mode: Continuous-measurement mode
+    {
+        ::lowsyslog("Mag: Failed to begin self test\n");
         return false;
     }
 
-    const int16_t hx = (((int16_t)rx[0]) << 8) | rx[1];  // X
-    const int16_t hz = (((int16_t)rx[2]) << 8) | rx[3];  // Z
-    const int16_t hy = (((int16_t)rx[4]) << 8) | rx[5];  // Y
+    /*
+     * Ignore the first two samples, keep the last one
+     */
+    int16_t raw_xyz[3] = {};
+    for (int i = 0; i < 3; i++)
+    {
+        ::usleep(80000);
+        if (!tryReadRawData(raw_xyz))
+        {
+            return false;
+        }
+    }
 
-    out_gauss[0] = hx * GaussScale;
-    out_gauss[1] = hy * GaussScale;
-    out_gauss[2] = hz * GaussScale;
+    ::lowsyslog("Mag self test sample, %s, x/y/z: %d %d %d\n", polarity ? "positive": "negative",
+                int(raw_xyz[0]), int(raw_xyz[1]), int(raw_xyz[2]));
+
+    /*
+     * Validate the obtained results
+     */
+    for (const auto a : raw_xyz)
+    {
+        const auto normalized = polarity ? a : -a;
+        if ((normalized < LowLimit) || (normalized > HighLimit))
+        {
+            ::lowsyslog("Mag self test sample %d is invalid\n", int(a));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool tryInit()
+{
+    /*
+     * Run two self tests - positive and negative
+     */
+    if (!trySelfTest(true))
+    {
+        ::lowsyslog("Mag positive self test failed\n");
+        return false;
+    }
+
+    if (!trySelfTest(false))
+    {
+        ::lowsyslog("Mag negative self test failed\n");
+        return false;
+    }
+
+    /*
+     * Configure normal mode
+     */
+    if (!writeCraCrbMode(0b01111000,  // Reg A: Averaging 8x, Update rate 75Hz, Normal mode
+                         0b00100000,  // Reg B: Default gain
+                         0b00000000)) // Mode: Continuous measurement
+    {
+        ::lowsyslog("Mag: Failed to begin normal operation\n");
+        return false;
+    }
+
+    /*
+     * Discard the first sample after gain change
+     */
+    ::usleep(80000);
+    int16_t dummy[3] = {};
+    return tryReadRawData(dummy);
+}
+
+bool tryRead(float out_gauss[3])
+{
+    int16_t raw_xyz[3] = {};
+    if (!tryReadRawData(raw_xyz))
+    {
+        return false;
+    }
+    out_gauss[0] = raw_xyz[0] * GaussScale;
+    out_gauss[1] = raw_xyz[1] * GaussScale;
+    out_gauss[2] = raw_xyz[2] * GaussScale;
     return true;
 }
 
@@ -182,6 +269,9 @@ public:
         wdt.startMSec(1000);
         setName("mag");
 
+        ::usleep(500000);         // Startup delay
+        wdt.reset();
+
         while (!tryInit() && !node::hasPendingRestartRequest())
         {
             setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
@@ -189,6 +279,8 @@ public:
             ::usleep(500000);
             wdt.reset();
         }
+
+        wdt.reset();
 
         const float variance = param_variance.get();
         const uint64_t period_usec = 1000000 / param_rate.get();
