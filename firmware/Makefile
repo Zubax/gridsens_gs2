@@ -52,6 +52,8 @@ UDEFS += -DGIT_HASH=0x$(GIT_HASH)
 
 SERIAL_CLI_PORT_NUMBER = 1
 
+CPPWARN := -Wundef -Wno-error=undef
+
 RELEASE_OPT = -Os -fomit-frame-pointer
 DEBUG_OPT = -Os -g3
 
