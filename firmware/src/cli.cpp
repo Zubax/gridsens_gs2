@@ -80,7 +80,7 @@ const ::ShellCommand HandlerTable[] =
     {nullptr, nullptr}
 };
 
-#if RELEASE
+#if defined(RELEASE_BUILD) && RELEASE_BUILD
 bool readRxPin()
 {
     return palReadPad(GPIO_PORT_SERIAL_RX, GPIO_PIN_SERIAL_RX);
@@ -91,7 +91,7 @@ bool readRxPin()
 
 void init()
 {
-#if RELEASE
+#if defined(RELEASE_BUILD) && RELEASE_BUILD
     if (!readRxPin())
     {
         ::usleep(500000);   // Some USB-serial adapters are weird and need some time to initialize TX line
