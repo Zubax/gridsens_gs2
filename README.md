@@ -8,7 +8,7 @@ Zubax GNSS is a high performance open source positioning module for outdoor envi
 
 ## Building the Firmware
 
-* Install ARM GCC toolchain version 4.8
+* Install ARM GCC toolchain version 4.8 or newer
 * Init the sources:
 ```shell
 git submodule update --init --recursive
