@@ -50,18 +50,21 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             return;
         }
 
-        static uavcan::equipment::air_data::StaticAirData air_data;
-        air_data.static_pressure = pressure_pa;
-        air_data.static_pressure_variance = pressure_variance;
+        static uavcan::equipment::air_data::StaticPressure pressure;
+        pressure.static_pressure = pressure_pa;
+        pressure.static_pressure_variance = pressure_variance;
 
-        air_data.static_temperature = temperature_degc;
-        air_data.static_temperature_variance = temperature_variance;
+        static uavcan::equipment::air_data::StaticTemperature temperature;
+        temperature.static_temperature = temperature_degc;
+        temperature.static_temperature_variance = temperature_variance;
 
         node::Lock locker;
         auto& node = node::getNode();
 
-        static uavcan::Publisher<uavcan::equipment::air_data::StaticAirData> air_data_pub(node);
-        (void)air_data_pub.broadcast(air_data);
+        static uavcan::Publisher<uavcan::equipment::air_data::StaticPressure> pressure_pub(node);
+        static uavcan::Publisher<uavcan::equipment::air_data::StaticTemperature> temperature_pub(node);
+        (void)pressure_pub.broadcast(pressure);
+        (void)temperature_pub.broadcast(temperature);
     }
 
     void tryRun() const

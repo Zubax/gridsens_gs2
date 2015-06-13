@@ -106,9 +106,6 @@ void publishAuxiliary(const ublox::Fix& fix, const ublox::Auxiliary& aux)
     msg.sats_used = fix.sats_used;
     msg.sats_visible = aux.num_sats;
 
-    // Flags
-    msg.differential_corrections_applied = (fix.flags & ublox::Fix::Flags::DifferentialSolution) != 0;
-
     // Publishing
     node::Lock locker;
     static uavcan::Publisher<uavcan::equipment::gnss::Auxiliary> pub(node::getNode());
