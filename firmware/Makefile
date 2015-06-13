@@ -28,11 +28,11 @@ UDEFS += -DUAVCAN_STM32_TIMER_NUMBER=7    \
          -DUAVCAN_MEM_POOL_BLOCK_SIZE=56  \
          -DUAVCAN_TOSTRING=0
 
-include uavcan/libuavcan/include.mk
+include libuavcan/libuavcan/include.mk
 CPPSRC += $(LIBUAVCAN_SRC)
 UINCDIR += $(LIBUAVCAN_INC)
 
-include uavcan/libuavcan_drivers/stm32/driver/include.mk
+include libuavcan/libuavcan_drivers/stm32/driver/include.mk
 CPPSRC += $(LIBUAVCAN_STM32_SRC)
 UINCDIR += $(LIBUAVCAN_STM32_INC)
 

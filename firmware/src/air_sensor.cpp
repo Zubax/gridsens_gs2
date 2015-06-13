@@ -8,7 +8,8 @@
 #include "board/ms5611.h"
 #include "node.hpp"
 
-#include <uavcan/equipment/air_data/StaticAirData.hpp>
+#include <uavcan/equipment/air_data/StaticPressure.hpp>
+#include <uavcan/equipment/air_data/StaticTemperature.hpp>
 
 #include <ch.hpp>
 #include <zubax_chibios/sys/sys.h>

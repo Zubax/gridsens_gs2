@@ -150,7 +150,8 @@ void publishTimeSync(const uavcan::TimerEvent&)
  */
 class ParamManager : public uavcan::IParamManager
 {
-    void convert(float native_value, ConfigDataType native_type, uavcan::protocol::param::Value& out_value) const
+    void convert(float native_value, ConfigDataType native_type,
+                 uavcan::protocol::param::Value& out_value) const
     {
         if (native_type == CONFIG_TYPE_BOOL)
         {
@@ -170,7 +171,24 @@ class ParamManager : public uavcan::IParamManager
         }
     }
 
-    void getParamNameByIndex(ParamIndex index, ParamName& out_name) const override
+    void convert(float native_value, ConfigDataType native_type,
+                 uavcan::protocol::param::NumericValue& out_value) const
+    {
+        if (native_type == CONFIG_TYPE_INT)
+        {
+            out_value.value_int.push_back(native_value);
+        }
+        else if (native_type == CONFIG_TYPE_FLOAT)
+        {
+            out_value.value_float.push_back(native_value);
+        }
+        else
+        {
+            ; // Not applicable
+        }
+    }
+
+    void getParamNameByIndex(Index index, Name& out_name) const override
     {
         const char* name = configNameByIndex(index);
         if (name != nullptr)
@@ -179,14 +197,14 @@ class ParamManager : public uavcan::IParamManager
         }
     }
 
-    void assignParamValue(const ParamName& name, const ParamValue& value) override
+    void assignParamValue(const Name& name, const Value& value) override
     {
         const float native_value = (!value.value_bool.empty()) ? (value.value_bool[0] ? 1 : 0) :
                                    (!value.value_int.empty()) ? value.value_int[0] : value.value_float[0];
         (void)configSet(name.c_str(), native_value);
     }
 
-    void readParamValue(const ParamName& name, ParamValue& out_value) const override
+    void readParamValue(const Name& name, Value& out_value) const override
     {
         ConfigParam descr;
         const int res = configGetDescr(name.c_str(), &descr);
@@ -196,8 +214,8 @@ class ParamManager : public uavcan::IParamManager
         }
     }
 
-    void readParamDefaultMaxMin(const ParamName& name, ParamValue& out_default,
-                                        ParamValue& out_max, ParamValue& out_min) const override
+    void readParamDefaultMaxMin(const Name& name, Value& out_default,
+                                NumericValue& out_max, NumericValue& out_min) const override
     {
         ConfigParam descr;
         const int res = configGetDescr(name.c_str(), &descr);
@@ -261,7 +279,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
         assert(getNode().isStarted());
 
-        getNode().getNodeStatusProvider().setStatusPublishingPeriod(
+        getNode().getNodeStatusProvider().setStatusPublicationPeriod(
             uavcan::MonotonicDuration::fromMSec(param_node_status_pub_interval_ms.get()));
 
         while (getParamServer().start(&param_manager) < 0)
