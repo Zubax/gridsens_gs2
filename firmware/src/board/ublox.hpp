@@ -114,6 +114,12 @@ struct Auxiliary
     Sat sats[MaxSats];
 };
 
+struct GpsLeapSeconds
+{
+    Timestamps ts;
+    std::uint16_t num_leap_seconds;
+};
+
 
 struct ChecksumComputer
 {
@@ -266,10 +272,12 @@ class Driver
 
     Fix fix_ = Fix();
     Auxiliary aux_ = Auxiliary();
+    GpsLeapSeconds leaps_ = GpsLeapSeconds();
 
     void handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt);
     void handleDOP(const Timestamps& ts, const msg::NAV_DOP& dop);
     void handleSAT(const Timestamps& ts, const msg::NAV_SAT& sat);
+    void handleTIMEGPS(const Timestamps& ts, const msg::NAV_TIMEGPS& timegps);
 
     void handleReceivedMessage(const RxMessage& msg);
 
@@ -288,9 +296,11 @@ public:
 
     std::function<void (const Fix&)> on_fix;
     std::function<void (const Auxiliary&)> on_aux;
+    std::function<void (const GpsLeapSeconds&)> on_gps_leap_seconds;
 
     const Fix& getFix() const { return fix_; }
     const Auxiliary& getAuxiliary() const { return aux_; }
+    const GpsLeapSeconds& getGpsLeapSeconds() const { return leaps_; }
 
     bool areRatesValid() const;
 };

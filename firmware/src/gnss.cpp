@@ -32,7 +32,13 @@ zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_
 zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
 
 
-void publishFix(const ublox::Fix& data)
+std::uint16_t computeNumLeapSecondsFromGpsLeapSeconds(std::uint16_t gps_leaps)
+{
+    return gps_leaps + 9;
+}
+
+
+void publishFix(const ublox::Fix& data, const ublox::GpsLeapSeconds& leaps)
 {
     static uavcan::equipment::gnss::Fix msg;
     msg = uavcan::equipment::gnss::Fix();
@@ -42,6 +48,13 @@ void publishFix(const ublox::Fix& data)
 
     // Timestamp - GNSS clock
     msg.gnss_timestamp = data.utc_valid ? uavcan::UtcTime::fromUSec(data.utc_usec) : uavcan::UtcTime();
+
+    msg.gnss_time_standard = uavcan::equipment::gnss::Fix::GNSS_TIME_STANDARD_UTC;
+
+    if (leaps.num_leap_seconds > 0)     // Zero means unknown
+    {
+        msg.num_leap_seconds = computeNumLeapSecondsFromGpsLeapSeconds(leaps.num_leap_seconds);
+    }
 
     // Position
     msg.latitude_deg_1e8  = static_cast<std::int64_t>(data.lat * 1e8);
@@ -200,7 +213,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     void handleFix(const ublox::Fix& fix) const
     {
         // Publish the new GNSS solution onto the bus
-        publishFix(fix);
+        publishFix(fix, driver_.getGpsLeapSeconds());
 
         // Update component status
         const bool warn = (static_cast<unsigned>(fix.mode) < warn_min_fix_dimensions_) ||

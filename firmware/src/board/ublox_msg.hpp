@@ -271,7 +271,7 @@ struct NAV_PVT
         DeadReckoning         = 1,
         Fix2D                 = 2,
         Fix3D                 = 3,
-        GnssAndDeadReckoning = 4,
+        GnssAndDeadReckoning  = 4,
         TimeOnly              = 5
     } fixType;
 
@@ -362,6 +362,28 @@ struct NAV_SAT
     } svs[1];
 };
 static_assert(sizeof(NAV_SAT) == 20, "Struct size error");
+
+
+struct NAV_TIMEGPS
+{
+    static constexpr unsigned Class = 0x01;
+    static constexpr unsigned ID    = 0x20;
+
+    U4 iTOW;
+    I4 fTOW;
+    I2 week;
+    I1 leapS;
+    X1 valid;
+    U4 tAcc;
+
+    struct ValidMask
+    {
+        static constexpr X1 towValid   = 1;
+        static constexpr X1 weekValid  = 2;
+        static constexpr X1 leapSValid = 4;
+    };
+};
+static_assert(sizeof(NAV_TIMEGPS) == 16, "Struct size error");
 
 
 struct MON_GNSS

@@ -453,6 +453,22 @@ void Driver::handleSAT(const Timestamps& ts, const msg::NAV_SAT& sat)
     }
 }
 
+void Driver::handleTIMEGPS(const Timestamps& ts, const msg::NAV_TIMEGPS& timegps)
+{
+    leaps_ = GpsLeapSeconds();
+    leaps_.ts = ts;
+
+    if (timegps.valid & msg::NAV_TIMEGPS::ValidMask::leapSValid)
+    {
+        leaps_.num_leap_seconds = timegps.leapS;
+
+        if (on_gps_leap_seconds)
+        {
+            on_gps_leap_seconds(leaps_);
+        }
+    }
+}
+
 void Driver::handleReceivedMessage(const RxMessage& raw_msg)
 {
     if (auto msg = raw_msg.tryCastTo<msg::NAV_PVT>())
@@ -466,6 +482,10 @@ void Driver::handleReceivedMessage(const RxMessage& raw_msg)
     else if (auto msg = raw_msg.tryCastTo<msg::NAV_SAT>())
     {
         handleSAT(raw_msg, *msg);
+    }
+    else if (auto msg = raw_msg.tryCastTo<msg::NAV_TIMEGPS>())
+    {
+        handleTIMEGPS(raw_msg, *msg);
     }
     else
     {
@@ -542,6 +562,10 @@ bool Driver::configureGnss(zubax_chibios::watchdog::Timer& wdt)
 bool Driver::configureMessages()
 {
     if (!configureMessageRate(msg::NAV_PVT::Class, msg::NAV_PVT::ID, 1))  // Position-Velocity-Time solution
+    {
+        return false;
+    }
+    if (!configureMessageRate(msg::NAV_TIMEGPS::Class, msg::NAV_TIMEGPS::ID, 1))
     {
         return false;
     }
