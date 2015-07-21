@@ -7,6 +7,7 @@
 #include "node.hpp"
 
 #include "board/board.hpp"
+#include "component_status_manager.hpp"
 #include <ch.hpp>
 #include <unistd.h>
 
@@ -30,14 +31,14 @@ zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000,
 zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
 zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
 zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_ms("node_status_pub_interval_ms", 200,
-                                                            uavcan::protocol::NodeStatus::MIN_PUBLICATION_PERIOD_MS,
-                                                            uavcan::protocol::NodeStatus::MAX_PUBLICATION_PERIOD_MS);
+                                                            uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS,
+                                                            uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS);
 
 uavcan_stm32::CanInitHelper<> can;
 
 uavcan_stm32::Mutex node_mutex;
 
-ComponentStatusManager comp_stat_mgr(uavcan::protocol::NodeStatus::STATUS_INITIALIZING);
+ComponentStatusManager<unsigned(ComponentID::NumComponents_)> comp_mgr;
 
 bool started = false;
 bool pending_restart_request = false;
@@ -58,7 +59,7 @@ void configureNode()
     swver.minor = FW_VERSION_MINOR;
 
     swver.vcs_commit = GIT_HASH;
-    swver.optional_field_mask |= swver.OPTIONAL_FIELD_MASK_VCS_COMMIT;
+    swver.optional_field_flags |= swver.OPTIONAL_FIELD_FLAG_VCS_COMMIT;
 
     node.setSoftwareVersion(swver);
 
@@ -150,20 +151,19 @@ void publishTimeSync(const uavcan::TimerEvent&)
  */
 class ParamManager : public uavcan::IParamManager
 {
-    void convert(float native_value, ConfigDataType native_type,
-                 uavcan::protocol::param::Value& out_value) const
+    void convert(float native_value, ConfigDataType native_type, Value& out_value) const
     {
         if (native_type == CONFIG_TYPE_BOOL)
         {
-            out_value.value_bool.push_back(native_value != 0);
+            out_value.to<Value::Tag::boolean_value>() = uavcan::isCloseToZero(native_value);
         }
         else if (native_type == CONFIG_TYPE_INT)
         {
-            out_value.value_int.push_back(native_value);
+            out_value.to<Value::Tag::integer_value>() = static_cast<std::int64_t>(native_value);
         }
         else if (native_type == CONFIG_TYPE_FLOAT)
         {
-            out_value.value_float.push_back(native_value);
+            out_value.to<Value::Tag::real_value>() = native_value;
         }
         else
         {
@@ -171,16 +171,15 @@ class ParamManager : public uavcan::IParamManager
         }
     }
 
-    void convert(float native_value, ConfigDataType native_type,
-                 uavcan::protocol::param::NumericValue& out_value) const
+    void convert(float native_value, ConfigDataType native_type, NumericValue& out_value) const
     {
         if (native_type == CONFIG_TYPE_INT)
         {
-            out_value.value_int.push_back(native_value);
+            out_value.to<NumericValue::Tag::integer_value>() = static_cast<std::int64_t>(native_value);
         }
         else if (native_type == CONFIG_TYPE_FLOAT)
         {
-            out_value.value_float.push_back(native_value);
+            out_value.to<NumericValue::Tag::real_value>() = native_value;
         }
         else
         {
@@ -199,8 +198,25 @@ class ParamManager : public uavcan::IParamManager
 
     void assignParamValue(const Name& name, const Value& value) override
     {
-        const float native_value = (!value.value_bool.empty()) ? (value.value_bool[0] ? 1 : 0) :
-                                   (!value.value_int.empty()) ? value.value_int[0] : value.value_float[0];
+        float native_value = 0.F;
+
+        if (value.is(Value::Tag::boolean_value))
+        {
+            native_value = (*value.as<Value::Tag::boolean_value>()) ? 1.F : 0.F;
+        }
+        else if (value.is(Value::Tag::integer_value))
+        {
+            native_value = static_cast<float>(*value.as<Value::Tag::integer_value>());
+        }
+        else if (value.is(Value::Tag::real_value))
+        {
+            native_value = *value.as<Value::Tag::real_value>();
+        }
+        else
+        {
+            return;
+        }
+
         (void)configSet(name.c_str(), native_value);
     }
 
@@ -346,7 +362,15 @@ public:
             {
                 Lock locker;
 
-                node.getNodeStatusProvider().setStatusCode(comp_stat_mgr.getWorstStatusCode());
+                if (node.getNodeStatusProvider().getMode() != uavcan::protocol::NodeStatus::MODE_OPERATIONAL)
+                {
+                    if (comp_mgr.areAllInitialized())
+                    {
+                        node.setModeOperational();
+                    }
+                }
+
+                node.getNodeStatusProvider().setHealth(comp_mgr.getWorstHealth());
 
                 const int spin_res = node.spin(uavcan::MonotonicDuration::fromUSec(500));
                 if (spin_res < 0)
@@ -406,10 +430,16 @@ void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
     }
 }
 
-void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status)
+void setComponentHealth(ComponentID comp, std::uint8_t health)
 {
     Lock locker;
-    comp_stat_mgr.setComponentStatus(comp, status);
+    comp_mgr.setHealth(comp, health);
+}
+
+void markComponentInitialized(ComponentID comp)
+{
+    Lock locker;
+    comp_mgr.markInitialized(comp);
 }
 
 void init()

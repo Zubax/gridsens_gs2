@@ -7,7 +7,6 @@
 #pragma once
 
 #include <uavcan_stm32/uavcan_stm32.hpp>
-#include <uavcan/helpers/component_status_manager.hpp>
 
 namespace node
 {
@@ -25,8 +24,7 @@ struct Lock : uavcan_stm32::MutexLocker
     Lock();
 };
 
-typedef uavcan::Node<UAVCAN_MEM_POOL_BLOCK_SIZE * 128> Node;
-typedef uavcan::ComponentStatusManager<unsigned(ComponentID::NumComponents_)> ComponentStatusManager;
+typedef uavcan::Node<uavcan::MemPoolBlockSize * 128> Node;
 
 bool isStarted();
 
@@ -36,7 +34,9 @@ Node& getNode();
 
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment);
 
-void setComponentStatus(ComponentID comp, ComponentStatusManager::StatusCode status);
+void setComponentHealth(ComponentID comp, std::uint8_t health);
+
+void markComponentInitialized(ComponentID comp);
 
 void init();
 

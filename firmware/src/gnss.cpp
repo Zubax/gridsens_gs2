@@ -205,8 +205,8 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         // Update component status
         const bool warn = (static_cast<unsigned>(fix.mode) < warn_min_fix_dimensions_) ||
                           (fix.sats_used < warn_min_sats_used_);
-        auto stat = warn ? uavcan::protocol::NodeStatus::STATUS_WARNING : uavcan::protocol::NodeStatus::STATUS_OK;
-        node::setComponentStatus(node::ComponentID::Gnss, stat);
+        auto stat = warn ? uavcan::protocol::NodeStatus::HEALTH_WARNING : uavcan::protocol::NodeStatus::HEALTH_OK;
+        node::setComponentHealth(node::ComponentID::Gnss, stat);
 
         // Adjust the local time (locked to the global UTC)
         if (fix.utc_valid)
@@ -230,13 +230,15 @@ public:
 
         pauseOneSec();  // Waiting for the receiver to boot
 
+        node::markComponentInitialized(node::ComponentID::Gnss);
+
         while (shouldKeepGoing())
         {
             pauseOneSec();
             lowsyslog("GNSS init...\n");
             tryInit();
             tryRun();
-            node::setComponentStatus(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+            node::setComponentHealth(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::HEALTH_ERROR);
         }
 
         lowsyslog("GNSS driver terminated\n");

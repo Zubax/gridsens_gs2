@@ -25,12 +25,19 @@ namespace
 
 std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 {
-    const auto self_status = node::getNode().getNodeStatusProvider().getStatusCode();
     using uavcan::protocol::NodeStatus;
-    if (self_status == NodeStatus::STATUS_INITIALIZING) { return {500, 500}; }
-    if (self_status == NodeStatus::STATUS_OK)           { return {100, 900}; }
-    if (self_status == NodeStatus::STATUS_WARNING)      { return {100, 300}; }
-    return {100, 100};  // CRITICAL and all
+
+    if (node::getNode().getNodeStatusProvider().getMode() == NodeStatus::MODE_OPERATIONAL)
+    {
+        const auto health = node::getNode().getNodeStatusProvider().getHealth();
+        if (health == NodeStatus::HEALTH_OK)      { return {100, 900}; }
+        if (health == NodeStatus::HEALTH_WARNING) { return {100, 200}; }
+        return {100, 100};  // ERROR/CRITICAL
+    }
+    else
+    {
+        return {500, 500};
+    }
 }
 
 }

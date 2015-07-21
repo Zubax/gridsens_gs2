@@ -218,12 +218,12 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
 {
     uavcan::MonotonicTime last_nonzero_vector_ts_;
 
-    static void setStatus(unsigned status)
+    static void setStatus(std::uint8_t status)
     {
-        node::setComponentStatus(node::ComponentID::Magnetometer, status);
+        node::setComponentHealth(node::ComponentID::Magnetometer, status);
     }
 
-    unsigned estimateStatusFromMeasurement(const float (&vector)[3])
+    std::uint8_t estimateStatusFromMeasurement(const float (&vector)[3])
     {
         // Checking if measured vector is a zero vector. Zero vectors are suspicious.
         bool zero_vector = true;
@@ -242,7 +242,7 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
             auto zero_vector_duration = uavcan_stm32::clock::getMonotonic() - last_nonzero_vector_ts_;
             if (zero_vector_duration > MaxZeroVectorDuration)
             {
-                return uavcan::protocol::NodeStatus::STATUS_WARNING;
+                return uavcan::protocol::NodeStatus::HEALTH_WARNING;
             }
         }
         else
@@ -255,11 +255,11 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
         {
             if (std::abs(v) > AbsMaxValidGauss)
             {
-                return uavcan::protocol::NodeStatus::STATUS_WARNING;
+                return uavcan::protocol::NodeStatus::HEALTH_WARNING;
             }
         }
 
-        return uavcan::protocol::NodeStatus::STATUS_OK;
+        return uavcan::protocol::NodeStatus::HEALTH_OK;
     }
 
 public:
@@ -272,9 +272,11 @@ public:
         ::usleep(500000);         // Startup delay
         wdt.reset();
 
+        node::markComponentInitialized(node::ComponentID::Magnetometer);
+
         while (!tryInit() && !node::hasPendingRestartRequest())
         {
-            setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+            setStatus(uavcan::protocol::NodeStatus::HEALTH_ERROR);
             lowsyslog("Mag init failed, will retry...\n");
             ::usleep(500000);
             wdt.reset();
@@ -300,7 +302,7 @@ public:
             }
             else
             {
-                setStatus(uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+                setStatus(uavcan::protocol::NodeStatus::HEALTH_ERROR);
             }
 
             sysSleepUntilChTime(sleep_until);

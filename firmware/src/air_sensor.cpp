@@ -94,15 +94,15 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             if (!isInRange(pressure, ValidPressureRange) ||
                 !isInRange(temperature, ValidTemperatureRange))
             {
-                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+                node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
             }
             else if (!isInRange(temperature, OperatingTemperatureRange))
             {
-                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_WARNING);
+                node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_WARNING);
             }
             else
             {
-                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
+                node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_OK);
             }
 
             sysSleepUntilChTime(sleep_until);
@@ -136,11 +136,11 @@ public:
                 continue;
             }
 
-            node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
+            node::markComponentInitialized(node::ComponentID::AirSensor);
             tryRun();
             if (!node::hasPendingRestartRequest())
             {
-                node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_CRITICAL);
+                node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
                 lowsyslog("Air sensor is about to restart...\n");
             }
         }
@@ -160,7 +160,7 @@ void init()
     }
     else
     {
-        node::setComponentStatus(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::STATUS_OK);
+        node::markComponentInitialized(node::ComponentID::AirSensor);
         lowsyslog("Air sensor disabled\n");
     }
 }
