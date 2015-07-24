@@ -25,8 +25,11 @@ namespace
 
 SerialDriver* const serial_port = &SD2;
 
-zubax_chibios::config::Param<float> param_gnss_fix_rate("gnss_fix_rate_hz", 10.0, 0.5, 15.0);
-zubax_chibios::config::Param<float> param_gnss_aux_rate("gnss_aux_rate_hz", 1.0,  0.1, 1.0);
+zubax_chibios::config::Param<float> param_gnss_fix_period_usec("uavcan.pubp-uavcan.equipment.gnss.Fix",
+                                                               100000, 66666, 2000000);
+
+zubax_chibios::config::Param<float> param_gnss_aux_period_usec("uavcan.pubp-uavcan.equipment.gnss.Auxiliary",
+                                                               1000000, 100000, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_warn_min_fix_dimensions", 0, 0, 3);
 zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
@@ -190,8 +193,8 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     void tryInit() const
     {
         auto cfg = ublox::Config();
-        cfg.fix_rate_hz = param_gnss_fix_rate.get();
-        cfg.aux_rate_hz = param_gnss_aux_rate.get();
+        cfg.fix_rate_hz = 1e6F / param_gnss_fix_period_usec.get();
+        cfg.aux_rate_hz = 1e6F / param_gnss_aux_period_usec.get();
 
         while (shouldKeepGoing() && !driver_.configure(cfg, watchdog_))
         {

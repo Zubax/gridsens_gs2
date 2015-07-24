@@ -26,7 +26,11 @@ const float ValidPressureRange[] = { 1000, 120000 };          ///< Sensor range
 const float ValidTemperatureRange[] = { -40, 85 };            ///< Sensor range
 const float OperatingTemperatureRange[] = { -30, 60 };        ///< Operating temperature, by specification
 
-zubax_chibios::config::Param<unsigned> param_rate("air_data_rate_hz", 0, 0, 30);
+const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
+
+zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.air_data.StaticPressure",
+                                                         0, 0, 1000000);
+
 zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
 zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
 
@@ -71,8 +75,8 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
     {
         systime_t sleep_until = chibios_rt::System::getTime();
 
-        assert(param_rate.get() > 0);
-        const unsigned period_usec = 1000000U / param_rate.get();
+        assert(param_period_usec.get() > 0);
+        const unsigned period_usec = std::max(MinPublicationPeriodUSec, param_period_usec.get());
 
         while (!node::hasPendingRestartRequest())
         {
@@ -154,7 +158,7 @@ public:
 
 void init()
 {
-    if (param_rate.get() > 0)
+    if (param_period_usec.get() > 0)
     {
         (void)air_sensor_thread.start(HIGHPRIO - 10);
     }

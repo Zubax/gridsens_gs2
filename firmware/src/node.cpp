@@ -28,12 +28,15 @@ namespace
 const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
-zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 0, 0, 1000000);
-zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 0, 0, 125);
+zubax_chibios::config::Param<unsigned> param_can_bitrate("uavcan.can_bus_bit_rate", 0, 0, 1000000);
+zubax_chibios::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125);
 zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
-zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_ms("node_status_pub_interval_ms", 200,
-                                                            uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS,
-                                                            uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS);
+
+zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_usec(
+    "uavcan.pubp-uavcan.protocol.NodeStatus",
+    200000,
+    uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS * 1000,
+    uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS * 1000);
 
 uavcan_stm32::CanInitHelper<> can;
 
@@ -321,7 +324,7 @@ class : public chibios_rt::BaseStaticThread<3000>
             getNode().setRestartRequestHandler(&restart_request_handler);
 
             getNode().getNodeStatusProvider().setStatusPublicationPeriod(
-                uavcan::MonotonicDuration::fromMSec(param_node_status_pub_interval_ms.get()));
+                uavcan::MonotonicDuration::fromUSec(param_node_status_pub_interval_usec.get()));
         }
 
         // Configuring the local node ID

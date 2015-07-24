@@ -28,7 +28,9 @@ const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   
 const float GaussScale = 0.92e-03;
 
 zubax_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
-zubax_chibios::config::Param<unsigned> param_rate("mag_rate_hz", 20, 1, 50);
+
+zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.ahrs.Magnetometer",
+                                                         50000, 20000, 1000000);
 
 void publish(float field[3], float variance)
 {
@@ -285,7 +287,7 @@ public:
         wdt.reset();
 
         const float variance = param_variance.get();
-        const uint64_t period_usec = 1000000 / param_rate.get();
+        const uint64_t period_usec = param_period_usec.get();
 
         systime_t sleep_until = chibios_rt::System::getTime();
 
