@@ -27,7 +27,7 @@ namespace
 const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
-zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 1000000, 20000, 1000000);
+zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 0, 0, 1000000);
 zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
 zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
 zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_ms("node_status_pub_interval_ms", 200,
@@ -272,6 +272,34 @@ class RestartRequestHandler : public uavcan::IRestartRequestHandler
  */
 class : public chibios_rt::BaseStaticThread<3000>
 {
+    void initCanBus() const
+    {
+        int res = 0;
+        do
+        {
+            ::sleep(1);
+
+            std::uint32_t bitrate = param_can_bitrate.get();
+
+            res = can.init([]() { ::usleep(can.getRecommendedListeningDelay().toUSec()); },
+                           bitrate);
+
+            if (res >= 0)
+            {
+                ::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
+            }
+            else if (param_can_bitrate.get() > 0)
+            {
+                ::lowsyslog("CAN init failed, will retry; error %d\n", res);
+            }
+            else
+            {
+                ;
+            }
+        }
+        while (res < 0);
+    }
+
     void init() const
     {
         configureNode();
@@ -349,6 +377,7 @@ public:
     msg_t main() override
     {
         setName("uavcan");
+        initCanBus();
         init();
 
         zubax_chibios::watchdog::Timer wdt;
@@ -444,23 +473,6 @@ void markComponentInitialized(ComponentID comp)
 
 void init()
 {
-    while (true)
-    {
-        int can_res = can.init(param_can_bitrate.get());
-        if (can_res >= 0)
-        {
-            lowsyslog("CAN bitrate %u\n", unsigned(param_can_bitrate.get()));
-            break;
-        }
-        lowsyslog("CAN init failed [%i], trying default bitrate...\n", can_res);
-        can_res = can.init(param_can_bitrate.default_);
-        if (can_res >= 0)
-        {
-            lowsyslog("CAN bitrate %u\n", unsigned(param_can_bitrate.default_));
-            break;
-        }
-    }
-
     (void)node_thread.start(LOWPRIO + 10);
 }
 
