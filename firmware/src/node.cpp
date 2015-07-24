@@ -14,6 +14,7 @@
 #include <uavcan/protocol/global_time_sync_master.hpp>
 #include <uavcan/protocol/global_time_sync_slave.hpp>
 #include <uavcan/protocol/param_server.hpp>
+#include <uavcan/protocol/dynamic_node_id_client.hpp>
 
 #include <zubax_chibios/config/config.hpp>
 #include <zubax_chibios/watchdog/watchdog.hpp>
@@ -28,7 +29,7 @@ const unsigned TimeSyncPubPeriodMSec = 1000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
 zubax_chibios::config::Param<unsigned> param_can_bitrate("can_bitrate", 0, 0, 1000000);
-zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 1, 1, 125);
+zubax_chibios::config::Param<unsigned> param_node_id("uavcan_node_id", 0, 0, 125);
 zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
 zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_ms("node_status_pub_interval_ms", 200,
                                                             uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS,
@@ -49,7 +50,6 @@ void configureNode()
 {
     Node& node = getNode();
 
-    node.setNodeID(param_node_id.get());
     node.setName("com.zubax.gnss");
 
     // Software version
@@ -272,6 +272,8 @@ class RestartRequestHandler : public uavcan::IRestartRequestHandler
  */
 class : public chibios_rt::BaseStaticThread<3000>
 {
+    mutable uavcan::MonotonicTime prev_led_update;
+
     void initCanBus() const
     {
         int res = 0;
@@ -300,47 +302,74 @@ class : public chibios_rt::BaseStaticThread<3000>
         while (res < 0);
     }
 
-    void init() const
+    int init() const
     {
-        configureNode();
-        configureClockSync();
-
-        getNode().setRestartRequestHandler(&restart_request_handler);
-
-        // Starting the UAVCAN node
-        while (true)
         {
+            Lock locker;
+
+            configureNode();
+            configureClockSync();
+
+            // Starting the node
+            const int uavcan_start_res = getNode().start();
+            if (uavcan_start_res < 0)
+            {
+                return -1000 + uavcan_start_res;
+            }
+            assert(getNode().isStarted());
+
+            getNode().setRestartRequestHandler(&restart_request_handler);
+
+            getNode().getNodeStatusProvider().setStatusPublicationPeriod(
+                uavcan::MonotonicDuration::fromMSec(param_node_status_pub_interval_ms.get()));
+        }
+
+        // Configuring the local node ID
+        if (param_node_id.get() > 0)
+        {
+            Lock locker;
+            getNode().setNodeID(param_node_id.get());
+        }
+        else
+        {
+            uavcan::DynamicNodeIDClient dnid_client(getNode());
+
             {
                 Lock locker;
-                const int uavcan_start_res = getNode().start();
-                if (uavcan_start_res >= 0)
+                const int res = dnid_client.start(getNode().getNodeStatusProvider().getHardwareVersion());
+                if (res < 0)
                 {
-                    break;
+                    return -2000 + res;
                 }
-                lowsyslog("Node init failure: %i, will retry\n", uavcan_start_res);
             }
-            ::sleep(3);
-        }
-        assert(getNode().isStarted());
 
-        getNode().getNodeStatusProvider().setStatusPublicationPeriod(
-            uavcan::MonotonicDuration::fromMSec(param_node_status_pub_interval_ms.get()));
+            lowsyslog("Waiting for dynamic node ID allocation...\n");
 
-        while (getParamServer().start(&param_manager) < 0)
-        {
-            ; // That's impossible to fail
-        }
-
-        // Starting the time sync slave
-        while (true)
-        {
-            const int res = getTimeSyncSlave().start();
-            if (res >= 0)
+            while (!dnid_client.isAllocationComplete())
             {
-                break;
+                Lock locker;
+                spinOnce();
+                ::usleep(1000);
             }
-            lowsyslog("Time sync slave init failure: %i, will retry\n", res);
-            ::sleep(1);
+
+            lowsyslog("Dynamic node ID %d allocated by %d\n",
+                      int(dnid_client.getAllocatedNodeID().get()), int(dnid_client.getAllocatorNodeID().get()));
+
+            getNode().setNodeID(dnid_client.getAllocatedNodeID());
+        }
+
+        Lock locker;
+
+        const int param_server_res = getParamServer().start(&param_manager);
+        if (param_server_res < 0)
+        {
+            return -3000 + param_server_res;
+        }
+
+        const int time_sync_res = getTimeSyncSlave().start();
+        if (time_sync_res < 0)
+        {
+            return -4000 + param_server_res;
         }
 
         // Time sync master - if enabled
@@ -348,15 +377,10 @@ class : public chibios_rt::BaseStaticThread<3000>
         {
             time_sync_master_enabled = true;
             lowsyslog("Time sync enabled\n");
-            while (true)
+            const int res = getTimeSyncMaster().init();
+            if (res < 0)
             {
-                const int res = getTimeSyncMaster().init();
-                if (res >= 0)
-                {
-                    break;
-                }
-                lowsyslog("Time sync master init failure: %i, will retry\n", res);
-                ::sleep(1);
+                return -5000 + res;
             }
 
             static uavcan::Timer tsm_timer(getNode());
@@ -371,6 +395,30 @@ class : public chibios_rt::BaseStaticThread<3000>
 
         started = true;
         lowsyslog("UAVCAN node started, ID %i\n", int(getNode().getNodeID().get()));
+
+        return 0;
+    }
+
+    void spinOnce() const
+    {
+        getNode().getNodeStatusProvider().setHealth(comp_mgr.getWorstHealth());
+
+        const int spin_res = getNode().spin(uavcan::MonotonicDuration::fromUSec(500));
+        if (spin_res < 0)
+        {
+            lowsyslog("UAVCAN spin failure: %i\n", spin_res);
+        }
+
+        // Iface LED update
+        const auto ts = uavcan_stm32::clock::getMonotonic();
+        if ((ts - prev_led_update).toMSec() >= IfaceLedUpdatePeriodMSec)
+        {
+            prev_led_update = ts;
+            for (unsigned i = 0; i < can.driver.getNumIfaces(); i++)
+            {
+                board::setCANLed(i, can.driver.getIface(i)->hadActivity());
+            }
+        }
     }
 
 public:
@@ -378,49 +426,37 @@ public:
     {
         setName("uavcan");
         initCanBus();
-        init();
+
+        while (true)
+        {
+            const int res = init();
+            if (res >= 0)
+            {
+                break;
+            }
+            ::lowsyslog("UAVCAN node init failed [%i], will retry\n", res);
+            ::sleep(3);
+        }
 
         zubax_chibios::watchdog::Timer wdt;
         wdt.startMSec(100);
 
-        static uavcan::MonotonicTime prev_led_update;
-        auto& node = getNode();
-
         while (!hasPendingRestartRequest())
         {
-            {
-                Lock locker;
-
-                if (node.getNodeStatusProvider().getMode() != uavcan::protocol::NodeStatus::MODE_OPERATIONAL)
-                {
-                    if (comp_mgr.areAllInitialized())
-                    {
-                        node.setModeOperational();
-                    }
-                }
-
-                node.getNodeStatusProvider().setHealth(comp_mgr.getWorstHealth());
-
-                const int spin_res = node.spin(uavcan::MonotonicDuration::fromUSec(500));
-                if (spin_res < 0)
-                {
-                    lowsyslog("UAVCAN spin failure: %i\n", spin_res);
-                }
-            }
-
-            // Iface LED update
-            const auto ts = uavcan_stm32::clock::getMonotonic();
-            if ((ts - prev_led_update).toMSec() >= IfaceLedUpdatePeriodMSec)
-            {
-                prev_led_update = ts;
-                for (unsigned i = 0; i < can.driver.getNumIfaces(); i++)
-                {
-                    board::setCANLed(i, can.driver.getIface(i)->hadActivity());
-                }
-            }
-
             ::usleep(1000);
             wdt.reset();
+
+            Lock locker;
+
+            if (getNode().getNodeStatusProvider().getMode() != uavcan::protocol::NodeStatus::MODE_OPERATIONAL)
+            {
+                if (comp_mgr.areAllInitialized())
+                {
+                    getNode().setModeOperational();
+                }
+            }
+
+            spinOnce();
         }
 
         lowsyslog("UAVCAN terminated\n");
