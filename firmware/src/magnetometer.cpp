@@ -6,6 +6,7 @@
 
 #include "magnetometer.hpp"
 #include "node.hpp"
+#include "execute_once.hpp"
 
 #include <array>
 
@@ -32,6 +33,11 @@ zubax_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e
 zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.ahrs.Magnetometer",
                                                          50000, 20000, 1000000);
 
+zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.ahrs.Magnetometer",
+                                                  uavcan::TransferPriority::Default.get(),
+                                                  uavcan::TransferPriority::NumericallyMin,
+                                                  uavcan::TransferPriority::NumericallyMax);
+
 void publish(float field[3], float variance)
 {
     if (!node::isStarted())
@@ -47,6 +53,11 @@ void publish(float field[3], float variance)
     auto& node = node::getNode();
 
     static uavcan::Publisher<uavcan::equipment::ahrs::Magnetometer> mag_pub(node);
+
+    EXECUTE_ONCE_NON_THREAD_SAFE
+    {
+        mag_pub.setPriority(param_prio.get());
+    }
 
     (void)mag_pub.broadcast(mag);
 }

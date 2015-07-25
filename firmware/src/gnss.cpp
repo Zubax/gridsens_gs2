@@ -7,6 +7,7 @@
 #include "gnss.hpp"
 #include "board/ublox.hpp"
 #include "node.hpp"
+#include "execute_once.hpp"
 
 #include <uavcan/equipment/gnss/RTCMStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
@@ -30,6 +31,16 @@ zubax_chibios::config::Param<float> param_gnss_fix_period_usec("uavcan.pubp-uavc
 
 zubax_chibios::config::Param<float> param_gnss_aux_period_usec("uavcan.pubp-uavcan.equipment.gnss.Auxiliary",
                                                                1000000, 100000, 1000000);
+
+zubax_chibios::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-uavcan.equipment.gnss.Fix",
+                                                           uavcan::TransferPriority::Default.get(),
+                                                           uavcan::TransferPriority::NumericallyMin,
+                                                           uavcan::TransferPriority::NumericallyMax);
+
+zubax_chibios::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-uavcan.equipment.gnss.Auxiliary",
+                                                           uavcan::TransferPriority::MiddleLower.get(),
+                                                           uavcan::TransferPriority::NumericallyMin,
+                                                           uavcan::TransferPriority::NumericallyMax);
 
 zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_warn_min_fix_dimensions", 0, 0, 3);
 zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
@@ -101,6 +112,12 @@ void publishFix(const ublox::Fix& data, const ublox::GpsLeapSeconds& leaps)
     // Publishing
     node::Lock locker;
     static uavcan::Publisher<uavcan::equipment::gnss::Fix> pub(node::getNode());
+
+    EXECUTE_ONCE_NON_THREAD_SAFE
+    {
+        pub.setPriority(param_gnss_fix_prio.get());
+    }
+
     (void)pub.broadcast(msg);
 }
 
@@ -125,6 +142,12 @@ void publishAuxiliary(const ublox::Fix& fix, const ublox::Auxiliary& aux)
     // Publishing
     node::Lock locker;
     static uavcan::Publisher<uavcan::equipment::gnss::Auxiliary> pub(node::getNode());
+
+    EXECUTE_ONCE_NON_THREAD_SAFE
+    {
+        pub.setPriority(param_gnss_aux_prio.get());
+    }
+
     (void)pub.broadcast(msg);
 }
 

@@ -7,6 +7,7 @@
 #include "air_sensor.hpp"
 #include "board/ms5611.h"
 #include "node.hpp"
+#include "execute_once.hpp"
 
 #include <uavcan/equipment/air_data/StaticPressure.hpp>
 #include <uavcan/equipment/air_data/StaticTemperature.hpp>
@@ -30,6 +31,11 @@ const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
 
 zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.air_data.StaticPressure",
                                                          0, 0, 1000000);
+
+zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.air_data.StaticPressure",
+                                                  uavcan::TransferPriority::Default.get(),
+                                                  uavcan::TransferPriority::NumericallyMin,
+                                                  uavcan::TransferPriority::NumericallyMax);
 
 zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
 zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
@@ -67,6 +73,13 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 
         static uavcan::Publisher<uavcan::equipment::air_data::StaticPressure> pressure_pub(node);
         static uavcan::Publisher<uavcan::equipment::air_data::StaticTemperature> temperature_pub(node);
+
+        EXECUTE_ONCE_NON_THREAD_SAFE
+        {
+            pressure_pub.setPriority(param_prio.get());
+            temperature_pub.setPriority(param_prio.get());
+        }
+
         (void)pressure_pub.broadcast(pressure);
         (void)temperature_pub.broadcast(temperature);
     }

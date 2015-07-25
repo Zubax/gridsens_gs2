@@ -34,11 +34,21 @@ zubax_chibios::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125
 zubax_chibios::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-uavcan.protocol.GlobalTimeSync",
                                                                    0, 0, 1000000);
 
+zubax_chibios::config::Param<unsigned> param_time_sync_prio("uavcan.prio-uavcan.protocol.GlobalTimeSync",
+                                                            uavcan::TransferPriority::OneLowerThanHighest.get(),
+                                                            uavcan::TransferPriority::NumericallyMin,
+                                                            uavcan::TransferPriority::NumericallyMax);
+
 zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_usec(
     "uavcan.pubp-uavcan.protocol.NodeStatus",
     200000,
     uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS * 1000,
     uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS * 1000);
+
+zubax_chibios::config::Param<unsigned> param_node_status_prio("uavcan.prio-uavcan.protocol.NodeStatus",
+                                                              uavcan::TransferPriority::MiddleLower.get(),
+                                                              uavcan::TransferPriority::NumericallyMin,
+                                                              uavcan::TransferPriority::NumericallyMax);
 
 uavcan_stm32::CanInitHelper<> can;
 
@@ -316,7 +326,7 @@ class : public chibios_rt::BaseStaticThread<3000>
             configureClockSync();
 
             // Starting the node
-            const int uavcan_start_res = getNode().start();
+            const int uavcan_start_res = getNode().start(param_node_status_prio.get());
             if (uavcan_start_res < 0)
             {
                 return -1000 + uavcan_start_res;
@@ -381,7 +391,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         if (param_time_sync_period_usec.get() > 0)
         {
             time_sync_master_enabled = true;
-            const int res = getTimeSyncMaster().init();
+            const int res = getTimeSyncMaster().init(param_time_sync_prio.get());
             if (res < 0)
             {
                 return -5000 + res;
