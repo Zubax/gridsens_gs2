@@ -25,12 +25,14 @@ namespace node
 namespace
 {
 
-const unsigned TimeSyncPubPeriodMSec = 1000;
+const unsigned MinTimeSyncPubPeriodUSec = 500000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
 zubax_chibios::config::Param<unsigned> param_can_bitrate("uavcan.can_bus_bit_rate", 0, 0, 1000000);
 zubax_chibios::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125);
-zubax_chibios::config::Param<bool> param_time_sync_master_enabled("time_sync_master_enabled", false);
+
+zubax_chibios::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-uavcan.protocol.GlobalTimeSync",
+                                                                   0, 0, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_usec(
     "uavcan.pubp-uavcan.protocol.NodeStatus",
@@ -350,9 +352,9 @@ class : public chibios_rt::BaseStaticThread<3000>
 
             while (!dnid_client.isAllocationComplete())
             {
+                ::usleep(1000);
                 Lock locker;
                 spinOnce();
-                ::usleep(1000);
             }
 
             lowsyslog("Dynamic node ID %d allocated by %d\n",
@@ -376,19 +378,22 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         // Time sync master - if enabled
-        if (param_time_sync_master_enabled.get())
+        if (param_time_sync_period_usec.get() > 0)
         {
             time_sync_master_enabled = true;
-            lowsyslog("Time sync enabled\n");
             const int res = getTimeSyncMaster().init();
             if (res < 0)
             {
                 return -5000 + res;
             }
 
+            const auto period_usec = std::max(MinTimeSyncPubPeriodUSec, param_time_sync_period_usec.get());
+
+            lowsyslog("Time sync enabled, period %f sec\n", period_usec * 1e-6F);
+
             static uavcan::Timer tsm_timer(getNode());
             tsm_timer.setCallback(&publishTimeSync);
-            tsm_timer.startPeriodic(uavcan::MonotonicDuration::fromMSec(TimeSyncPubPeriodMSec));
+            tsm_timer.startPeriodic(uavcan::MonotonicDuration::fromUSec(period_usec));
         }
         else
         {
