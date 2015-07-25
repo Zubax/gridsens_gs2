@@ -34,7 +34,7 @@ zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equ
                                                          50000, 20000, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.ahrs.Magnetometer",
-                                                  uavcan::TransferPriority::Default.get(),
+                                                  16,
                                                   uavcan::TransferPriority::NumericallyMin,
                                                   uavcan::TransferPriority::NumericallyMax);
 

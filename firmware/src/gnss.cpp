@@ -33,12 +33,12 @@ zubax_chibios::config::Param<float> param_gnss_aux_period_usec("uavcan.pubp-uavc
                                                                1000000, 100000, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-uavcan.equipment.gnss.Fix",
-                                                           uavcan::TransferPriority::Default.get(),
+                                                           16,
                                                            uavcan::TransferPriority::NumericallyMin,
                                                            uavcan::TransferPriority::NumericallyMax);
 
 zubax_chibios::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-uavcan.equipment.gnss.Auxiliary",
-                                                           uavcan::TransferPriority::MiddleLower.get(),
+                                                           20,
                                                            uavcan::TransferPriority::NumericallyMin,
                                                            uavcan::TransferPriority::NumericallyMax);
 

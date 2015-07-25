@@ -33,7 +33,7 @@ zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equ
                                                          0, 0, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.air_data.StaticPressure",
-                                                  uavcan::TransferPriority::Default.get(),
+                                                  16,
                                                   uavcan::TransferPriority::NumericallyMin,
                                                   uavcan::TransferPriority::NumericallyMax);
 

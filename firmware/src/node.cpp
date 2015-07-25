@@ -35,7 +35,7 @@ zubax_chibios::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-
                                                                    0, 0, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_time_sync_prio("uavcan.prio-uavcan.protocol.GlobalTimeSync",
-                                                            uavcan::TransferPriority::OneLowerThanHighest.get(),
+                                                            1,
                                                             uavcan::TransferPriority::NumericallyMin,
                                                             uavcan::TransferPriority::NumericallyMax);
 
@@ -46,7 +46,7 @@ zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_usec(
     uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS * 1000);
 
 zubax_chibios::config::Param<unsigned> param_node_status_prio("uavcan.prio-uavcan.protocol.NodeStatus",
-                                                              uavcan::TransferPriority::MiddleLower.get(),
+                                                              20,
                                                               uavcan::TransferPriority::NumericallyMin,
                                                               uavcan::TransferPriority::NumericallyMax);
 
