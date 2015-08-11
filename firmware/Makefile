@@ -55,4 +55,6 @@ CPPWARN := -Wundef -Wno-error=undef
 RELEASE_OPT = -Os -fomit-frame-pointer
 DEBUG_OPT = -Os -g3
 
+LDSCRIPT = ld.ld
+
 include zubax_chibios/rules_stm32f105_107.mk
