@@ -18,8 +18,27 @@ git submodule update --init --recursive
 cd firmware
 make RELEASE=1 # RELEASE is optional; omit to build the debug version
 ```
-* Flash the board using any available flash loader. For instance:
+* Optionally, generate release binaries:
+```shell
+cd firmware
+./make_release_binaries.sh
+```
+
+## Flashing
+
+### Using in-circuit debuggers
+
+Avialable loaders:
+
 ```shell
 ./zubax_chibios/tools/blackmagic_flash.sh   # Black Magic Debug Probe
 ./zubax_chibios/tools/stlink_flash.sh       # ST-Link v2
 ```
+
+### Using UAVCAN bootloader
+
+First, make sure to generate release binaries as described above.
+Then feed the signed binary (it will be named as `*.uavcan.bin`) to the UAVCAN firmware update server.
+
+Source of the UAVCAN bootloader for this board can be found at the
+[PX4 source repository](https://github.com/PX4/Firmware).
