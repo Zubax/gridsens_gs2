@@ -1,7 +1,6 @@
 # Build outputs
 *.o
 *.elf
-*.bin
 *.hex
 lib*.so
 lib*.so.*
