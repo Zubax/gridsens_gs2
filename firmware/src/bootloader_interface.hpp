@@ -27,4 +27,9 @@ std::uint32_t getInheritedCanBusBitRate();
  */
 uavcan::NodeID getInheritedNodeID();
 
+/**
+ * Initializes the shared data structure with given values.
+ */
+void passParametersToBootloader(std::uint32_t can_bus_bit_rate, uavcan::NodeID node_id);
+
 }

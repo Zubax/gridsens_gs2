@@ -16,6 +16,7 @@
 #include <uavcan/protocol/global_time_sync_slave.hpp>
 #include <uavcan/protocol/param_server.hpp>
 #include <uavcan/protocol/dynamic_node_id_client.hpp>
+#include <uavcan/protocol/file/BeginFirmwareUpdate.hpp>
 
 #include <zubax_chibios/config/config.hpp>
 #include <zubax_chibios/watchdog/watchdog.hpp>
@@ -52,6 +53,7 @@ zubax_chibios::config::Param<unsigned> param_node_status_prio("uavcan.prio-uavca
                                                               uavcan::TransferPriority::NumericallyMax);
 
 uavcan_stm32::CanInitHelper<> can;
+std::uint32_t active_can_bus_bit_rate;
 
 uavcan_stm32::Mutex node_mutex;
 
@@ -284,6 +286,42 @@ class RestartRequestHandler : public uavcan::IRestartRequestHandler
 } restart_request_handler;
 
 /*
+ * Firmware update handler
+ */
+typedef uavcan::ServiceServer<uavcan::protocol::file::BeginFirmwareUpdate,
+    void (*)(const uavcan::ReceivedDataStructure<uavcan::protocol::file::BeginFirmwareUpdate::Request>&,
+             uavcan::protocol::file::BeginFirmwareUpdate::Response&)>
+    BeginFirmwareUpdateServer;
+
+BeginFirmwareUpdateServer& getBeginFirmwareUpdateServer()
+{
+    static BeginFirmwareUpdateServer srv(getNode());
+    return srv;
+}
+
+void handleBeginFirmwareUpdateRequest(
+    const uavcan::ReceivedDataStructure<uavcan::protocol::file::BeginFirmwareUpdate::Request>& request,
+    uavcan::protocol::file::BeginFirmwareUpdate::Response& response)
+{
+    static bool in_progress = false;
+
+    ::lowsyslog("BeginFirmwareUpdate request from %d\n", int(request.getSrcNodeID().get()));
+
+    if (in_progress)
+    {
+        response.error = response.ERROR_IN_PROGRESS;
+    }
+    else
+    {
+        assert(active_can_bus_bit_rate > 0);
+        bootloader_interface::passParametersToBootloader(active_can_bus_bit_rate, getNode().getNodeID());
+
+        pending_restart_request = true;
+        in_progress = true;
+    }
+}
+
+/*
  * UAVCAN spin loop
  */
 class : public chibios_rt::BaseStaticThread<3000>
@@ -318,6 +356,7 @@ class : public chibios_rt::BaseStaticThread<3000>
             if (res >= 0)
             {
                 ::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
+                active_can_bus_bit_rate = bitrate;
             }
             else if (param_can_bitrate.get() > 0)
             {
@@ -428,6 +467,13 @@ class : public chibios_rt::BaseStaticThread<3000>
             lowsyslog("Time sync disabled\n");
         }
 
+        // Firmware update server
+        const int begin_firmware_update_res = getBeginFirmwareUpdateServer().start(&handleBeginFirmwareUpdateRequest);
+        if (begin_firmware_update_res < 0)
+        {
+            return -6000 + begin_firmware_update_res;
+        }
+
         started = true;
         lowsyslog("UAVCAN node started, ID %i\n", int(getNode().getNodeID().get()));
 
@@ -461,6 +507,8 @@ public:
     {
         setName("uavcan");
         initCanBus();
+
+        assert(active_can_bus_bit_rate > 0);
 
         while (true)
         {
