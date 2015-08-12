@@ -8,6 +8,7 @@
 
 #include "board/board.hpp"
 #include "component_status_manager.hpp"
+#include "bootloader_interface.hpp"
 #include <ch.hpp>
 #include <unistd.h>
 
@@ -297,6 +298,19 @@ class : public chibios_rt::BaseStaticThread<3000>
             ::sleep(1);
 
             std::uint32_t bitrate = param_can_bitrate.get();
+            if (bitrate == 0)
+            {
+                bitrate = bootloader_interface::getInheritedCanBusBitRate();
+            }
+
+            if (bitrate == 0)
+            {
+                ::lowsyslog("CAN auto bit rate detection...\n");
+            }
+            else
+            {
+                ::lowsyslog("CAN bit rate is fixed at %u bps\n", unsigned(bitrate));
+            }
 
             res = can.init([]() { ::usleep(can.getRecommendedListeningDelay().toUSec()); },
                            bitrate);
@@ -340,10 +354,13 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         // Configuring the local node ID
-        if (param_node_id.get() > 0)
+        if (param_node_id.get() > 0 || bootloader_interface::getInheritedNodeID().isUnicast())
         {
             Lock locker;
-            getNode().setNodeID(param_node_id.get());
+            getNode().setNodeID((param_node_id.get() > 0) ?
+                                static_cast<std::uint8_t>(param_node_id.get()) :
+                                bootloader_interface::getInheritedNodeID());
+            lowsyslog("Using static node ID %d\n", int(getNode().getNodeID().get()));
         }
         else
         {

@@ -13,6 +13,7 @@
 #include <zubax_chibios/sys/sys.h>
 #include <zubax_chibios/watchdog/watchdog.hpp>
 
+#include "bootloader_interface.hpp"
 #include "board/board.hpp"
 #include "node.hpp"
 #include "air_sensor.hpp"
@@ -22,20 +23,6 @@
 
 namespace
 {
-/**
- * This is the Brickproof Bootloader's app descriptor.
- * Details: https://github.com/PX4/Firmware/tree/nuttx_next/src/drivers/bootloaders/src/uavcan
- */
-const volatile class __attribute__((packed))
-{
-    std::uint8_t signature[8] = {'A','P','D','e','s','c','0','0'};
-    std::uint64_t image_crc = 0;
-    std::uint32_t image_size = 0;
-    std::uint32_t vcs_commit = GIT_HASH;
-    std::uint8_t major_version = FW_VERSION_MAJOR;
-    std::uint8_t minor_version = FW_VERSION_MINOR;
-    std::uint8_t reserved[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-} _app_descriptor __attribute__((section(".app_descriptor")));
 
 std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 {
@@ -58,6 +45,7 @@ std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 
 int main()
 {
+    bootloader_interface::init();
     board::init();
     node::init();
     air_sensor::init();

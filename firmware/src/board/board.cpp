@@ -13,6 +13,10 @@
 #include <zubax_chibios/config/config.hpp>
 #include <unistd.h>
 
+#if CORTEX_VTOR_INIT == 0
+# error CORTEX_VTOR_INIT
+#endif
+
 /**
  * GPIO config for ChibiOS PAL driver
  */
@@ -41,9 +45,10 @@ void init()
     halInit();
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
-    i2cStart(&I2CD2, &I2CCfg2);
 
     zubax_chibios::watchdog::init();
+
+    i2cStart(&I2CD2, &I2CCfg2);
 
     while (true)
     {
