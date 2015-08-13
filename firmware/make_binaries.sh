@@ -1,8 +1,5 @@
 #!/bin/bash
 
-make clean
-make RELEASE=1 -j8
-
 BOOTLOADER_SIZE_KB=8
 SIGNED_BINARY="com.zubax.gnss-1.0-1.0.`git rev-parse --short=8 HEAD`.uavcan.bin"
 
