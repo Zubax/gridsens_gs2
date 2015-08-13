@@ -19,8 +19,6 @@ void die(int error);
 void setCANLed(unsigned iface_index, bool state);
 void setStatusLed(bool state);
 
-void enterBootloader();
-
 void restart();
 
 constexpr unsigned UniqueIDSize = 12;
