@@ -11,7 +11,7 @@ namespace bootloader_interface
  * This is the Brickproof Bootloader's app descriptor.
  * Details: https://github.com/PX4/Firmware/tree/nuttx_next/src/drivers/bootloaders/src/uavcan
  */
-static const volatile class __attribute__((packed))
+static const volatile struct __attribute__((packed))
 {
     std::uint8_t signature[8] = {'A','P','D','e','s','c','0','0'};
     std::uint64_t image_crc = 0;
@@ -74,6 +74,21 @@ void init()
         shared_data.can_bus_bit_rate_bps = bus_speed;
         shared_data.uavcan_node_id = static_cast<std::uint8_t>(node_id);
     }
+}
+
+uavcan::protocol::SoftwareVersion makeUavcanSoftwareVersionStruct()
+{
+    uavcan::protocol::SoftwareVersion x;
+
+    x.major = _app_descriptor.major_version;
+    x.minor = _app_descriptor.minor_version;
+
+    x.image_crc = _app_descriptor.image_crc;
+    x.vcs_commit = _app_descriptor.vcs_commit;
+
+    x.optional_field_flags = x.OPTIONAL_FIELD_FLAG_VCS_COMMIT | x.OPTIONAL_FIELD_FLAG_IMAGE_CRC;
+
+    return x;
 }
 
 std::uint32_t getInheritedCanBusBitRate()

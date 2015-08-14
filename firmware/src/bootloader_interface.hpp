@@ -16,6 +16,12 @@ namespace bootloader_interface
 void init();
 
 /**
+ * Returns version info of the currently running firmware image.
+ * This function relies on the firmware image post-processing; refer to the build system docs for details.
+ */
+uavcan::protocol::SoftwareVersion makeUavcanSoftwareVersionStruct();
+
+/**
  * If known, returns the bit rate value inherited from the bootloader.
  * If unknown, return zero.
  */
