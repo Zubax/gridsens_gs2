@@ -26,11 +26,11 @@ namespace
 
 SerialDriver* const serial_port = &SD2;
 
-zubax_chibios::config::Param<float> param_gnss_fix_period_usec("uavcan.pubp-uavcan.equipment.gnss.Fix",
-                                                               100000, 66666, 2000000);
+zubax_chibios::config::Param<unsigned> param_gnss_fix_period_usec("uavcan.pubp-uavcan.equipment.gnss.Fix",
+                                                                  100000, 66666, 2000000);
 
-zubax_chibios::config::Param<float> param_gnss_aux_period_usec("uavcan.pubp-uavcan.equipment.gnss.Auxiliary",
-                                                               1000000, 100000, 1000000);
+zubax_chibios::config::Param<unsigned> param_gnss_aux_period_usec("uavcan.pubp-uavcan.equipment.gnss.Auxiliary",
+                                                                  1000000, 100000, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-uavcan.equipment.gnss.Fix",
                                                            16,
