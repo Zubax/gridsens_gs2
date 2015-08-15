@@ -60,11 +60,23 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     }
 }
 
+void cmd_bootloader(BaseSequentialStream*, int, char**)
+{
+    lowsyslog("\nENTERING THE BOOTLOADER\n\n");
+    ::usleep(100000);
+
+    // Suppress the watchdog - set the maximum possible interval
+    zubax_chibios::watchdog::Timer().startMSec(1000000);
+
+    board::enterBootloader();
+}
+
 const ::ShellCommand HandlerTable[] =
 {
     {"cfg",        &cmd_cfg},
     {"reset",      &cmd_reset},
     {"gnssbridge", &cmd_gnssbridge},
+    {"bootloader", &cmd_bootloader},
     {nullptr, nullptr}
 };
 
