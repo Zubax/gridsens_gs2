@@ -10,7 +10,7 @@
 
 #include <array>
 
-#include <uavcan/equipment/ahrs/Magnetometer.hpp>
+#include <uavcan/equipment/ahrs/MagneticFieldStrength.hpp>
 
 #include <ch.hpp>
 #include <zubax_chibios/sys/sys.h>
@@ -30,10 +30,10 @@ const float GaussScale = 0.92e-03;
 
 zubax_chibios::config::Param<float> param_variance("mag_variance_ga2", 0.005, 1e-6, 1.0);
 
-zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.ahrs.Magnetometer",
+zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.ahrs.MagneticFieldStrength",
                                                          50000, 20000, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.ahrs.Magnetometer",
+zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.ahrs.MagneticFieldStrength",
                                                   16,
                                                   uavcan::TransferPriority::NumericallyMin,
                                                   uavcan::TransferPriority::NumericallyMax);
@@ -45,14 +45,14 @@ void publish(float field[3], float variance)
         return;
     }
 
-    uavcan::equipment::ahrs::Magnetometer mag;
-    std::copy(field, field + 3, mag.magnetic_field.begin());
+    uavcan::equipment::ahrs::MagneticFieldStrength mag;
+    std::copy(field, field + 3, mag.magnetic_field_ga.begin());
     mag.magnetic_field_covariance.push_back(variance);
 
     node::Lock locker;
     auto& node = node::getNode();
 
-    static uavcan::Publisher<uavcan::equipment::ahrs::Magnetometer> mag_pub(node);
+    static uavcan::Publisher<uavcan::equipment::ahrs::MagneticFieldStrength> mag_pub(node);
 
     EXECUTE_ONCE_NON_THREAD_SAFE
     {
