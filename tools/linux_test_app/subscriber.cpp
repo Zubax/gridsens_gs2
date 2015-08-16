@@ -10,7 +10,7 @@
 #include <uavcan_linux/uavcan_linux.hpp>
 #include <uavcan/equipment/air_data/StaticPressure.hpp>
 #include <uavcan/equipment/air_data/StaticTemperature.hpp>
-#include <uavcan/equipment/ahrs/Magnetometer.hpp>
+#include <uavcan/equipment/ahrs/MagneticFieldStrength.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
 #include <uavcan/equipment/gnss/Auxiliary.hpp>
 
@@ -51,7 +51,7 @@ static void runForever(const uavcan_linux::NodePtr& node)
     auto sub_log      = makePrintingSubscriber<uavcan::protocol::debug::LogMessage>(node);
     auto sub_pressure = makePrintingSubscriber<uavcan::equipment::air_data::StaticPressure>(node);
     auto sub_temperat = makePrintingSubscriber<uavcan::equipment::air_data::StaticTemperature>(node);
-    auto sub_mag      = makePrintingSubscriber<uavcan::equipment::ahrs::Magnetometer>(node);
+    auto sub_mag      = makePrintingSubscriber<uavcan::equipment::ahrs::MagneticFieldStrength>(node);
     auto sub_gnss_fix = makePrintingSubscriber<uavcan::equipment::gnss::Fix>(node);
     auto sub_gnss_aux = makePrintingSubscriber<uavcan::equipment::gnss::Auxiliary>(node);
 
