@@ -23,9 +23,11 @@ namespace air_sensor
 namespace
 {
 
-const float ValidPressureRange[] = { 1000, 120000 };          ///< Sensor range
-const float ValidTemperatureRange[] = { -40, 85 };            ///< Sensor range
-const float OperatingTemperatureRange[] = { -30, 60 };        ///< Operating temperature, by specification
+const float DegreesCelsiusToKelvinOffset = 273.15F;
+
+const float ValidPressureRangePa[] = { 1000, 120000 };            ///< Sensor range
+const float ValidTemperatureRangeDegC[] = { -40, 85 };            ///< Sensor range
+const float OperatingTemperatureRangeDegC[] = { -30, 60 };        ///< Operating temperature, by specification
 
 const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
 
@@ -38,7 +40,7 @@ zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.
                                                   uavcan::TransferPriority::NumericallyMax);
 
 zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
-zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_degc2", 4.0, 1.0, 100.0);
+zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_k2", 4.0, 1.0, 100.0);
 
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
@@ -65,7 +67,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         pressure.static_pressure_variance = pressure_variance;
 
         static uavcan::equipment::air_data::StaticTemperature temperature;
-        temperature.static_temperature = temperature_degc;
+        temperature.static_temperature = temperature_degc + DegreesCelsiusToKelvinOffset;
         temperature.static_temperature_variance = temperature_variance;
 
         node::Lock locker;
@@ -103,17 +105,17 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
                 break;
             }
 
-            const float pressure = static_cast<float>(raw_pressure);
-            const float temperature = raw_temperature / 100.F;
+            const float pressure_pa = static_cast<float>(raw_pressure);
+            const float temperature_degc = raw_temperature / 100.F;
 
-            publish(pressure, temperature);
+            publish(pressure_pa, temperature_degc);
 
-            if (!isInRange(pressure, ValidPressureRange) ||
-                !isInRange(temperature, ValidTemperatureRange))
+            if (!isInRange(pressure_pa, ValidPressureRangePa) ||
+                !isInRange(temperature_degc, ValidTemperatureRangeDegC))
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
             }
-            else if (!isInRange(temperature, OperatingTemperatureRange))
+            else if (!isInRange(temperature_degc, OperatingTemperatureRangeDegC))
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_WARNING);
             }
