@@ -31,16 +31,16 @@ const float OperatingTemperatureRangeDegC[] = { -30, 60 };        ///< Operating
 
 const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
 
-zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-uavcan.equipment.air_data.StaticPressure",
+zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-pres",
                                                          0, 0, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-uavcan.equipment.air_data.StaticPressure",
+zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-pres",
                                                   16,
                                                   uavcan::TransferPriority::NumericallyMin,
                                                   uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<float> param_pressure_variance("pressure_variance_pa2", 100.0, 1.0, 4000.0);
-zubax_chibios::config::Param<float> param_temperature_variance("temperature_variance_k2", 4.0, 1.0, 100.0);
+zubax_chibios::config::Param<float> param_pressure_variance("pres.variance", 100.0, 1.0, 4000.0);
+zubax_chibios::config::Param<float> param_temperature_variance("temp.variance", 4.0, 1.0, 100.0);
 
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {

@@ -26,24 +26,24 @@ namespace
 
 SerialDriver* const serial_port = &SD2;
 
-zubax_chibios::config::Param<unsigned> param_gnss_fix_period_usec("uavcan.pubp-uavcan.equipment.gnss.Fix",
+zubax_chibios::config::Param<unsigned> param_gnss_fix_period_usec("uavcan.pubp-fix",
                                                                   100000, 66666, 2000000);
 
-zubax_chibios::config::Param<unsigned> param_gnss_aux_period_usec("uavcan.pubp-uavcan.equipment.gnss.Auxiliary",
+zubax_chibios::config::Param<unsigned> param_gnss_aux_period_usec("uavcan.pubp-aux",
                                                                   1000000, 100000, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-uavcan.equipment.gnss.Fix",
+zubax_chibios::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-fix",
                                                            16,
                                                            uavcan::TransferPriority::NumericallyMin,
                                                            uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-uavcan.equipment.gnss.Auxiliary",
+zubax_chibios::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-aux",
                                                            20,
                                                            uavcan::TransferPriority::NumericallyMin,
                                                            uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss_warn_min_fix_dimensions", 0, 0, 3);
-zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss_warn_min_sats_used", 0, 0, 20);
+zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.warn_dimens", 0, 0, 3);
+zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
 
 
 std::uint16_t computeNumLeapSecondsFromGpsLeapSeconds(std::uint16_t gps_leaps)

@@ -30,24 +30,24 @@ namespace
 const unsigned MinTimeSyncPubPeriodUSec = 500000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
-zubax_chibios::config::Param<unsigned> param_can_bitrate("uavcan.can_bus_bit_rate", 0, 0, 1000000);
+zubax_chibios::config::Param<unsigned> param_can_bitrate("uavcan.bit_rate", 0, 0, 1000000);
 zubax_chibios::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125);
 
-zubax_chibios::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-uavcan.protocol.GlobalTimeSync",
+zubax_chibios::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-time",
                                                                    0, 0, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_time_sync_prio("uavcan.prio-uavcan.protocol.GlobalTimeSync",
+zubax_chibios::config::Param<unsigned> param_time_sync_prio("uavcan.prio-time",
                                                             1,
                                                             uavcan::TransferPriority::NumericallyMin,
                                                             uavcan::TransferPriority::NumericallyMax);
 
 zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_usec(
-    "uavcan.pubp-uavcan.protocol.NodeStatus",
+    "uavcan.pubp-stat",
     200000,
     uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS * 1000,
     uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS * 1000);
 
-zubax_chibios::config::Param<unsigned> param_node_status_prio("uavcan.prio-uavcan.protocol.NodeStatus",
+zubax_chibios::config::Param<unsigned> param_node_status_prio("uavcan.prio-stat",
                                                               20,
                                                               uavcan::TransferPriority::NumericallyMin,
                                                               uavcan::TransferPriority::NumericallyMax);
