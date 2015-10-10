@@ -399,7 +399,7 @@ class : public chibios_rt::BaseStaticThread<3000>
 
             {
                 Lock locker;
-                const int res = dnid_client.start(getNode().getNodeStatusProvider().getHardwareVersion());
+                const int res = dnid_client.start(getNode().getNodeStatusProvider().getHardwareVersion().unique_id);
                 if (res < 0)
                 {
                     return -2000 + res;
