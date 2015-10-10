@@ -177,6 +177,22 @@ void boardInit(void)
     mapr |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 
     AFIO->MAPR = mapr;
+
+    /*
+     * Enabling the CAN controllers, then configuring GPIO functions for CAN_TX.
+     * Order matters, otherwise the CAN_TX pins will twitch, disturbing the CAN bus.
+     * This is why we can't perform this initialization using ChibiOS GPIO configuration.
+     *
+     * NOTE: Check this - the problem may only appear when CAN pin remapping is used,
+     *       because ChibiOS initializes AFIO after GPIO.
+     */
+    RCC->APB1ENR |= RCC_APB1ENR_CAN1EN;
+    palSetPadMode(GPIOA, 12, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
+
+#if UAVCAN_STM32_NUM_IFACES > 1
+    RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;
+    palSetPadMode(GPIOB, 13, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
+#endif
 }
 
 }

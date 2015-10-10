@@ -52,11 +52,11 @@
  */
 
 #define VAL_GPIOACRL            0x88888B88      // 7..0
-#define VAL_GPIOACRH            0x888B88b3      // 15..8
+#define VAL_GPIOACRH            0x888488b3      // 15..8
 #define VAL_GPIOAODR            0x00000000
 
 #define VAL_GPIOBCRL            0x88888882
-#define VAL_GPIOBCRH            0x88B8FF88
+#define VAL_GPIOBCRH            0x8848FF88
 #define VAL_GPIOBODR            0x00000000
 
 #define VAL_GPIOCCRL            0x88228888
