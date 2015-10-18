@@ -60,7 +60,7 @@
 
 #define VAL_GPIOBCRL            0xEE222888
 #define VAL_GPIOBCRH            0x88488848
-#define VAL_GPIOBODR            0x00000000
+#define VAL_GPIOBODR            ((1 << 7) | (1 << 6))
 
 #define VAL_GPIOCCRL            0x88888888
 #define VAL_GPIOCCRH            0x88888288

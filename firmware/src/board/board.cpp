@@ -33,7 +33,7 @@ const PALConfig pal_default_config =
 namespace board
 {
 
-static const I2CConfig I2CCfg2 =
+static const I2CConfig I2CCfg1 =
 {
     OPMODE_I2C,
     400000,
@@ -48,7 +48,7 @@ void init()
 
     zubax_chibios::watchdog::init();
 
-    i2cStart(&I2CD2, &I2CCfg2);
+    i2cStart(&I2CD1, &I2CCfg1);
 
     while (true)
     {

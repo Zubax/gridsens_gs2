@@ -149,11 +149,11 @@ bool ms5611Reset(Ms5611* ms5611)
     uint8_t buf_tx[] = { Ms5611Cmd_Reset };
     msg_t status = RDY_OK;
 
-    i2cAcquireBus(&I2CD2);
+    i2cAcquireBus(&I2CD1);
     {
-        status = i2cMasterTransmitTimeout(&I2CD2, MS5611Addr, &buf_tx[0], 1, &buf_tx[0], 0, MS2ST(5));
+        status = i2cMasterTransmitTimeout(&I2CD1, MS5611Addr, &buf_tx[0], 1, &buf_tx[0], 0, MS2ST(5));
     }
-    i2cReleaseBus(&I2CD2);
+    i2cReleaseBus(&I2CD1);
 
     chThdSleepMilliseconds(5);
     return status == RDY_OK;
@@ -173,11 +173,11 @@ bool ms5611GetProm(Ms5611* ms5611)
         uint8_t rx_arr[] = { 0x00, 0x00 };
         msg_t status = ~RDY_OK;
 
-        i2cAcquireBus(&I2CD2);
+        i2cAcquireBus(&I2CD1);
         {
-            status = i2cMasterTransmitTimeout(&I2CD2, MS5611Addr, tx_arr, 1, rx_arr, 2, MS2ST(5));
+            status = i2cMasterTransmitTimeout(&I2CD1, MS5611Addr, tx_arr, 1, rx_arr, 2, MS2ST(5));
         }
-        i2cReleaseBus(&I2CD2);
+        i2cReleaseBus(&I2CD1);
 
         if (status != RDY_OK)
         {
@@ -210,12 +210,12 @@ static bool convertDx(Ms5611Cmd cmd, uint32_t* out)
     /*
      * Request conversion
      */
-    i2cAcquireBus(&I2CD2);
+    i2cAcquireBus(&I2CD1);
     {
         const uint8_t tx_arr[] = { cmd };
-        status = i2cMasterTransmitTimeout(&I2CD2, MS5611Addr, tx_arr, 1, rx_arr, 0, MS2ST(5));
+        status = i2cMasterTransmitTimeout(&I2CD1, MS5611Addr, tx_arr, 1, rx_arr, 0, MS2ST(5));
     }
-    i2cReleaseBus(&I2CD2);
+    i2cReleaseBus(&I2CD1);
 
     if (status != RDY_OK)
     {
@@ -227,12 +227,12 @@ static bool convertDx(Ms5611Cmd cmd, uint32_t* out)
     /*
      * Read converted data
      */
-    i2cAcquireBus(&I2CD2);
+    i2cAcquireBus(&I2CD1);
     {
         const uint8_t tx_arr[] = { Ms5611Cmd_ADCread };
-        status = i2cMasterTransmitTimeout(&I2CD2, MS5611Addr, tx_arr, 1, rx_arr, 3, MS2ST(5));
+        status = i2cMasterTransmitTimeout(&I2CD1, MS5611Addr, tx_arr, 1, rx_arr, 3, MS2ST(5));
     }
-    i2cReleaseBus(&I2CD2);
+    i2cReleaseBus(&I2CD1);
 
     if (status != RDY_OK)
     {

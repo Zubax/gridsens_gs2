@@ -23,6 +23,8 @@ namespace magnetometer
 namespace
 {
 
+static auto& I2CD = I2CD1;
+
 const float AbsMaxValidGauss = 1.3;                                             ///< For the default gain
 const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   ///< Should be OK
 
@@ -66,9 +68,9 @@ template <unsigned TxSize, unsigned RxSize>
 bool io(const std::array<uint8_t, TxSize>& tx, std::array<uint8_t, RxSize>& rx)
 {
     const unsigned Address = 0x1E;
-    i2cAcquireBus(&I2CD2);
-    const msg_t status = i2cMasterTransmitTimeout(&I2CD2, Address, tx.data(), TxSize, rx.data(), RxSize, MS2ST(5));
-    i2cReleaseBus(&I2CD2);
+    i2cAcquireBus(&I2CD);
+    const msg_t status = i2cMasterTransmitTimeout(&I2CD, Address, tx.data(), TxSize, rx.data(), RxSize, MS2ST(5));
+    i2cReleaseBus(&I2CD);
     return status == RDY_OK;
 }
 
