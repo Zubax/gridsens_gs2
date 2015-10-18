@@ -17,14 +17,17 @@
 #define GPIO_PORT_SERIAL_RX     GPIOA
 #define GPIO_PIN_SERIAL_RX      10
 
+#define GPIO_PORT_PERIPH_RESET  GPIOC
+#define GPIO_PIN_PERIPH_RESET   10
+
 // LED
 #define GPIO_PORT_LED_STATUS    GPIOB
-#define GPIO_PIN_LED_STATUS     0
+#define GPIO_PIN_LED_STATUS     3
 
-#define GPIO_PORT_LED_CAN1      GPIOC
+#define GPIO_PORT_LED_CAN1      GPIOB
 #define GPIO_PIN_LED_CAN1       5
 
-#define GPIO_PORT_LED_CAN2      GPIOC
+#define GPIO_PORT_LED_CAN2      GPIOB
 #define GPIO_PIN_LED_CAN2       4
 
 /*
@@ -51,17 +54,17 @@
  * Please refer to the STM32 Reference Manual for details.
  */
 
-#define VAL_GPIOACRL            0x88888B88      // 7..0
-#define VAL_GPIOACRH            0x888488b3      // 15..8
+#define VAL_GPIOACRL            0x88888A88      // 7..0
+#define VAL_GPIOACRH            0x888008A3      // 15..8
 #define VAL_GPIOAODR            0x00000000
 
-#define VAL_GPIOBCRL            0x88888882
-#define VAL_GPIOBCRH            0x8848FF88
+#define VAL_GPIOBCRL            0xEE222888
+#define VAL_GPIOBCRH            0x88488848
 #define VAL_GPIOBODR            0x00000000
 
-#define VAL_GPIOCCRL            0x88228888
-#define VAL_GPIOCCRH            0x88888888
-#define VAL_GPIOCODR            0x00000000
+#define VAL_GPIOCCRL            0x88888888
+#define VAL_GPIOCCRH            0x88888288
+#define VAL_GPIOCODR            ((1 << GPIO_PIN_PERIPH_RESET))
 
 #define VAL_GPIODCRL            0x88888888
 #define VAL_GPIODCRH            0x88888888

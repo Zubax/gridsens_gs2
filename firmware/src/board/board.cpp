@@ -176,7 +176,7 @@ void boardInit(void)
     // Enable SWJ only, JTAG is not needed at all:
     mapr |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 
-    AFIO->MAPR = mapr;
+    AFIO->MAPR = mapr | AFIO_MAPR_CAN_REMAP_REMAP2;
 
     /*
      * Enabling the CAN controllers, then configuring GPIO functions for CAN_TX.
@@ -187,7 +187,7 @@ void boardInit(void)
      *       because ChibiOS initializes AFIO after GPIO.
      */
     RCC->APB1ENR |= RCC_APB1ENR_CAN1EN;
-    palSetPadMode(GPIOA, 12, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
+    palSetPadMode(GPIOB, 9, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
 
 #if UAVCAN_STM32_NUM_IFACES > 1
     RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;

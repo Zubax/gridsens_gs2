@@ -34,7 +34,7 @@
 #define STM32_PPRE1                         STM32_PPRE1_DIV2
 #define STM32_PPRE2                         STM32_PPRE2_DIV2
 #define STM32_ADCPRE                        STM32_ADCPRE_DIV4
-#define STM32_OTG_CLOCK_REQUIRED            FALSE
+#define STM32_OTG_CLOCK_REQUIRED            TRUE
 #define STM32_OTGFSPRE                      STM32_OTGFSPRE_DIV3
 #define STM32_I2S_CLOCK_REQUIRED            FALSE
 #define STM32_MCOSEL                        STM32_MCOSEL_PLL3
@@ -183,9 +183,9 @@
 /*
  * USB driver system settings.
  */
-#define STM32_USB_USE_OTG1                  FALSE
-#define STM32_USB_OTG1_IRQ_PRIORITY         14
+#define STM32_USB_USE_OTG1                  TRUE
+#define STM32_USB_OTG1_IRQ_PRIORITY         15
 #define STM32_USB_OTG1_RX_FIFO_SIZE         512
 #define STM32_USB_OTG_THREAD_PRIO           LOWPRIO
-#define STM32_USB_OTG_THREAD_STACK_SIZE     128
+#define STM32_USB_OTG_THREAD_STACK_SIZE     200
 #define STM32_USB_OTGFIFO_FILL_BASEPRI      0
