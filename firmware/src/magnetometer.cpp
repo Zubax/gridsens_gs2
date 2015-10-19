@@ -129,9 +129,9 @@ bool trySelfTest(const bool polarity)
     /*
      * Enable self test mode (pos/neg)
      */
-    if (!writeCraCrbMode(polarity ? 0x71 : 0x72,    // Reg A: 8-average, 15 Hz default, positive/negative self test
-                         0xE0,                      // Reg B: Gain=7
-                         0x00))                     // Mode: Continuous-measurement mode
+    if (!writeCraCrbMode(polarity ? 0b11110001 : 0b11110010, // Reg A: Temp comp., 8-avg, 15 Hz default, pos/neg test
+                         0b11100000,                         // Reg B: Gain=7
+                         0b00000000))                        // Mode: Continuous-measurement mode
     {
         ::lowsyslog("Mag: Failed to begin self test\n");
         return false;
@@ -189,7 +189,7 @@ bool tryInit()
     /*
      * Configure normal mode
      */
-    if (!writeCraCrbMode(0b01111000,  // Reg A: Averaging 8x, Update rate 75Hz, Normal mode
+    if (!writeCraCrbMode(0b11111000,  // Reg A: Temp compens., Averaging 8x, Update rate 75Hz, Normal mode
                          0b00100000,  // Reg B: Default gain
                          0b00000000)) // Mode: Continuous measurement
     {
