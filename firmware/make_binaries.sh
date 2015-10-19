@@ -1,7 +1,9 @@
 #!/bin/bash
 
 BOOTLOADER_SIZE_KB=8
-SIGNED_BINARY="com.zubax.gnss-1.0-1.0.`git rev-parse --short=8 HEAD`.uavcan.bin"
+
+# TODO: teach the make descriptor script format the file name automatically
+SIGNED_BINARY="com.zubax.gnss-2.0-3.0.`git rev-parse --short=8 HEAD`.uavcan.bin"
 
 ./make_can_boot_descriptor.py -v build/zubax_gnss.bin build/$SIGNED_BINARY
 

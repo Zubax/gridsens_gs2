@@ -16,7 +16,9 @@ CPPSRC = $(shell find src -name '*.cpp')
 
 UINCDIR = src/sys
 
-UDEFS = -DFW_VERSION_MAJOR=1 -DFW_VERSION_MINOR=0 -DHW_VERSION=1
+UDEFS = -DFW_VERSION_MAJOR=3 \
+        -DFW_VERSION_MINOR=0 \
+        -DHW_VERSION=2
 
 #
 # UAVCAN library
