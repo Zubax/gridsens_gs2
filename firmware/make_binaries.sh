@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BOOTLOADER_SIZE_KB=8
+BOOTLOADER_SIZE_KB=16
 
 # TODO: teach the make descriptor script format the file name automatically
 SIGNED_BINARY="com.zubax.gnss-2.0-3.0.`git rev-parse --short=8 HEAD`.uavcan.bin"

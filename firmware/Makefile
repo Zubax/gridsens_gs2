@@ -50,7 +50,7 @@ UDEFS += -DGIT_HASH=0x$(GIT_HASH)
 # ChibiOS
 #
 
-DDEFS += -DCORTEX_VTOR_INIT=0x2000    # Bootloader offset
+DDEFS += -DCORTEX_VTOR_INIT=0x4000    # Bootloader offset
 
 SERIAL_CLI_PORT_NUMBER = 1
 
