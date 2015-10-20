@@ -27,4 +27,8 @@ void restart();
 typedef std::array<std::uint8_t, 12> UniqueID;
 void readUniqueID(UniqueID& out_bytes);
 
+typedef std::array<std::uint8_t, 128> DeviceSignature;
+bool tryReadDeviceSignature(DeviceSignature& out_sign);
+bool tryWriteDeviceSignature(const DeviceSignature& sign);
+
 }

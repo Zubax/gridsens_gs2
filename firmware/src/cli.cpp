@@ -8,6 +8,7 @@
 #include "gnss.hpp"
 #include "board/board.hpp"
 #include <unistd.h>
+#include <cstdio>
 #include <zubax_chibios/sys/sys.h>
 #include <zubax_chibios/sys/assert_always.h>
 #include <zubax_chibios/config/cli.hpp>
@@ -71,12 +72,56 @@ void cmd_bootloader(BaseSequentialStream*, int, char**)
     board::enterBootloader();
 }
 
+const char* signatureToHex(const board::DeviceSignature& sign,
+                           char out_str[std::tuple_size<board::DeviceSignature>::value * 2 + 1])
+{
+    static const auto nibble2hex = [](std::uint8_t x)
+    {
+        const char n = char((x & 0xF) + '0');
+        return (n > '9') ? char(n + 'A' - '9' - 1) : n;
+    };
+
+    unsigned pos = 0;
+    for (auto x : sign)
+    {
+        out_str[pos++] = nibble2hex(x >> 4);
+        out_str[pos++] = nibble2hex(x);
+    }
+
+    out_str[std::tuple_size<board::DeviceSignature>::value * 2] = '\0';
+
+    return &out_str[0];
+}
+
+void cmd_signature(BaseSequentialStream*, int argc, char** argv)
+{
+    if (argc == 0)
+    {
+        board::DeviceSignature sign;
+        if (board::tryReadDeviceSignature(sign))
+        {
+            char buf[257];
+            std::puts(signatureToHex(sign, buf));
+        }
+        else
+        {
+            std::puts("Error: Could not read signature");
+        }
+    }
+    else
+    {
+        const char* const sign = argv[0];
+        (void)sign;
+    }
+}
+
 const ::ShellCommand HandlerTable[] =
 {
     {"cfg",        &cmd_cfg},
     {"reset",      &cmd_reset},
     {"gnssbridge", &cmd_gnssbridge},
     {"bootloader", &cmd_bootloader},
+    {"signature",  &cmd_signature},
     {nullptr, nullptr}
 };
 

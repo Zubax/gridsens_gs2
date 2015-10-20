@@ -29,6 +29,8 @@ const PALConfig pal_default_config =
     { VAL_GPIOEODR, VAL_GPIOECRL, VAL_GPIOECRH }
 };
 
+/// Provided by linker
+const extern std::uint8_t DeviceSignatureStorage[];
 
 namespace board
 {
@@ -153,6 +155,39 @@ void restart()
 void readUniqueID(UniqueID& out_bytes)
 {
     std::memcpy(out_bytes.data(), reinterpret_cast<const void*>(0x1FFFF7E8), std::tuple_size<UniqueID>::value);
+}
+
+bool tryReadDeviceSignature(DeviceSignature& out_sign)
+{
+    ::lowsyslog("DevSign @ %08x\n", unsigned(&DeviceSignatureStorage[0]));
+
+    std::memcpy(out_sign.data(), &DeviceSignatureStorage[0], std::tuple_size<DeviceSignature>::value);
+
+    bool valid = false;
+    for (auto x : out_sign)
+    {
+        if (x != 0xFF && x != 0x00)          // All 0xFF/0x00 is not a valid signature, it's empty storage
+        {
+            valid = true;
+            break;
+        }
+    }
+
+    return valid;
+}
+
+bool tryWriteDeviceSignature(const DeviceSignature& sign)
+{
+    {
+        DeviceSignature dummy;
+        if (tryReadDeviceSignature(dummy))
+        {
+            return false;               // Already written
+        }
+    }
+
+    (void)sign;
+    return false;
 }
 
 }

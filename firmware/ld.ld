@@ -33,6 +33,8 @@ __ram_end__             = __ram_start__ + __ram_size__;
 
 ENTRY(ResetHandler)
 
+PROVIDE(DeviceSignatureStorage = ORIGIN(flash) - 256);
+
 SECTIONS
 {
     . = 0;
