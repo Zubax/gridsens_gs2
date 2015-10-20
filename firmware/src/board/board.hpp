@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 
 namespace board
 {
@@ -23,8 +24,7 @@ void enterBootloader();
 
 void restart();
 
-constexpr unsigned UniqueIDSize = 12;
-
-void readUniqueID(std::uint8_t bytes[UniqueIDSize]);
+typedef std::array<std::uint8_t, 12> UniqueID;
+void readUniqueID(UniqueID& out_bytes);
 
 }

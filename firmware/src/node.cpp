@@ -77,7 +77,7 @@ void configureNode()
     uavcan::protocol::HardwareVersion hwver;
     hwver.major = HW_VERSION;
 
-    std::uint8_t uid[board::UniqueIDSize] = {};
+    board::UniqueID uid;
     board::readUniqueID(uid);
     std::copy(std::begin(uid), std::end(uid), std::begin(hwver.unique_id));
 

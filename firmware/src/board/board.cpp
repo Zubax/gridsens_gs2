@@ -150,9 +150,9 @@ void restart()
     NVIC_SystemReset();
 }
 
-void readUniqueID(std::uint8_t bytes[UniqueIDSize])
+void readUniqueID(UniqueID& out_bytes)
 {
-    std::memcpy(bytes, reinterpret_cast<const void*>(0x1FFFF7E8), UniqueIDSize);
+    std::memcpy(out_bytes.data(), reinterpret_cast<const void*>(0x1FFFF7E8), std::tuple_size<UniqueID>::value);
 }
 
 }
