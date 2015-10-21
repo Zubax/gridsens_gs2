@@ -119,34 +119,68 @@ const ::ShellCommand HandlerTable[] =
     {nullptr, nullptr}
 };
 
-}
-
-void init()
+class : public chibios_rt::BaseStaticThread<1024>
 {
-    ::shellInit();
-
-    static WORKING_AREA(_wa_shell, 1024);
-
-    static const ShellConfig config
+    static void initUSB()
     {
-        (BaseSequentialStream*)&STDOUT_SD,
-        HandlerTable
-    };
-    const Thread* const thd = ::shellCreateStatic(&config, _wa_shell, sizeof(_wa_shell), LOWPRIO);
-    ASSERT_ALWAYS(thd != nullptr);
+        usb_cli::DeviceSerialNumber sn;
 
-    usb_cli::DeviceSerialNumber sn;
-    {
         board::UniqueID unique_id;
         board::readUniqueID(unique_id);
 
         std::fill(std::begin(sn), std::end(sn), 0);
         std::copy(std::begin(unique_id), std::end(unique_id), std::begin(sn));
+
+        usb_cli::init(sn);
     }
 
-    ::lowsyslog("Initializing USB...\n");
-    usb_cli::init(sn);
-    ::lowsyslog("USB initialized\n");
+
+public:
+    msg_t main() override
+    {
+        setName("cli-ctl");
+
+        initUSB();
+
+        ::shellInit();
+
+        ::lowsyslog("USB & shell inited\n");
+
+        static const ShellConfig shell_config
+        {
+            reinterpret_cast<BaseSequentialStream*>(usb_cli::getSerialUSBDriver()),
+            HandlerTable
+        };
+
+        static WORKING_AREA(wa_shell, 2048);
+
+        Thread* shelltp = nullptr;
+        for (;;)
+        {
+            ::sleep(1);
+
+            if ((shelltp == nullptr) && usb_cli::isConnected())
+            {
+                ::lowsyslog("Starting shell\n");
+                shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
+            }
+
+            if ((shelltp != nullptr) && chThdTerminated(shelltp))
+            {
+                shelltp = NULL;
+                ::lowsyslog("Shell terminated\n");
+            }
+        }
+
+        return 0;
+    }
+} cli_control_thread;
+
+} // namespace
+
+void init()
+{
+    cli_control_thread.start(LOWPRIO + 1);
 }
 
 }
