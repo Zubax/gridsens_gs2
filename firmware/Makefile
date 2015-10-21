@@ -14,7 +14,8 @@ CSRC = $(shell find src -name '*.c')
 
 CPPSRC = $(shell find src -name '*.cpp')
 
-UINCDIR = src/sys
+UINCDIR = src                \
+          src/sys
 
 UDEFS = -DFW_VERSION_MAJOR=3 \
         -DFW_VERSION_MINOR=0 \

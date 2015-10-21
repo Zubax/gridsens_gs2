@@ -19,7 +19,7 @@
 #include "air_sensor.hpp"
 #include "magnetometer.hpp"
 #include "gnss.hpp"
-#include "cli.hpp"
+#include "cli/cli.hpp"
 
 namespace
 {

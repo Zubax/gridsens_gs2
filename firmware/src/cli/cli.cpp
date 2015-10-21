@@ -4,9 +4,10 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
-#include "cli.hpp"
-#include "gnss.hpp"
-#include "board/board.hpp"
+#include "base64.hpp"
+#include <cli/cli.hpp>
+#include <gnss.hpp>
+#include <board/board.hpp>
 #include <unistd.h>
 #include <cstdio>
 #include <zubax_chibios/sys/sys.h>
@@ -72,36 +73,16 @@ void cmd_bootloader(BaseSequentialStream*, int, char**)
     board::enterBootloader();
 }
 
-const char* signatureToHex(const board::DeviceSignature& sign,
-                           char out_str[std::tuple_size<board::DeviceSignature>::value * 2 + 1])
-{
-    static const auto nibble2hex = [](std::uint8_t x)
-    {
-        const char n = char((x & 0xF) + '0');
-        return (n > '9') ? char(n + 'A' - '9' - 1) : n;
-    };
-
-    unsigned pos = 0;
-    for (auto x : sign)
-    {
-        out_str[pos++] = nibble2hex(x >> 4);
-        out_str[pos++] = nibble2hex(x);
-    }
-
-    out_str[std::tuple_size<board::DeviceSignature>::value * 2] = '\0';
-
-    return &out_str[0];
-}
-
 void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 {
     if (argc == 0)
     {
         board::DeviceSignature sign;
+
         if (board::tryReadDeviceSignature(sign))
         {
-            char buf[257];
-            std::puts(signatureToHex(sign, buf));
+            char buf[base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
+            std::puts(base64::encode(sign, buf));
         }
         else
         {
@@ -110,8 +91,20 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
     }
     else
     {
-        const char* const sign = argv[0];
-        (void)sign;
+        const char* const encoded = argv[0];
+        board::DeviceSignature sign;
+
+        if (!base64::decode(sign, encoded))
+        {
+            std::puts("Error: Could not decode base64");
+            return;
+        }
+
+        if (!board::tryWriteDeviceSignature(sign))
+        {
+            std::puts("Error: Could not write signature");
+            return;
+        }
     }
 }
 
