@@ -75,7 +75,7 @@ void cmd_bootloader(BaseSequentialStream*, int, char**)
 
 void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 {
-    if (argc == 0)
+    if (argc < 1)
     {
         board::DeviceSignature sign;
 
@@ -86,7 +86,7 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
         }
         else
         {
-            std::puts("Error: Could not read signature");
+            std::puts("Error: Read failed");
         }
     }
     else
@@ -96,13 +96,13 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 
         if (!base64::decode(sign, encoded))
         {
-            std::puts("Error: Could not decode base64");
+            std::puts("Error: Invalid base64");
             return;
         }
 
         if (!board::tryWriteDeviceSignature(sign))
         {
-            std::puts("Error: Could not write signature");
+            std::puts("Error: Write failed");
             return;
         }
     }

@@ -5,6 +5,7 @@
  */
 
 #include "board.hpp"
+#include "stm32_flash_writer.hpp"
 #include <cstring>
 #include <ch.hpp>
 #include <hal.h>
@@ -159,8 +160,6 @@ void readUniqueID(UniqueID& out_bytes)
 
 bool tryReadDeviceSignature(DeviceSignature& out_sign)
 {
-    ::lowsyslog("DevSign @ %08x\n", unsigned(&DeviceSignatureStorage[0]));
-
     std::memcpy(out_sign.data(), &DeviceSignatureStorage[0], std::tuple_size<DeviceSignature>::value);
 
     bool valid = false;
@@ -186,8 +185,13 @@ bool tryWriteDeviceSignature(const DeviceSignature& sign)
         }
     }
 
-    (void)sign;
-    return false;
+    // Before flash can be written, the source must be aligned.
+    alignas(4) std::uint8_t aligned_buffer[std::tuple_size<DeviceSignature>::value];
+    std::copy(std::begin(sign), std::end(sign), std::begin(aligned_buffer));
+
+    stm32_flash_writer::Writer writer;
+
+    return writer.write(&DeviceSignatureStorage[0], &aligned_buffer[0], sizeof(aligned_buffer));
 }
 
 }

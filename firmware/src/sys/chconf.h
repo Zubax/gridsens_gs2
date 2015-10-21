@@ -28,4 +28,10 @@
 #define PORT_IDLE_THREAD_STACK_SIZE    64
 #define PORT_INT_REQUIRED_STACK        512
 
+/*
+ * Max line length must be large enough to accommodate signature installation command:
+ *   ch> signature <172 bytes of signature>
+ */
+#define SHELL_MAX_LINE_LENGTH           200
+
 #include <zubax_chibios/sys/chconf_tail.h>
