@@ -5,6 +5,7 @@
  */
 
 #include "base64.hpp"
+#include "usb_cli.hpp"
 #include <cli/cli.hpp>
 #include <gnss.hpp>
 #include <board/board.hpp>
@@ -118,29 +119,10 @@ const ::ShellCommand HandlerTable[] =
     {nullptr, nullptr}
 };
 
-#if defined(RELEASE_BUILD) && RELEASE_BUILD
-bool readRxPin()
-{
-    return palReadPad(GPIO_PORT_SERIAL_RX, GPIO_PIN_SERIAL_RX);
-}
-#endif
-
 }
 
 void init()
 {
-#if defined(RELEASE_BUILD) && RELEASE_BUILD
-    if (!readRxPin())
-    {
-        ::usleep(500000);   // Some USB-serial adapters are weird and need some time to initialize TX line
-        if (!readRxPin())
-        {
-            lowsyslog("Console: RX pin is low, console will not be inited\n");
-            return;
-        }
-    }
-#endif
-
     ::shellInit();
 
     static WORKING_AREA(_wa_shell, 1024);
@@ -152,6 +134,19 @@ void init()
     };
     const Thread* const thd = ::shellCreateStatic(&config, _wa_shell, sizeof(_wa_shell), LOWPRIO);
     ASSERT_ALWAYS(thd != nullptr);
+
+    usb_cli::DeviceSerialNumber sn;
+    {
+        board::UniqueID unique_id;
+        board::readUniqueID(unique_id);
+
+        std::fill(std::begin(sn), std::end(sn), 0);
+        std::copy(std::begin(unique_id), std::end(unique_id), std::begin(sn));
+    }
+
+    ::lowsyslog("Initializing USB...\n");
+    usb_cli::init(sn);
+    ::lowsyslog("USB initialized\n");
 }
 
 }
