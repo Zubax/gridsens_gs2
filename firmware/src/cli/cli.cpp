@@ -109,6 +109,39 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
     }
 }
 
+void cmd_threads(BaseSequentialStream*, int, char**)
+{
+    static const char* ThreadStateNames[] = { THD_STATE_NAMES };
+
+    static const auto gauge_free_stack = [](const Thread* tp)
+    {
+        const std::uint8_t* limit = reinterpret_cast<std::uint8_t*>(tp->p_stklimit);
+        const unsigned current = reinterpret_cast<unsigned>(tp->p_ctx.r13);
+        unsigned num_bytes = 0;
+        while ((*limit++ == CH_STACK_FILL_VALUE) &&
+               (reinterpret_cast<unsigned>(limit) < current))
+        {
+            num_bytes++;
+        }
+        return num_bytes;
+    };
+
+    puts("Name             State     FStk Prio Time");
+    puts("--------------------------------------------");
+    Thread* tp = chRegFirstThread();
+    do
+    {
+        printf("%-16s %-9s %-4u %-4u %u\r\n",
+               tp->p_name,
+               ThreadStateNames[tp->p_state],
+               gauge_free_stack(tp),
+               static_cast<unsigned>(tp->p_prio),
+               static_cast<unsigned>(tp->p_time));
+        tp = chRegNextThread(tp);
+    }
+    while (tp != nullptr);
+}
+
 const ::ShellCommand HandlerTable[] =
 {
     {"cfg",        &cmd_cfg},
@@ -116,6 +149,7 @@ const ::ShellCommand HandlerTable[] =
     {"gnssbridge", &cmd_gnssbridge},
     {"bootloader", &cmd_bootloader},
     {"signature",  &cmd_signature},
+    {"threads",    &cmd_threads},
     {nullptr, nullptr}
 };
 
@@ -137,7 +171,7 @@ class : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
-        setName("cli-ctl");
+        setName("cli_ctl");
 
         initUSB();
 
