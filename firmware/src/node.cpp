@@ -88,16 +88,6 @@ void configureNode()
     }
 
     node.setHardwareVersion(hwver);
-
-    // Printing identification to CLI
-    lowsyslog("Git commit hash: 0x%08x\n", GIT_HASH);
-
-    lowsyslog("UDID:");
-    for (auto b : hwver.unique_id)
-    {
-        lowsyslog(" %02x", unsigned(b));
-    }
-    lowsyslog("\n");
 }
 
 void configureClockSync()
