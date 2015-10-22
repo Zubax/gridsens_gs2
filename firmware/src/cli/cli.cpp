@@ -31,7 +31,7 @@ void cmd_cfg(BaseSequentialStream*, int argc, char* argv[])
     zubax_chibios::config::executeCliCommand(argc, argv);
 }
 
-void cmd_reset(BaseSequentialStream*, int, char**)
+void cmd_reboot(BaseSequentialStream*, int, char**)
 {
     ::puts("RESTART");
     ::usleep(10000);
@@ -177,7 +177,7 @@ void cmd_threads(BaseSequentialStream*, int, char**)
 const ::ShellCommand HandlerTable[] =
 {
     {"cfg",        &cmd_cfg},
-    {"reset",      &cmd_reset},
+    {"reboot",     &cmd_reboot},
     {"gnssbridge", &cmd_gnssbridge},
     {"bootloader", &cmd_bootloader},
     {"signature",  &cmd_signature},
