@@ -39,27 +39,27 @@ void cmd_reset(BaseSequentialStream*, int, char**)
 
 void cmd_gnssbridge(BaseSequentialStream*, int, char**)
 {
-    ::puts("\nRESET THE BOARD TO RESUME NORMAL OPERATION\n");
+    ::puts("\nRESTART TO RESUME NORMAL OPERATION\n");
     gnss::stop();
     ::sleep(1);
 
-    SerialDriver& gnss_port = gnss::getSerialPort();
-    SerialDriver& cli_port = STDOUT_SD;
-
-    static const auto copy_once = [](SerialDriver* src, SerialDriver* dst)
+    static const auto copy_once = [](InputQueue* src, OutputQueue* dst)
     {
         uint8_t buffer[128];
-        const unsigned sz = sdReadTimeout(src, buffer, sizeof(buffer), TIME_IMMEDIATE);
+        const unsigned sz = chIQReadTimeout(src, buffer, sizeof(buffer), TIME_IMMEDIATE);
         if (sz > 0)
         {
-            sdWrite(dst, buffer, sz);
+            chOQWriteTimeout(dst, buffer, sz, TIME_INFINITE);
         }
     };
 
-    while (true)
+    SerialDriver* const gnss_port = &gnss::getSerialPort();
+    SerialUSBDriver* const cli_port  = usb_cli::getSerialUSBDriver();
+
+    while (usb_cli::isConnected())
     {
-        copy_once(&gnss_port, &cli_port);
-        copy_once(&cli_port, &gnss_port);
+        copy_once(&gnss_port->iqueue, &cli_port->oqueue);
+        copy_once(&cli_port->iqueue, &gnss_port->oqueue);
     }
 }
 
