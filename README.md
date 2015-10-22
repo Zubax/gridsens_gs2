@@ -21,7 +21,7 @@ make RELEASE=1 # RELEASE is optional; omit to build the debug version
 * Optionally, generate release binaries:
 ```shell
 cd firmware
-./make_release_binaries.sh
+./make_binaries.sh
 ```
 
 ## Flashing
