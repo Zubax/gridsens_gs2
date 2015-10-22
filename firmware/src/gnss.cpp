@@ -298,7 +298,7 @@ public:
 
 void init()
 {
-    (void)gnss_thread.start(HIGHPRIO);
+    (void)gnss_thread.start(HIGHPRIO - 5);
 }
 
 void stop()

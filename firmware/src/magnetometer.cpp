@@ -333,7 +333,7 @@ public:
 
 void init()
 {
-    (void)mag_thread.start(HIGHPRIO - 8);
+    (void)mag_thread.start(HIGHPRIO);
 }
 
 }
