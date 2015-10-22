@@ -126,9 +126,14 @@ void cmd_zubax_id(BaseSequentialStream*, int, char**)
 
     char base64_buf[base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
 
-    board::UniqueID uid;
-    board::readUniqueID(uid);
-    printf("hw_unique_id : '%s'\n", base64::encode(uid, base64_buf));
+    std::array<std::uint8_t, 16> uid_128;
+    std::fill(std::begin(uid_128), std::end(uid_128), 0);
+    {
+        board::UniqueID uid;
+        board::readUniqueID(uid);
+        std::copy(std::begin(uid), std::end(uid), std::begin(uid_128));
+    }
+    printf("hw_unique_id : '%s'\n", base64::encode(uid_128, base64_buf));
 
     board::DeviceSignature signature;
     if (board::tryReadDeviceSignature(signature))
