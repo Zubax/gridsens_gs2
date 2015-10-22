@@ -32,14 +32,14 @@ void cmd_cfg(BaseSequentialStream*, int argc, char* argv[])
 
 void cmd_reset(BaseSequentialStream*, int, char**)
 {
-    lowsyslog("RESTART\n\n");
+    ::puts("RESTART");
     ::usleep(10000);
     ::NVIC_SystemReset();
 }
 
 void cmd_gnssbridge(BaseSequentialStream*, int, char**)
 {
-    lowsyslog("\nRESET THE BOARD TO RESUME NORMAL OPERATION\n\n");
+    ::puts("\nRESET THE BOARD TO RESUME NORMAL OPERATION\n");
     gnss::stop();
     ::sleep(1);
 
@@ -65,7 +65,7 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
 
 void cmd_bootloader(BaseSequentialStream*, int, char**)
 {
-    lowsyslog("\nENTERING THE BOOTLOADER\n\n");
+    ::puts("\nENTERING THE BOOTLOADER\n");
     ::usleep(100000);
 
     // Suppress the watchdog - set the maximum possible interval
