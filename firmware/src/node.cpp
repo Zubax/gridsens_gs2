@@ -584,7 +584,7 @@ void markComponentInitialized(ComponentID comp)
 
 void init()
 {
-    (void)node_thread.start(LOWPRIO + 10);
+    (void)node_thread.start(NORMALPRIO);
 }
 
 }
