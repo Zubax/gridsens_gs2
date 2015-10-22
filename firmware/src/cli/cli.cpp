@@ -8,7 +8,7 @@
 #include "usb_cli.hpp"
 #include <cli/cli.hpp>
 #include <gnss.hpp>
-#include <node.hpp>
+#include <bootloader_interface.hpp>
 #include <board/board.hpp>
 #include <unistd.h>
 #include <cstdio>
@@ -112,22 +112,29 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 
 void cmd_zubax_id(BaseSequentialStream*, int, char**)
 {
-    const auto sw_version = node::getNode().getSoftwareVersion();
-    const auto hw_version = node::getNode().getHardwareVersion();
+    const auto sw_version = bootloader_interface::makeUavcanSoftwareVersionStruct();
 
-    printf("product_id   : '%s'\n", node::getNode().getName().c_str());
+    printf("product_id   : '%s'\n", PRODUCT_ID_STRING);
     printf("product_name : '%s'\n", PRODUCT_NAME_STRING);
 
     printf("sw_version   : '%u.%u'\n", sw_version.major, sw_version.minor);
-    printf("sw_vcs_commit: %u\n", GIT_HASH);
+    printf("sw_vcs_commit: %lu\n", sw_version.vcs_commit);
     printf("sw_build_date: %s\n", __DATE__);
 
+    auto hw_version = board::detectHardwareVersion();
     printf("hw_version   : '%u.%u'\n", hw_version.major, hw_version.minor);
 
-    char base64_buf[base64::predictEncodedDataLength(hw_version.certificate_of_authenticity.MaxSize)];
+    char base64_buf[base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
 
-    printf("hw_unique_id : '%s'\n", base64::encode(hw_version.unique_id, base64_buf));
-    printf("hw_signature : '%s'\n", base64::encode(hw_version.certificate_of_authenticity, base64_buf));
+    board::UniqueID uid;
+    board::readUniqueID(uid);
+    printf("hw_unique_id : '%s'\n", base64::encode(uid, base64_buf));
+
+    board::DeviceSignature signature;
+    if (board::tryReadDeviceSignature(signature))
+    {
+        printf("hw_signature : '%s'\n", base64::encode(signature, base64_buf));
+    }
 }
 
 #if defined(DEBUG_BUILD) && DEBUG_BUILD

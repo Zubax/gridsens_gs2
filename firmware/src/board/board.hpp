@@ -31,4 +31,12 @@ typedef std::array<std::uint8_t, 128> DeviceSignature;
 bool tryReadDeviceSignature(DeviceSignature& out_sign);
 bool tryWriteDeviceSignature(const DeviceSignature& sign);
 
+struct HardwareVersion
+{
+    std::uint8_t major;
+    std::uint8_t minor;
+};
+
+HardwareVersion detectHardwareVersion();
+
 }
