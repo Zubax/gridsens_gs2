@@ -17,9 +17,11 @@ CPPSRC = $(shell find src -name '*.cpp')
 UINCDIR = src                \
           src/sys
 
-UDEFS = -DFW_VERSION_MAJOR=3 \
-        -DFW_VERSION_MINOR=0 \
-        -DHW_VERSION=2
+UDEFS = -DFW_VERSION_MAJOR=3                    \
+        -DFW_VERSION_MINOR=0                    \
+        -DHW_VERSION=2                          \
+        -DPRODUCT_ID_STRING=\"com.zubax.gnss\"  \
+        -DPRODUCT_NAME_STRING=\"Zubax\ GNSS\"
 
 #
 # UAVCAN library

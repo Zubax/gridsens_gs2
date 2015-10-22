@@ -8,6 +8,7 @@
 #include "usb_cli.hpp"
 #include <cli/cli.hpp>
 #include <gnss.hpp>
+#include <node.hpp>
 #include <board/board.hpp>
 #include <unistd.h>
 #include <cstdio>
@@ -142,6 +143,26 @@ void cmd_threads(BaseSequentialStream*, int, char**)
     while (tp != nullptr);
 }
 
+void cmd_zubax_id(BaseSequentialStream*, int, char**)
+{
+    const auto sw_version = node::getNode().getSoftwareVersion();
+    const auto hw_version = node::getNode().getHardwareVersion();
+
+    printf("product_id   : '%s'\n", node::getNode().getName().c_str());
+    printf("product_name : '%s'\n", PRODUCT_NAME_STRING);
+
+    printf("sw_version   : '%u.%u'\n", sw_version.major, sw_version.minor);
+    printf("sw_vcs_commit: %u\n", GIT_HASH);
+    printf("sw_build_date: %s\n", __DATE__);
+
+    printf("hw_version   : '%u.%u'\n", hw_version.major, hw_version.minor);
+
+    char base64_buf[base64::predictEncodedDataLength(hw_version.certificate_of_authenticity.MaxSize)];
+
+    printf("hw_unique_id : '%s'\n", base64::encode(hw_version.unique_id, base64_buf));
+    printf("hw_signature : '%s'\n", base64::encode(hw_version.certificate_of_authenticity, base64_buf));
+}
+
 const ::ShellCommand HandlerTable[] =
 {
     {"cfg",        &cmd_cfg},
@@ -150,6 +171,7 @@ const ::ShellCommand HandlerTable[] =
     {"bootloader", &cmd_bootloader},
     {"signature",  &cmd_signature},
     {"threads",    &cmd_threads},
+    {"zubax_id",   &cmd_zubax_id},
     {nullptr, nullptr}
 };
 

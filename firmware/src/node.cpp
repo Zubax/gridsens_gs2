@@ -68,7 +68,7 @@ void configureNode()
 {
     Node& node = getNode();
 
-    node.setName("com.zubax.gnss");
+    node.setName(PRODUCT_ID_STRING);
 
     // Software version
     node.setSoftwareVersion(bootloader_interface::makeUavcanSoftwareVersionStruct());
@@ -80,6 +80,12 @@ void configureNode()
     board::UniqueID uid;
     board::readUniqueID(uid);
     std::copy(std::begin(uid), std::end(uid), std::begin(hwver.unique_id));
+
+    board::DeviceSignature coa;
+    if (board::tryReadDeviceSignature(coa))
+    {
+        std::copy(std::begin(coa), std::end(coa), std::back_inserter(hwver.certificate_of_authenticity));
+    }
 
     node.setHardwareVersion(hwver);
 
