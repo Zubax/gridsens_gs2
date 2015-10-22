@@ -134,7 +134,6 @@ class : public chibios_rt::BaseStaticThread<1024>
         usb_cli::init(sn);
     }
 
-
 public:
     msg_t main() override
     {
@@ -143,8 +142,6 @@ public:
         initUSB();
 
         ::shellInit();
-
-        ::lowsyslog("USB & shell inited\n");
 
         static const ShellConfig shell_config
         {
@@ -161,14 +158,12 @@ public:
 
             if ((shelltp == nullptr) && usb_cli::isConnected())
             {
-                ::lowsyslog("Starting shell\n");
                 shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
             }
 
             if ((shelltp != nullptr) && chThdTerminated(shelltp))
             {
                 shelltp = NULL;
-                ::lowsyslog("Shell terminated\n");
             }
         }
 
@@ -180,7 +175,21 @@ public:
 
 void init()
 {
-    cli_control_thread.start(LOWPRIO + 1);
+    /*
+     * TODO FIXME HACK: This is a fix to USB hardware bug.
+     * It must be fixed in future revisions in either way:
+     *  - Remapping UART to some other pin, not PA9 (which is shared with VBUS_SENS)
+     *  - Using a different MCU, e.g. STM32F0, F4, etc, not F1.
+     * More info: https://github.com/Zubax/hardware/issues/1
+     */
+    if (board::isDebugSerialConnected())
+    {
+        ::lowsyslog("Hw bug workaround: USB will not start because debug serial is connected\n");
+    }
+    else
+    {
+        cli_control_thread.start(LOWPRIO + 1);
+    }
 }
 
 }
