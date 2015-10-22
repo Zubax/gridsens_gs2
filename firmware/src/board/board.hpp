@@ -24,8 +24,6 @@ void enterBootloader();
 
 void restart();
 
-bool isDebugSerialConnected();
-
 typedef std::array<std::uint8_t, 12> UniqueID;
 void readUniqueID(UniqueID& out_bytes);
 

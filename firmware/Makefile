@@ -53,7 +53,7 @@ UDEFS += -DGIT_HASH=0x$(GIT_HASH)
 
 DDEFS += -DCORTEX_VTOR_INIT=0x4000    # Bootloader offset
 
-SERIAL_CLI_PORT_NUMBER = 1
+SERIAL_CLI_PORT_NUMBER = 3
 
 CPPWARN := -Wundef -Wno-error=undef
 

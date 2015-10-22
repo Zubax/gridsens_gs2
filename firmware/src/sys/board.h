@@ -14,12 +14,6 @@
  * GPIO
  */
 // Misc
-#define GPIO_PORT_SERIAL_RX     GPIOA
-#define GPIO_PIN_SERIAL_RX      10
-
-#define GPIO_PORT_SERIAL_TX     GPIOA
-#define GPIO_PIN_SERIAL_TX      9
-
 #define GPIO_PORT_PERIPH_RESET  GPIOC
 #define GPIO_PIN_PERIPH_RESET   10
 
@@ -57,12 +51,17 @@
  * Please refer to the STM32 Reference Manual for details.
  */
 
-#define VAL_GPIOACRL            0x88888A88      // 7..0
-#define VAL_GPIOACRH            0x888008A3      // 15..8
-#define VAL_GPIOAODR            0x00000000
+/*
+ * USB on STM32F1xx requires that the pin OTG_FS_VBUS (PA9) is set to high level.
+ * It has been proven empirically that configuring the pin as input with pull-up is not enough to make USB work,
+ * instead it must be configured as output and set to high level, which is done here.
+ */
+#define VAL_GPIOACRL            0x88888A88                      // 7..0
+#define VAL_GPIOACRH            0x88800828                      // 15..8
+#define VAL_GPIOAODR            ((1 << 9))                      // USB requires that PA9 is HIGH
 
 #define VAL_GPIOBCRL            0xEE222888
-#define VAL_GPIOBCRH            0x88488848
+#define VAL_GPIOBCRH            0x88488A48
 #define VAL_GPIOBODR            ((1 << 7) | (1 << 6))
 
 #define VAL_GPIOCCRL            0x88888888

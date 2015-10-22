@@ -49,19 +49,6 @@ void init()
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
 
-    /*
-     * TODO FIXME HACK: This is a fix to USB hardware bug.
-     * It must be fixed in future revisions in either way:
-     *  - Remapping UART to some other pin, not PA9 (which is shared with VBUS_SENS)
-     *  - Using a different MCU, e.g. STM32F0, F4, etc, not F1.
-     * More info: https://github.com/Zubax/hardware/issues/1
-     */
-    if (!board::isDebugSerialConnected())
-    {
-        palSetPadMode(GPIO_PORT_SERIAL_TX, GPIO_PIN_SERIAL_TX, PAL_MODE_OUTPUT_PUSHPULL);
-        palSetPad(GPIO_PORT_SERIAL_TX, GPIO_PIN_SERIAL_TX);
-    }
-
     zubax_chibios::watchdog::init();
 
     i2cStart(&I2CD1, &I2CCfg1);
@@ -164,11 +151,6 @@ void enterBootloader()
 void restart()
 {
     NVIC_SystemReset();
-}
-
-bool isDebugSerialConnected()
-{
-    return !!palReadPad(GPIO_PORT_SERIAL_RX, GPIO_PIN_SERIAL_RX);
 }
 
 void readUniqueID(UniqueID& out_bytes)
