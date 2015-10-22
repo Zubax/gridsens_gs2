@@ -110,6 +110,28 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
     }
 }
 
+void cmd_zubax_id(BaseSequentialStream*, int, char**)
+{
+    const auto sw_version = node::getNode().getSoftwareVersion();
+    const auto hw_version = node::getNode().getHardwareVersion();
+
+    printf("product_id   : '%s'\n", node::getNode().getName().c_str());
+    printf("product_name : '%s'\n", PRODUCT_NAME_STRING);
+
+    printf("sw_version   : '%u.%u'\n", sw_version.major, sw_version.minor);
+    printf("sw_vcs_commit: %u\n", GIT_HASH);
+    printf("sw_build_date: %s\n", __DATE__);
+
+    printf("hw_version   : '%u.%u'\n", hw_version.major, hw_version.minor);
+
+    char base64_buf[base64::predictEncodedDataLength(hw_version.certificate_of_authenticity.MaxSize)];
+
+    printf("hw_unique_id : '%s'\n", base64::encode(hw_version.unique_id, base64_buf));
+    printf("hw_signature : '%s'\n", base64::encode(hw_version.certificate_of_authenticity, base64_buf));
+}
+
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
+
 void cmd_threads(BaseSequentialStream*, int, char**)
 {
     static const char* ThreadStateNames[] = { THD_STATE_NAMES };
@@ -143,25 +165,7 @@ void cmd_threads(BaseSequentialStream*, int, char**)
     while (tp != nullptr);
 }
 
-void cmd_zubax_id(BaseSequentialStream*, int, char**)
-{
-    const auto sw_version = node::getNode().getSoftwareVersion();
-    const auto hw_version = node::getNode().getHardwareVersion();
-
-    printf("product_id   : '%s'\n", node::getNode().getName().c_str());
-    printf("product_name : '%s'\n", PRODUCT_NAME_STRING);
-
-    printf("sw_version   : '%u.%u'\n", sw_version.major, sw_version.minor);
-    printf("sw_vcs_commit: %u\n", GIT_HASH);
-    printf("sw_build_date: %s\n", __DATE__);
-
-    printf("hw_version   : '%u.%u'\n", hw_version.major, hw_version.minor);
-
-    char base64_buf[base64::predictEncodedDataLength(hw_version.certificate_of_authenticity.MaxSize)];
-
-    printf("hw_unique_id : '%s'\n", base64::encode(hw_version.unique_id, base64_buf));
-    printf("hw_signature : '%s'\n", base64::encode(hw_version.certificate_of_authenticity, base64_buf));
-}
+#endif // defined(DEBUG_BUILD) && DEBUG_BUILD
 
 const ::ShellCommand HandlerTable[] =
 {
@@ -170,8 +174,10 @@ const ::ShellCommand HandlerTable[] =
     {"gnssbridge", &cmd_gnssbridge},
     {"bootloader", &cmd_bootloader},
     {"signature",  &cmd_signature},
-    {"threads",    &cmd_threads},
     {"zubax_id",   &cmd_zubax_id},
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
+    {"threads",    &cmd_threads},
+#endif
     {nullptr, nullptr}
 };
 
