@@ -75,11 +75,12 @@ binaries: build/zubax_gnss.bin
 	# Generating the signed image for the bootloader
 	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PRODUCT_ID_STRING) $(HW_VERSION).0 \
 	                                           --also-patch-descriptor-in=$(PROJECT).elf
-
 	# Generating compound image with embedded bootloader
 	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PRODUCT_ID_STRING) $(HW_VERSION).0 \
 	                                           --bootloader-image-size=$(BOOTLOADER_SIZE)          \
 	                                           --bootloader-image=../bootloader.bin                \
 	                                           --output-prefix='withbootloader-'
+	# Removing temporary files
+	cd build && rm -f $(PROJECT).bin *.hex
 
 include zubax_chibios/rules_stm32f105_107.mk
