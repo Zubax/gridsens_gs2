@@ -49,8 +49,8 @@ The steps above will produce the following outputs in the build output directory
 Artifact                                | Purpose
 ----------------------------------------|----------------------------------------------------------------------
 `com.zubax.*.uavcan.bin`                | Application binary suitable for UAVCAN bootloading
-`withbootloader-com.zubax.*.uavcan.bin` | Above image combined with the bootloader; can be flashed to empty MCU
-`*.elf`                                 | ELF file with correct bootloader signature; suitable for debugging
+`withbootloader-com.zubax.*.uavcan.bin` | Above image combined with the bootloader; can be flashed on empty MCU
+`withbootloader-com.zubax.*.elf`        | ELF file with embedded bootloader and correct descriptor, for debugging
 
 ## Loading the firmware
 
@@ -65,8 +65,8 @@ Avialable loaders:
 
 ### Using UAVCAN bootloader
 
-First, make sure to generate release binaries as described above.
-Then feed the signed binary (it will be named as `*.uavcan.bin`) to the UAVCAN firmware update server.
+Feed the signed binary (it will be named as `*.uavcan.bin`) to the UAVCAN firmware update server.
+For example, see these instructions for PX4: <http://dev.px4.io/uavcan-node-firmware.html>.
 
 Source of the UAVCAN bootloader for this board can be found at the
 [PX4 source repository](https://github.com/PX4/Firmware).
