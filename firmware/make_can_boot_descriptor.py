@@ -1,4 +1,37 @@
 #!/usr/bin/env python
+#
+#   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name PX4 nor the names of its contributors may be
+#    used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Based on make_can_boot_descriptor.py originally created by Ben Dyer, David Sidrane and Pavel Kirienko for PX4.
+# See https://github.com/PX4/Firmware/blob/nuttx_next/Tools/make_can_boot_descriptor.py
+#
 
 import os
 import sys
@@ -238,19 +271,24 @@ if __name__ == "__main__":
     parser.add_option("-g", "--use-git-hash", dest="use_git_hash", action="store_true",
                       help="set the descriptor's VCS commit value to the current git hash",
                       metavar="GIT")
-    parser.add_option("--bootloader-size", dest="bootloader_size", default=0,
+    parser.add_option("--ignore-leading-bytes", dest="ignore_leading_bytes", default=0,
                       help="don't write the first SIZE bytes of the image",
                       metavar="SIZE")
     parser.add_option("--bootloader-image", dest="bootloader_image", default=0,
                       help="prepend a bootloader image to the output file",
                       metavar="IMAGE")
+    parser.add_option("--bootloader-image-size", dest="bootloader_image_size", default=0,
+                      help="pad the bootloader image to the specified size if necessary",
+                      metavar="SIZE")
+    parser.add_option("--output-prefix", dest="out_file_prefix", default='',
+                      help="prefix to be added to the output file name",
+                      metavar="STRING")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
                       help="show additional firmware information on stdout")
 
     options, args = parser.parse_args()
-    if len(args) not in (0, 2):
-        parser.error("specify both IN or OUT for file operation, or " +
-                     "neither for stdin/stdout operation")
+    if len(args) != 3:
+        parser.error("Expected positional arguments: <input binary> <node name> <hardware version string>")
 
     if options.vcs_commit and options.use_git_hash:
         parser.error("options --vcs-commit and --use-git-commit are mutually exclusive")
@@ -262,25 +300,34 @@ if __name__ == "__main__":
             print "Git Command failed "+ str(e) +"- Exiting!"
             quit()
 
-    if args:
-        in_file = args[0]
-        out_file = args[1]
-    else:
-        in_file = sys.stdin
-        out_file = sys.stdout
+    in_file = args[0]
+    out_file_prefix = '%s%s-%s-' % (options.out_file_prefix, args[1], args[2])
 
-    bootloader_image = ""
+    bootloader_image = b''
     if options.bootloader_image:
         with open(options.bootloader_image, "rb") as bootloader:
             bootloader_image = bootloader.read()
+    if options.bootloader_image_size:
+        bootloader_image_size = int(options.bootloader_image_size)
+        if len(bootloader_image) > bootloader_image_size:
+            print "Bootloader image is larger than specified alignment"
+            quit()
+        while len(bootloader_image) < bootloader_image_size:
+            bootloader_image += '\xFF'
+        print "Bootloader image padded to %d bytes" % len(bootloader_image)
 
-    bootloader_size = int(options.bootloader_size)
+    ignore_leading_bytes = int(options.ignore_leading_bytes)
 
     with FirmwareImage(in_file, "rb") as in_image:
+        vcs_commit = options.vcs_commit or in_image.app_descriptor.vcs_commit
+        out_file = '%s%s.%s.%x.uavcan.bin' % (out_file_prefix,
+                                              in_image.app_descriptor.version_major,
+                                              in_image.app_descriptor.version_minor,
+                                              vcs_commit)
         with FirmwareImage(out_file, "wb") as out_image:
             image = in_image.read()
             out_image.write(bootloader_image)
-            out_image.write(image[bootloader_size:])
+            out_image.write(image[ignore_leading_bytes:])
             if options.vcs_commit:
                 out_image.app_descriptor.vcs_commit = options.vcs_commit
             out_image.write_descriptor()
@@ -291,14 +338,14 @@ if __name__ == "__main__":
 Application descriptor located at offset 0x{0.app_descriptor_offset:08X}
 
 """.format(in_image, in_image.app_descriptor, out_image.app_descriptor,
-           bootloader_size, len(bootloader_image)))
-                if bootloader_size:
+           ignore_leading_bytes, len(bootloader_image)))
+                if ignore_leading_bytes:
                     sys.stderr.write(
 """Ignored the first {3:d} bytes of the input image. Prepended {4:d} bytes of
 bootloader image to the output image.
 
 """.format(in_image, in_image.app_descriptor, out_image.app_descriptor,
-           bootloader_size, len(bootloader_image)))
+           ignore_leading_bytes, len(bootloader_image)))
                 sys.stderr.write(
 """READ VALUES
 ------------------------------------------------------------------------------
@@ -325,7 +372,7 @@ version_minor       uint8             {2.version_minor:d}
 reserved            uint8[6]          {2.reserved!r}
 
 """.format(in_image, in_image.app_descriptor, out_image.app_descriptor,
-           bootloader_size, len(bootloader_image)))
+           ignore_leading_bytes, len(bootloader_image)))
                 if out_image.padding:
                     sys.stderr.write(
 """

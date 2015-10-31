@@ -6,6 +6,11 @@
 
 PROJECT = zubax_gnss
 
+PRODUCT_ID_STRING = com.zubax.gnss
+PRODUCT_NAME_STRING = Zubax\ GNSS
+
+HW_VERSION = 2
+
 #
 # Application
 #
@@ -17,11 +22,11 @@ CPPSRC = $(shell find src -name '*.cpp')
 UINCDIR = src                \
           src/sys
 
-UDEFS = -DFW_VERSION_MAJOR=3                    \
-        -DFW_VERSION_MINOR=0                    \
-        -DHW_VERSION=2                          \
-        -DPRODUCT_ID_STRING=\"com.zubax.gnss\"  \
-        -DPRODUCT_NAME_STRING=\"Zubax\ GNSS\"
+UDEFS = -DFW_VERSION_MAJOR=3                             \
+        -DFW_VERSION_MINOR=0                             \
+        -DHW_VERSION=$(HW_VERSION)                       \
+        -DPRODUCT_ID_STRING=\"$(PRODUCT_ID_STRING)\"     \
+        -DPRODUCT_NAME_STRING=\"$(PRODUCT_NAME_STRING)\"
 
 #
 # UAVCAN library
@@ -53,7 +58,9 @@ UDEFS += -DGIT_HASH=0x$(GIT_HASH)
 # ChibiOS
 #
 
-DDEFS += -DCORTEX_VTOR_INIT=0x4000    # Bootloader offset
+BOOTLOADER_SIZE = 16384
+
+DDEFS += -DCORTEX_VTOR_INIT=$(BOOTLOADER_SIZE)
 
 SERIAL_CLI_PORT_NUMBER = 3
 
@@ -65,6 +72,10 @@ DEBUG_OPT = -Os -g3
 LDSCRIPT = ld.ld
 
 binaries: build/zubax_gnss.bin
-	@./make_binaries.sh >/dev/null 2>&1
+	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PRODUCT_ID_STRING) $(HW_VERSION).0
+	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PRODUCT_ID_STRING) $(HW_VERSION).0 \
+	                                           --bootloader-image-size=$(BOOTLOADER_SIZE)          \
+	                                           --bootloader-image=../bootloader.bin                \
+	                                           --output-prefix='withbootloader-'
 
 include zubax_chibios/rules_stm32f105_107.mk
