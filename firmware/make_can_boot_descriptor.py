@@ -283,6 +283,9 @@ if __name__ == "__main__":
     parser.add_option("--output-prefix", dest="out_file_prefix", default='',
                       help="prefix to be added to the output file name",
                       metavar="STRING")
+    parser.add_option("--also-patch-descriptor-in", dest="also_patch_descriptor_in", default='',
+                      help="file where the descriptor will be updated too (e.g. ELF)",
+                      metavar="PATH")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
                       help="show additional firmware information on stdout")
 
@@ -324,6 +327,7 @@ if __name__ == "__main__":
                                               in_image.app_descriptor.version_major,
                                               in_image.app_descriptor.version_minor,
                                               vcs_commit)
+
         with FirmwareImage(out_file, "wb") as out_image:
             image = in_image.read()
             out_image.write(bootloader_image)
@@ -332,6 +336,13 @@ if __name__ == "__main__":
                 out_image.app_descriptor.vcs_commit = options.vcs_commit
             out_image.write_descriptor()
 
+            if options.also_patch_descriptor_in:
+                with open(options.also_patch_descriptor_in, "rb") as im:
+                    also_image = im.read()
+                also_image = also_image.replace(in_image.app_descriptor.pack(), out_image.app_descriptor.pack())
+                with open(options.also_patch_descriptor_in, "wb") as im:
+                    im.write(also_image)
+                
             if options.verbose:
                 sys.stderr.write(
 """
