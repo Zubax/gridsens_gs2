@@ -41,17 +41,18 @@ git submodule update --init --recursive
 * Build:
 ```shell
 cd firmware
-make RELEASE=1 # RELEASE is optional; omit to build the debug version
+make binaries RELEASE=1 # RELEASE is optional; omit to build the debug version
 ```
-* Optionally, generate release binaries:
-```shell
-cd firmware
-./make_binaries.sh
-```
+
+The steps above will produce the following outputs in the build output directory:
+
+Artifact                                | Purpose
+----------------------------------------|----------------------------------------------------------------------
+`com.zubax.*.uavcan.bin`                | Application binary suitable for UAVCAN bootloading
+`withbootloader-com.zubax.*.uavcan.bin` | Above image combined with the bootloader; can be flashed to empty MCU
+`*.elf`                                 | ELF file with correct bootloader signature; suitable for debugging
 
 ## Loading the firmware
-
-TODO: explain how to flash the bootloader.
 
 ### Using in-circuit debuggers
 

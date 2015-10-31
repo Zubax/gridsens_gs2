@@ -4,10 +4,7 @@
 # Author: Pavel Kirienko <pavel.kirienko@zubax.com>
 #
 
-PROJECT = zubax_gnss
-
-PRODUCT_ID_STRING = com.zubax.gnss
-PRODUCT_NAME_STRING = Zubax\ GNSS
+PROJECT = com.zubax.gnss
 
 HW_VERSION = 2
 
@@ -25,8 +22,8 @@ UINCDIR = src                \
 UDEFS = -DFW_VERSION_MAJOR=3                             \
         -DFW_VERSION_MINOR=0                             \
         -DHW_VERSION=$(HW_VERSION)                       \
-        -DPRODUCT_ID_STRING=\"$(PRODUCT_ID_STRING)\"     \
-        -DPRODUCT_NAME_STRING=\"$(PRODUCT_NAME_STRING)\"
+        -DPRODUCT_ID_STRING=\"$(PROJECT)\"               \
+        -DPRODUCT_NAME_STRING=\"Zubax\ GNSS\"
 
 #
 # UAVCAN library
@@ -71,16 +68,23 @@ DEBUG_OPT = -Os -g3
 
 LDSCRIPT = ld.ld
 
-binaries: build/zubax_gnss.bin
+binaries: build/$(PROJECT).bin build/$(PROJECT).elf
+	# Removing previous build outputs that could use a different git hash
+	rm -rf build/*.uavcan.bin
 	# Generating the signed image for the bootloader
-	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PRODUCT_ID_STRING) $(HW_VERSION).0 \
+	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION).0 \
 	                                           --also-patch-descriptor-in=$(PROJECT).elf
 	# Generating compound image with embedded bootloader
-	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PRODUCT_ID_STRING) $(HW_VERSION).0 \
-	                                           --bootloader-image-size=$(BOOTLOADER_SIZE)          \
-	                                           --bootloader-image=../bootloader.bin                \
+	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION).0 \
+	                                           --bootloader-image-size=$(BOOTLOADER_SIZE)\
+	                                           --bootloader-image=../bootloader.bin      \
 	                                           --output-prefix='withbootloader-'
+	# Injecting the bootloader into the final ELF
+	cd build && $(TOOLCHAIN_PREFIX)-objcopy --add-section bootloader=../bootloader.bin     \
+	                                        --set-section-flags bootloader=load,alloc      \
+	                                        --change-section-address bootloader=0x08000000 \
+	                                        $(PROJECT).elf withbootloader-$(PROJECT).elf
 	# Removing temporary files
-	cd build && rm -f $(PROJECT).bin *.hex
+	cd build && rm -f $(PROJECT).bin $(PROJECT).elf *.hex
 
 include zubax_chibios/rules_stm32f105_107.mk

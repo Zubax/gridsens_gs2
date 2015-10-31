@@ -64,6 +64,22 @@ SECTIONS
         PROVIDE(__fini_array_end = .);
     } > flash
 
+    .padding1 :
+    {
+        /* 
+         * Filling is important: if it is not specified, gaps between aligned sections will be filled with zero when
+         * exporting binaries, and will be skipped (i.e. set to 0xFF) when flashing .elf directly during debugging.
+         * The discrepancy causes the firmware CRC to mismatch, preventing the bootloader from running it.
+         * Assigning a well-defined fill byte eliminates the discrepancy (binary files will also contain 0xFF),
+         * allowing to flash the firmware directly with an SWD debugger during development.
+         * See http://www.math.utah.edu/docs/info/ld_3.html
+         */
+        FILL(0xFF);
+        . += 1;            /* This increment prevents moving location counter backwards if no alignment is needed */
+        . = ALIGN(16) - 1;
+        BYTE(0xFF)         /* Without this, the linker will ignore aligmnent */
+    } > flash
+
     .text : ALIGN(16) SUBALIGN(16)
     {
         *(.text.startup.*)
