@@ -64,6 +64,9 @@ SECTIONS
         PROVIDE(__fini_array_end = .);
     } > flash
 
+    /*
+     * This padding section must be inserted before every section with greater alignment.
+     */
     .padding1 :
     {
         /* 
