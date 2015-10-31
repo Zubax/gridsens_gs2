@@ -64,4 +64,7 @@ DEBUG_OPT = -Os -g3
 
 LDSCRIPT = ld.ld
 
+binaries: build/zubax_gnss.bin
+	@./make_binaries.sh >/dev/null 2>&1
+
 include zubax_chibios/rules_stm32f105_107.mk
