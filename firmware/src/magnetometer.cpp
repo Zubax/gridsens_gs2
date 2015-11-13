@@ -31,7 +31,7 @@ const float GaussScale = 0.92e-03;
 zubax_chibios::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
 zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-mag",
-                                                         50000, 20000, 1000000);
+                                                         20000, 20000, 1000000);
 
 zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-mag",
                                                   16,
