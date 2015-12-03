@@ -1,10 +1,26 @@
 /*
- * Base64 encoder and decoder optimized for deeply embedded systems.
+ * Copyright (C) 2014-2015  Zubax Robotics  <info@zubax.com>
  *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
+ */
+
+/*
+ * Base64 encoder and decoder optimized for deeply embedded systems.
  * This implementation is somewhat inspired by this source (released into public domain):
  *      https://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64#C.2B.2B
- *
- * Copyright (C) 2015 Pavel Kirienko <pavel.kirienko@gmail.com>
  */
 
 #pragma once
