@@ -4,3 +4,6 @@
 [submodule "firmware/libuavcan"]
 	path = firmware/libuavcan
 	url = https://github.com/UAVCAN/libuavcan
+[submodule "tools/drwatson/drwatson"]
+	path = tools/drwatson/drwatson
+	url = https://github.com/Zubax/drwatson
