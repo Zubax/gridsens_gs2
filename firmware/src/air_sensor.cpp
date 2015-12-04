@@ -168,6 +168,8 @@ public:
                 continue;
             }
 
+            lowsyslog("Air sensor init OK\n");
+
             node::markComponentInitialized(node::ComponentID::AirSensor);
             tryRun();
             if (!node::hasPendingRestartRequest())
