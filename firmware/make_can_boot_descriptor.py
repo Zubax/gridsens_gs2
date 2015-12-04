@@ -41,6 +41,7 @@ import optparse
 import binascii
 from io import BytesIO
 
+
 class AppDescriptor(object):
     """
     UAVCAN firmware image descriptor format:
@@ -55,7 +56,7 @@ class AppDescriptor(object):
 
     LENGTH = 8 + 8 + 4 + 4 + 1 + 1 + 6
     SIGNATURE = b"APDesc00"
-    RESERVED =  b"\xFF" * 6
+    RESERVED = b"\xFF" * 6
 
     def __init__(self, bytes=None):
         self.signature = AppDescriptor.SIGNATURE
@@ -73,10 +74,8 @@ class AppDescriptor(object):
                 raise ValueError("Invalid AppDescriptor: {0}".format(binascii.b2a_hex(bytes)))
 
     def pack(self):
-        return struct.pack("<8sQLLBB6s", self.signature, self.image_crc,
-                           self.image_size, self.vcs_commit,
-                           self.version_major, self.version_minor,
-                           self.reserved)
+        return struct.pack("<8sQLLBB6s", self.signature, self.image_crc, self.image_size, self.vcs_commit,
+                           self.version_major, self.version_minor, self.reserved)
 
     def unpack(self, bytes):
         (self.signature, self.image_crc, self.image_size, self.vcs_commit,
@@ -103,7 +102,7 @@ class FirmwareImage(object):
         if getattr(path_or_file, "read", None):
             self._file = path_or_file
             self._do_close = False
-            self._padding = 0 
+            self._padding = 0
         else:
             self._file = open(path_or_file, (mode + "b").replace("bb", "b"))
             self._do_close = True
@@ -136,7 +135,7 @@ class FirmwareImage(object):
             if getattr(self._file, "seek", None):
                 self._file.seek(0)
             self._file.write(self._contents.getvalue())
-            if  self._padding:
+            if self._padding:
                 self._file.write(b'\xff' * self._padding)
 
         if self._do_close:
@@ -174,7 +173,7 @@ class FirmwareImage(object):
         crc_offset = self.app_descriptor_offset + len(AppDescriptor.SIGNATURE)
         content = bytearray(self._contents.getvalue())
         content[crc_offset:crc_offset + 8] = bytearray(b"\x00" * 8)
-        if  self._padding:
+        if self._padding:
             content += bytearray(b"\xff" * self._padding)
         val = MASK
         for byte in content:
@@ -199,7 +198,7 @@ class FirmwareImage(object):
                 fill = self._length % self._padding
                 if fill:
                     self._length += fill
-                self._padding = fill 
+                self._padding = fill
             self._contents.seek(prev_offset)
 
         return self._length
@@ -263,7 +262,6 @@ if __name__ == "__main__":
                                                   in_image.app_descriptor.version_major,
                                                   in_image.app_descriptor.version_minor,
                                                   in_image.app_descriptor.vcs_commit)
-
         with FirmwareImage(out_file, "wb") as out_image:
             image = in_image.read()
             out_image.write(image)
@@ -275,10 +273,9 @@ if __name__ == "__main__":
                 also_image = also_image.replace(in_image.app_descriptor.pack(), out_image.app_descriptor.pack())
                 with open(patchee, "wb") as im:
                     im.write(also_image)
-                
+
             if options.verbose:
-                sys.stderr.write(
-"""
+                sys.stderr.write("""
 Application descriptor located at offset 0x{0.app_descriptor_offset:08X}
 
 READ VALUES
