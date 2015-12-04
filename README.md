@@ -47,8 +47,8 @@ make binaries RELEASE=1 # RELEASE is optional; omit to build the debug version
 The steps above will produce the following outputs in the build output directory:
 
 * `com.zubax.*.uavcan.bin` - application binary suitable for UAVCAN bootloading, with correct image CRC.
-* `withbootloader-com.zubax.*.uavcan.bin` - above image combined with the bootloader; can be flashed on an empty MCU.
-* `withbootloader-com.zubax.*.elf` - ELF file with embedded bootloader and correct image CRC; can be used for symbol
+* `firmware_with_bootloader.bin` - above image combined with the bootloader; can be flashed on an empty MCU.
+* `firmware_with_bootloader.elf` - ELF file with embedded bootloader and correct image CRC; can be used for symbol
 debugging. Since this ELF includes the bootloader and has correct image CRC, it can be flashed and executed directly
 with an SWD debugger, no extra steps required.
 
