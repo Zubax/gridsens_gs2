@@ -283,7 +283,7 @@ if __name__ == "__main__":
     parser.add_option("--output-prefix", dest="out_file_prefix", default='',
                       help="prefix to be added to the output file name",
                       metavar="STRING")
-    parser.add_option("--also-patch-descriptor-in", dest="also_patch_descriptor_in", default='',
+    parser.add_option("--also-patch-descriptor-in", dest="also_patch_descriptor_in", default=[], action='append',
                       help="file where the descriptor will be updated too (e.g. ELF)",
                       metavar="PATH")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
@@ -336,11 +336,11 @@ if __name__ == "__main__":
                 out_image.app_descriptor.vcs_commit = options.vcs_commit
             out_image.write_descriptor()
 
-            if options.also_patch_descriptor_in:
-                with open(options.also_patch_descriptor_in, "rb") as im:
+            for patchee in options.also_patch_descriptor_in:
+                with open(patchee, "rb") as im:
                     also_image = im.read()
                 also_image = also_image.replace(in_image.app_descriptor.pack(), out_image.app_descriptor.pack())
-                with open(options.also_patch_descriptor_in, "wb") as im:
+                with open(patchee, "wb") as im:
                     im.write(also_image)
                 
             if options.verbose:

@@ -84,20 +84,24 @@ LDSCRIPT = ld.ld
 binaries: build/$(PROJECT).bin build/$(PROJECT).elf
 	# Removing previous build outputs that could use a different git hash
 	rm -rf build/*.uavcan.bin
-	# Generating the signed image for the bootloader
-	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION).0 \
-	                                           --also-patch-descriptor-in=$(PROJECT).elf
+	
 	# Generating compound image with embedded bootloader
-	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION).0 \
-	                                           --bootloader-image-size=$(BOOTLOADER_SIZE)\
-	                                           --bootloader-image=../bootloader.bin      \
-	                                           --output-prefix='withbootloader-'
+	cd build && dd if=/dev/zero bs=$(BOOTLOADER_SIZE) count=1 | tr "\000" "\377" >padded_bootloader.tmp.bin
+	cd build && dd if=../bootloader.bin of=padded_bootloader.tmp.bin conv=notrunc
+	cd build && cat padded_bootloader.tmp.bin $(PROJECT).bin >firmware_with_bootloader.bin
+	
+	# Generating the signed image for the bootloader
+	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION).0   \
+	                                           --also-patch-descriptor-in=$(PROJECT).elf   \
+	                                           --also-patch-descriptor-in=firmware_with_bootloader.bin
+	
 	# Injecting the bootloader into the final ELF
 	cd build && $(TOOLCHAIN_PREFIX)-objcopy --add-section bootloader=../bootloader.bin     \
 	                                        --set-section-flags bootloader=load,alloc      \
 	                                        --change-section-address bootloader=0x08000000 \
-	                                        $(PROJECT).elf withbootloader-$(PROJECT).elf
+	                                        $(PROJECT).elf firmware_with_bootloader.elf
+	
 	# Removing temporary files
-	cd build && rm -f $(PROJECT).bin $(PROJECT).elf *.hex
+	cd build && rm -f $(PROJECT).bin $(PROJECT).elf *.hex *.tmp.bin
 
 include zubax_chibios/rules_stm32f105_107.mk
