@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 #
 #   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
 #
@@ -33,23 +33,13 @@
 # See https://github.com/PX4/Firmware/blob/nuttx_next/Tools/make_can_boot_descriptor.py
 #
 
+from __future__ import division, absolute_import, print_function, unicode_literals
 import os
 import sys
-import subprocess
 import struct
 import optparse
 import binascii
 from io import BytesIO
-
-class GitWrapper:
-    @classmethod
-    def command(cls, txt):
-        cmd = "git " + txt
-        pr = subprocess.Popen( cmd , shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE )
-        (out, error) = pr.communicate()
-        if len(error):
-            raise Exception(cmd +" failed with [" + error.strip() + "]")
-        return out
 
 class AppDescriptor(object):
     """
@@ -57,7 +47,7 @@ class AppDescriptor(object):
     uint64_t signature (bytes [7:0] set to 'APDesc00' by linker script)
     uint64_t image_crc (set to 0 by linker script)
     uint32_t image_size (set to 0 by linker script)
-    uint32_t vcs_commit (TODO: make its overriding optional)
+    uint32_t vcs_commit (set in source)
     uint8_t version_major (set in source)
     uint8_t version_minor (set in source)
     uint8_t reserved[6] (set to 0xFF by linker script)
@@ -80,8 +70,7 @@ class AppDescriptor(object):
             try:
                 self.unpack(bytes)
             except Exception:
-                raise ValueError("Invalid AppDescriptor: {0}".format(
-                                 binascii.b2a_hex(bytes)))
+                raise ValueError("Invalid AppDescriptor: {0}".format(binascii.b2a_hex(bytes)))
 
     def pack(self):
         return struct.pack("<8sQLLBB6s", self.signature, self.image_crc,
@@ -91,8 +80,7 @@ class AppDescriptor(object):
 
     def unpack(self, bytes):
         (self.signature, self.image_crc, self.image_size, self.vcs_commit,
-            self.version_major, self.version_minor, self.reserved) = \
-            struct.unpack("<8sQLLBB6s", bytes)
+            self.version_major, self.version_minor, self.reserved) = struct.unpack("<8sQLLBB6s", bytes)
 
         if not self.empty and not self.valid:
             raise ValueError()
@@ -200,10 +188,6 @@ class FirmwareImage(object):
         return (val & MASK) ^ MASK
 
     @property
-    def padding(self):
-        return self._padding
-
-    @property
     def length(self):
         if not self._length:
             # Find the length of the file by seeking to the end and getting
@@ -264,56 +248,25 @@ class FirmwareImage(object):
 
 
 if __name__ == "__main__":
-    parser = optparse.OptionParser(usage="usage: %prog [options] [IN OUT]")
-    parser.add_option("--vcs-commit", dest="vcs_commit", default=None,
-                      help="set the descriptor's VCS commit value to COMMIT",
-                      metavar="COMMIT")
-    parser.add_option("-g", "--use-git-hash", dest="use_git_hash", action="store_true",
-                      help="set the descriptor's VCS commit value to the current git hash",
-                      metavar="GIT")
-    parser.add_option("--ignore-leading-bytes", dest="ignore_leading_bytes", default=0,
-                      help="don't write the first SIZE bytes of the image",
-                      metavar="SIZE")
-    parser.add_option("--output-prefix", dest="out_file_prefix", default='',
-                      help="prefix to be added to the output file name",
-                      metavar="STRING")
+    parser = optparse.OptionParser(usage="usage: %prog [options] <input binary> <node name> <hardware version string>")
     parser.add_option("--also-patch-descriptor-in", dest="also_patch_descriptor_in", default=[], action='append',
-                      help="file where the descriptor will be updated too (e.g. ELF)",
-                      metavar="PATH")
+                      help="file where the descriptor will be updated too (e.g. ELF)", metavar="PATH")
     parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
                       help="show additional firmware information on stdout")
 
     options, args = parser.parse_args()
     if len(args) != 3:
-        parser.error("Expected positional arguments: <input binary> <node name> <hardware version string>")
+        parser.error("Invalid usage")
 
-    if options.vcs_commit and options.use_git_hash:
-        parser.error("options --vcs-commit and --use-git-commit are mutually exclusive")
-
-    if options.use_git_hash:
-        try:
-            options.vcs_commit = int(GitWrapper.command("rev-list HEAD --max-count=1 --abbrev=8 --abbrev-commit"),16)
-        except Exception  as e:
-            print("Git Command failed "+ str(e) +"- Exiting!")
-            quit()
-
-    in_file = args[0]
-    out_file_prefix = '%s%s-%s-' % (options.out_file_prefix, args[1], args[2])
-
-    ignore_leading_bytes = int(options.ignore_leading_bytes)
-
-    with FirmwareImage(in_file, "rb") as in_image:
-        vcs_commit = options.vcs_commit or in_image.app_descriptor.vcs_commit
-        out_file = '%s%s.%s.%x.uavcan.bin' % (out_file_prefix,
-                                              in_image.app_descriptor.version_major,
-                                              in_image.app_descriptor.version_minor,
-                                              vcs_commit)
+    with FirmwareImage(args[0], "rb") as in_image:
+        out_file = '%s-%s-%s.%s.%x.uavcan.bin' % (args[1], args[2],
+                                                  in_image.app_descriptor.version_major,
+                                                  in_image.app_descriptor.version_minor,
+                                                  in_image.app_descriptor.vcs_commit)
 
         with FirmwareImage(out_file, "wb") as out_image:
             image = in_image.read()
-            out_image.write(image[ignore_leading_bytes:])
-            if options.vcs_commit:
-                out_image.app_descriptor.vcs_commit = options.vcs_commit
+            out_image.write(image)
             out_image.write_descriptor()
 
             for patchee in options.also_patch_descriptor_in:
@@ -328,14 +281,7 @@ if __name__ == "__main__":
 """
 Application descriptor located at offset 0x{0.app_descriptor_offset:08X}
 
-""".format(in_image, in_image.app_descriptor, out_image.app_descriptor, ignore_leading_bytes))
-                if ignore_leading_bytes:
-                    sys.stderr.write(
-"""Ignored the first {3:d} bytes of the input image.
-
-""".format(in_image, in_image.app_descriptor, out_image.app_descriptor, ignore_leading_bytes))
-                sys.stderr.write(
-"""READ VALUES
+READ VALUES
 ------------------------------------------------------------------------------
 
 Field               Type              Value
@@ -359,10 +305,4 @@ version_major       uint8             {2.version_major:d}
 version_minor       uint8             {2.version_minor:d}
 reserved            uint8[6]          {2.reserved!r}
 
-""".format(in_image, in_image.app_descriptor, out_image.app_descriptor, ignore_leading_bytes))
-                if out_image.padding:
-                    sys.stderr.write(
-"""
-padding added {}
-""".format(out_image.padding))
-                
+""".format(in_image, in_image.app_descriptor, out_image.app_descriptor))
