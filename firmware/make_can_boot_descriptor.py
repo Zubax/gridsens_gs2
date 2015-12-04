@@ -274,12 +274,6 @@ if __name__ == "__main__":
     parser.add_option("--ignore-leading-bytes", dest="ignore_leading_bytes", default=0,
                       help="don't write the first SIZE bytes of the image",
                       metavar="SIZE")
-    parser.add_option("--bootloader-image", dest="bootloader_image", default=0,
-                      help="prepend a bootloader image to the output file",
-                      metavar="IMAGE")
-    parser.add_option("--bootloader-image-size", dest="bootloader_image_size", default=0,
-                      help="pad the bootloader image to the specified size if necessary",
-                      metavar="SIZE")
     parser.add_option("--output-prefix", dest="out_file_prefix", default='',
                       help="prefix to be added to the output file name",
                       metavar="STRING")
@@ -306,19 +300,6 @@ if __name__ == "__main__":
     in_file = args[0]
     out_file_prefix = '%s%s-%s-' % (options.out_file_prefix, args[1], args[2])
 
-    bootloader_image = b''
-    if options.bootloader_image:
-        with open(options.bootloader_image, "rb") as bootloader:
-            bootloader_image = bootloader.read()
-    if options.bootloader_image_size:
-        bootloader_image_size = int(options.bootloader_image_size)
-        if len(bootloader_image) > bootloader_image_size:
-            print "Bootloader image is larger than specified alignment"
-            quit()
-        while len(bootloader_image) < bootloader_image_size:
-            bootloader_image += '\xFF'
-        print "Bootloader image padded to %d bytes" % len(bootloader_image)
-
     ignore_leading_bytes = int(options.ignore_leading_bytes)
 
     with FirmwareImage(in_file, "rb") as in_image:
@@ -330,7 +311,6 @@ if __name__ == "__main__":
 
         with FirmwareImage(out_file, "wb") as out_image:
             image = in_image.read()
-            out_image.write(bootloader_image)
             out_image.write(image[ignore_leading_bytes:])
             if options.vcs_commit:
                 out_image.app_descriptor.vcs_commit = options.vcs_commit
@@ -348,15 +328,12 @@ if __name__ == "__main__":
 """
 Application descriptor located at offset 0x{0.app_descriptor_offset:08X}
 
-""".format(in_image, in_image.app_descriptor, out_image.app_descriptor,
-           ignore_leading_bytes, len(bootloader_image)))
+""".format(in_image, in_image.app_descriptor, out_image.app_descriptor, ignore_leading_bytes))
                 if ignore_leading_bytes:
                     sys.stderr.write(
-"""Ignored the first {3:d} bytes of the input image. Prepended {4:d} bytes of
-bootloader image to the output image.
+"""Ignored the first {3:d} bytes of the input image.
 
-""".format(in_image, in_image.app_descriptor, out_image.app_descriptor,
-           ignore_leading_bytes, len(bootloader_image)))
+""".format(in_image, in_image.app_descriptor, out_image.app_descriptor, ignore_leading_bytes))
                 sys.stderr.write(
 """READ VALUES
 ------------------------------------------------------------------------------
@@ -382,8 +359,7 @@ version_major       uint8             {2.version_major:d}
 version_minor       uint8             {2.version_minor:d}
 reserved            uint8[6]          {2.reserved!r}
 
-""".format(in_image, in_image.app_descriptor, out_image.app_descriptor,
-           ignore_leading_bytes, len(bootloader_image)))
+""".format(in_image, in_image.app_descriptor, out_image.app_descriptor, ignore_leading_bytes))
                 if out_image.padding:
                     sys.stderr.write(
 """
