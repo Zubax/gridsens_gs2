@@ -49,6 +49,8 @@ void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment);
 
 void setComponentHealth(ComponentID comp, std::uint8_t health);
 
+std::uint8_t getWorstComponentHealth();
+
 void markComponentInitialized(ComponentID comp);
 
 void init();

@@ -267,7 +267,7 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
         // If the measured vector is zero-length, we need to make sure it wasn't this way for too long.
         if (zero_vector && !last_nonzero_vector_ts_.isZero())
         {
-            auto zero_vector_duration = uavcan_stm32::clock::getMonotonic() - last_nonzero_vector_ts_;
+            auto zero_vector_duration = uavcan_stm32::SystemClock::instance().getMonotonic() - last_nonzero_vector_ts_;
             if (zero_vector_duration > MaxZeroVectorDuration)
             {
                 return uavcan::protocol::NodeStatus::HEALTH_WARNING;
@@ -275,7 +275,7 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
         }
         else
         {
-            last_nonzero_vector_ts_ = uavcan_stm32::clock::getMonotonic();
+            last_nonzero_vector_ts_ = uavcan_stm32::SystemClock::instance().getMonotonic();
         }
 
         // Check if the vector components are within valid range.

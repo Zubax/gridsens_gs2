@@ -191,12 +191,12 @@ public:
 
     std::uint64_t getMonotonicUSec() const override
     {
-        return uavcan_stm32::clock::getMonotonic().toUSec();
+        return uavcan_stm32::SystemClock::instance().getMonotonic().toUSec();
     }
 
     std::uint64_t getRealUSec() const override
     {
-        return uavcan_stm32::clock::getUtc().toUSec();
+        return uavcan_stm32::SystemClock::instance().getUtc().toUSec();
     }
 };
 

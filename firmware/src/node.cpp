@@ -585,6 +585,12 @@ void setComponentHealth(ComponentID comp, std::uint8_t health)
     comp_mgr.setHealth(comp, health);
 }
 
+std::uint8_t getWorstComponentHealth()
+{
+    Lock locker;
+    return comp_mgr.getWorstHealth();
+}
+
 void markComponentInitialized(ComponentID comp)
 {
     Lock locker;
