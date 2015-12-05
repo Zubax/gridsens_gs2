@@ -62,6 +62,7 @@ void init()
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
 
+    lowsyslog("Zubax GNSS %d.%d.%x\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, GIT_HASH);
     zubax_chibios::watchdog::init();
 
     i2cStart(&I2CD1, &I2CCfg1);
