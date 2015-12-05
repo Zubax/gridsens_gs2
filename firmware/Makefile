@@ -20,6 +20,8 @@
 PROJECT = com.zubax.gnss
 
 HW_VERSION = 2
+FW_VERSION_MAJOR = 3
+FW_VERSION_MINOR = 0
 
 #
 # Application
@@ -32,8 +34,8 @@ CPPSRC = $(shell find src -name '*.cpp')
 UINCDIR = src                \
           src/sys
 
-UDEFS = -DFW_VERSION_MAJOR=3                             \
-        -DFW_VERSION_MINOR=0                             \
+UDEFS = -DFW_VERSION_MAJOR=$(FW_VERSION_MAJOR)           \
+        -DFW_VERSION_MINOR=$(FW_VERSION_MINOR)           \
         -DHW_VERSION=$(HW_VERSION)                       \
         -DPRODUCT_ID_STRING=\"$(PROJECT)\"               \
         -DPRODUCT_NAME_STRING=\"Zubax\ GNSS\"
@@ -81,25 +83,29 @@ DEBUG_OPT = -Os -g3
 
 LDSCRIPT = ld.ld
 
+HW_VERSION_MAJOR_MINOR := $(HW_VERSION).0
+FW_VERSION_MAJOR_MINOR_VCS_HASH := $(FW_VERSION_MAJOR).$(FW_VERSION_MINOR).$(GIT_HASH)
+COMPOUND_IMAGE_FILE := $(PROJECT)-$(HW_VERSION_MAJOR_MINOR)-$(FW_VERSION_MAJOR_MINOR_VCS_HASH).compound.bin
+
 binaries: build/$(PROJECT).bin build/$(PROJECT).elf
 	# Removing previous build outputs that could use a different git hash
-	rm -rf build/*.uavcan.bin
+	rm -rf build/$(PROJECT)-*.*.bin
 	
 	# Generating compound image with embedded bootloader
 	cd build && dd if=/dev/zero bs=$(BOOTLOADER_SIZE) count=1 | tr "\000" "\377" >padded_bootloader.tmp.bin
 	cd build && dd if=../bootloader.bin of=padded_bootloader.tmp.bin conv=notrunc
-	cd build && cat padded_bootloader.tmp.bin $(PROJECT).bin >firmware_with_bootloader.bin
+	cd build && cat padded_bootloader.tmp.bin $(PROJECT).bin >$(COMPOUND_IMAGE_FILE)
 	
 	# Generating the signed image for the bootloader
-	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION).0   \
-	                                           --also-patch-descriptor-in=$(PROJECT).elf   \
-	                                           --also-patch-descriptor-in=firmware_with_bootloader.bin
+	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION_MAJOR_MINOR)     \
+	                                           --also-patch-descriptor-in=$(PROJECT).elf               \
+	                                           --also-patch-descriptor-in=$(COMPOUND_IMAGE_FILE)
 	
 	# Injecting the bootloader into the final ELF
 	cd build && $(TOOLCHAIN_PREFIX)-objcopy --add-section bootloader=../bootloader.bin     \
 	                                        --set-section-flags bootloader=load,alloc      \
 	                                        --change-section-address bootloader=0x08000000 \
-	                                        $(PROJECT).elf firmware_with_bootloader.elf
+	                                        $(PROJECT).elf compound.elf
 	
 	# Removing temporary files
 	cd build && rm -f $(PROJECT).bin $(PROJECT).elf *.hex *.tmp.bin
