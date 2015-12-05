@@ -89,7 +89,7 @@ COMPOUND_IMAGE_FILE := $(PROJECT)-$(HW_VERSION_MAJOR_MINOR)-$(FW_VERSION_MAJOR_M
 
 binaries: build/$(PROJECT).bin build/$(PROJECT).elf
 	# Removing previous build outputs that could use a different git hash
-	rm -rf build/$(PROJECT)-*.*.bin
+	rm -rf build/*.uavcan.bin build/*.compound.bin
 	
 	# Generating compound image with embedded bootloader
 	cd build && dd if=/dev/zero bs=$(BOOTLOADER_SIZE) count=1 | tr "\000" "\377" >padded_bootloader.tmp.bin
