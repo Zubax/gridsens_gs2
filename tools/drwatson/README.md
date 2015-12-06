@@ -12,7 +12,7 @@ After checking out this repository and all of its submodules (see the main READM
 execute `sudo setup.sh`, and you're ready to get started:
 
 ```bash
-./drwatson_zubax_gnss.py --help
+./run.sh --help
 ```
 
 ## Other documentation
