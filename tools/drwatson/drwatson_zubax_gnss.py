@@ -315,13 +315,22 @@ def test_uavcan():
     if not input('Is the PPS LED blinking once per second?', yes_no=True, default_answer=True):
         abort('PPS LED is not working')
 
-    if not input('Is the CAN1 LED glowing solid?', yes_no=True, default_answer=True):
+    if not input('Is the CAN1 LED blinking or glowing solid?', yes_no=True, default_answer=True):
         abort('CAN1 LED is not working (however the interface is fine)')
 
     if not input('Is the STATUS LED blinking once per second?', yes_no=True, default_answer=True):
         abort('STATUS LED is not working')
 
+    # Testing CAN2
+    input('1. Disconnect CAN1 and connect to CAN2\n'
+          '2. Terminate CAN2\n'
+          '3. Press ENTER')
+    if not input('Is the CAN2 LED glowing solid?', yes_no=True, default_answer=True):
+        abort('Either CAN2 or its LED are not working')
+
+
 with CLIWaitCursor():
+    print('Please wait...')
     firmware_data = get_firmware()
 
     # Initializing the CAN interface. If we're using SLCAN, entire initialization will be done by pyuavcan.
@@ -338,10 +347,10 @@ def process_one_device():
 
     info('Loading the firmware')
     with CLIWaitCursor():
-        pass  # load_firmware(firmware_data)
+        load_firmware(firmware_data)
 
     info('Waiting for the board to boot...')
-    # wait_for_boot()
+    wait_for_boot()
     info('Booted successfully')
 
     if use_socketcan:
