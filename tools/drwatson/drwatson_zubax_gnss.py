@@ -24,8 +24,12 @@ import tempfile
 import logging
 import time
 import uavcan
+import uavcan.monitors
+from contextlib import closing, contextmanager
+from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
-    info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port
+    info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
+    enforce, DrwatsonException
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -36,6 +40,9 @@ TOOLCHAIN_PREFIX = 'arm-none-eabi-'
 DEBUGGER_PORT_GDB_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if00'
 DEBUGGER_PORT_CLI_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if0[12]'
 BOOT_TIMEOUT = 9
+GNSS_FIX_TIMEOUT = 60 * 10
+GNSS_MIN_SAT_TIMEOUT = 60 * 10
+GNSS_MIN_SAT_NUM = 8
 
 
 logger = logging.getLogger(__name__)
@@ -94,7 +101,7 @@ def load_firmware(firmware_data):
                 'quit 0'
             ]))
 
-        runtc('gdb %s --batch -x %s -return-child-result', fn('output.elf'), fn('script.gdb'))
+        runtc('gdb %s --batch -x %s -return-child-result -silent', fn('output.elf'), fn('script.gdb'))
 
 
 def wait_for_boot():
@@ -106,7 +113,7 @@ def wait_for_boot():
             for line in p:
                 if b'Zubax GNSS' in line:
                     return
-                print(line)
+                print('Debug output:', line)
                 if time.monotonic() > deadline:
                     break
         except IOError:
@@ -120,6 +127,160 @@ def wait_for_boot():
           '3. The serial port is open by another application.')
     abort('Boot error')
 
+
+def test_uavcan():
+    node_info = uavcan.protocol.GetNodeInfo.Response()  # @UndefinedVariable
+    node_info.name.encode('com.zubax.drwatson.zubax_gnss')
+
+    with closing(uavcan.make_node(args.iface, bitrate=CAN_BITRATE, node_id=127,
+                                  mode=uavcan.protocol.NodeStatus().MODE_OPERATIONAL)) as n:  # @UndefinedVariable
+        def safe_spin(timeout):
+            try:
+                n.spin(timeout)
+            except uavcan.UAVCANException:
+                logger.error('Node spin failure', exc_info=True)
+
+        @contextmanager
+        def time_limit(timeout, error_fmt, *args):
+            aborter = n.defer(timeout, partial(abort, error_fmt, *args))
+            yield
+            aborter.remove()
+
+        # Dynamic node ID allocation
+        try:
+            nsmon = uavcan.monitors.NodeStatusMonitor(n)
+            alloc = uavcan.monitors.DynamicNodeIDServer(n, nsmon)  # @UnusedVariable
+
+            with time_limit(10, 'The node did not show up in time'):
+                while True:
+                    safe_spin(1)
+                    target_nodes = list(nsmon.find_all(lambda e: e.info and e.info.name.decode() == PRODUCT_NAME))
+                    if len(target_nodes) == 1:
+                        break
+                    if len(target_nodes) > 1:
+                        abort('Expected to find exactly one target node, found more: %r', target_nodes)
+
+            node_id = target_nodes[0].node_id
+            info('Node %r initialized', node_id)
+            print(target_nodes[0])
+
+            def request(what):
+                response_event = None
+
+                def cb(e):
+                    nonlocal response_event
+                    if not e:
+                        abort('Request has timed out: %r', what)
+                    response_event = e  # @UnusedVariable
+
+                n.request(what, node_id, cb)
+                while response_event is None:
+                    safe_spin(0.1)
+                return response_event.response
+
+            # Starting the node and checking its self-reported diag outputs
+            def wait_for_init():
+                with time_limit(10, 'The node did not complete initialization in time'):
+                    while True:
+                        safe_spin(1)
+                        if nsmon.exists(node_id) and nsmon.get(node_id).status.mode == \
+                                uavcan.protocol.NodeStatus().MODE_OPERATIONAL:              # @UndefinedVariable
+                            break
+
+            def check_status():
+                status = nsmon.get(node_id).status
+                enforce(status.mode == uavcan.protocol.NodeStatus().MODE_OPERATIONAL,   # @UndefinedVariable
+                        'Unexpected operating mode')
+                enforce(status.health == uavcan.protocol.NodeStatus().HEALTH_OK,        # @UndefinedVariable
+                        'Bad node health')
+
+            info('Waiting for the node to complete initialization...')
+            wait_for_init()
+            check_status()
+
+            info('Reconfiguring the node...')
+
+            def print_all_params():
+                for index in range(10000):
+                    r = request(uavcan.protocol.param.GetSet.Request(index=index))  # @UndefinedVariable
+                    if not r.name:
+                        break
+                    print('Param %-30r %r' % (r.name.decode(), getattr(r.value, r.value.union_field)))
+
+            def set_param(name, value, union_field=None):
+                union_field = union_field or {
+                    int: 'integer_value',
+                    float: 'real_value',
+                    bool: 'boolean_value',
+                    str: 'string_value'
+                }[type(value)]
+                logger.info('Setting parameter %r field %r value %r', name, union_field, value)
+                req = uavcan.protocol.param.GetSet.Request()                            # @UndefinedVariable
+                req.name.encode(name)
+                setattr(req.value, union_field, value)
+                r = request(req)
+                enforce(r.value.union_field == union_field,
+                        'Union field mismatch in param set response for %r', name)
+                enforce(getattr(r.value, union_field) == value,
+                        'The node refused to set parameter %r', name)
+
+            set_param('uavcan.pubp-time', 10000)
+            set_param('uavcan.pubp-stat', 2000)
+            set_param('uavcan.pubp-pres', 10000)
+            set_param('uavcan.pubp-mag', 20000)
+            set_param('uavcan.pubp-fix', 66666)
+            set_param('uavcan.pubp-aux', 100000)
+
+            enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(                # @UndefinedVariable
+                opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_SAVE)).ok,  # @UndefinedVariable
+                'Could not save configuration')
+
+            enforce(request(uavcan.protocol.RestartNode.Request(                        # @UndefinedVariable
+                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER)).ok,   # @UndefinedVariable
+                'Could not restart the node')
+
+            wait_for_boot()
+            wait_for_init()
+            check_status()
+            print_all_params()
+
+            def make_collector(data_type, timeout=0.1):
+                return uavcan.monitors.MessageCollector(n, data_type, timeout=timeout)
+
+            col_fix = make_collector(uavcan.equipment.gnss.Fix, 0.2)                    # @UndefinedVariable
+            col_mag = make_collector(uavcan.equipment.ahrs.MagneticFieldStrength)       # @UndefinedVariable
+            col_pressure = make_collector(uavcan.equipment.air_data.StaticPressure)     # @UndefinedVariable
+            col_temp = make_collector(uavcan.equipment.air_data.StaticTemperature)      # @UndefinedVariable
+
+            def check_everything():
+                check_status()
+                # TODO test sensors
+
+            info('Waiting for GNSS fix...')
+            with time_limit(GNSS_FIX_TIMEOUT, 'GNSS fix timeout. Check the RF circuit, AFE, antenna, and receiver'):
+                while True:
+                    safe_spin(1)
+                    check_everything()
+                    if col_fix[node_id].message.status >= 3:
+                        break
+
+            info('Waiting for %d satellites...', GNSS_MIN_SAT_NUM)
+            with time_limit(GNSS_MIN_SAT_TIMEOUT,
+                            'GNSS performance is degraded. Could be caused by poor assembly of the RF circuit'):
+                while True:
+                    safe_spin(0.5)
+                    check_everything()
+                    num = col_fix[node_id].message.sats_used
+                    sys.stdout.write('%d\r' % num)
+                    sys.stdout.flush()
+                    if num >= GNSS_MIN_SAT_NUM:
+                        break
+
+            check_everything()
+        except Exception:
+            for nid in nsmon.get_all_node_id():
+                print('Node state: %r' % nsmon.get(nid))
+            raise
 
 with CLIWaitCursor():
     firmware_data = get_firmware()
@@ -137,14 +298,18 @@ def process_one_device():
           '4. Press ENTER')
 
     info('Loading the firmware')
-    load_firmware(firmware_data)
+    with CLIWaitCursor():
+        pass  # load_firmware(firmware_data)
 
     info('Waiting for the board to boot...')
-    wait_for_boot()
+    # wait_for_boot()
     info('Booted successfully')
 
     if use_socketcan:
         execute_shell_command('ifconfig %s down && ifconfig %s up', args.iface, args.iface)
+
+    info('Testing UAVCAN interface...')
+    test_uavcan()
 
 
 run(process_one_device)
