@@ -33,7 +33,7 @@ from contextlib import closing, contextmanager
 from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch, BackgroundSpinner
+    enforce, SerialCLI, catch, BackgroundSpinner, fatal
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -359,6 +359,42 @@ def test_uavcan():
         abort('Either CAN2 or its LED are not working')
 
 
+def init_socketcan_iface():
+    return execute_shell_command('ifconfig %s down && ip link set %s up type can bitrate %d sample-point 0.875',
+                                 args.iface, args.iface, CAN_BITRATE, ignore_failure=True)
+
+
+def check_interfaces():
+    ok = True
+
+    def test_serial_port(glob, name):
+        try:
+            with open_serial_port(DEBUGGER_PORT_GDB_GLOB):
+                info('%s port is OK', name)
+                return True
+        except Exception:
+            error('%s port is not working', name)
+            return False
+
+    info('Checking interfaces...')
+    ok = test_serial_port(DEBUGGER_PORT_GDB_GLOB, 'GDB') and ok
+    ok = test_serial_port(DEBUGGER_PORT_CLI_GLOB, 'CLI') and ok
+    if use_socketcan:
+        if 0 != init_socketcan_iface():
+            error('SocketCAN interface is not working')
+            ok = False
+        else:
+            info('SocketCAN interface is OK')
+    else:
+        ok = test_serial_port(args.iface, 'CAN adapter') and ok
+
+    if not ok:
+        fatal('Required interfaces are not available. Please check your hardware configuration.\n'
+              'If this application is running on a virtual machine, make sure that hardware\n'
+              'sharing is configured correctly.')
+
+check_interfaces()
+
 licensing_api = make_api_context_with_user_provided_credentials()
 
 with CLIWaitCursor():
@@ -367,8 +403,7 @@ with CLIWaitCursor():
 
     # Initializing the CAN interface. If we're using SLCAN, entire initialization will be done by pyuavcan.
     if use_socketcan:
-        execute_shell_command('ifconfig %s down && ip link set %s up type can bitrate %d sample-point 0.875',
-                              args.iface, args.iface, CAN_BITRATE, ignore_failure=True)
+        init_socketcan_iface()
 
 
 def process_one_device():
