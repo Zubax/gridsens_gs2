@@ -50,7 +50,7 @@ GNSS_MIN_SAT_TIMEOUT = 60 * 5
 GNSS_MIN_SAT_NUM = 6
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('main')
 
 
 args = init('''Zubax GNSS production testing application.
@@ -118,7 +118,7 @@ def wait_for_boot():
             for line in p:
                 if b'Zubax GNSS' in line:
                     return
-                logger.info('Debug UART output:', line)
+                logger.info('Debug UART output: %s', line)
                 if time.monotonic() > deadline:
                     break
         except IOError:
