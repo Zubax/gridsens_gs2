@@ -13,4 +13,4 @@ fi
 
 apt-get install -y python3 python3-pip
 
-pip3 install colorama easywebdav pyserial
+pip3 install colorama easywebdav pyserial numpy

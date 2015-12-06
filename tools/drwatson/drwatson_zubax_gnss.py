@@ -20,6 +20,7 @@ import os
 import sys
 sys.path.insert(1, os.path.join(sys.path[0], 'pyuavcan'))
 
+import numpy
 import tempfile
 import logging
 import time
@@ -29,7 +30,7 @@ from contextlib import closing, contextmanager
 from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, DrwatsonException
+    enforce
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -41,8 +42,8 @@ DEBUGGER_PORT_GDB_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if00'
 DEBUGGER_PORT_CLI_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if0[12]'
 BOOT_TIMEOUT = 9
 GNSS_FIX_TIMEOUT = 60 * 10
-GNSS_MIN_SAT_TIMEOUT = 60 * 10
-GNSS_MIN_SAT_NUM = 8
+GNSS_MIN_SAT_TIMEOUT = 60 * 5
+GNSS_MIN_SAT_NUM = 6
 
 
 logger = logging.getLogger(__name__)
@@ -254,7 +255,20 @@ def test_uavcan():
 
             def check_everything():
                 check_status()
-                # TODO test sensors
+
+                m = col_temp[node_id].message
+                if not 10 < (m.static_temperature - 273.15) < 50:
+                    abort('Invalid temperature reading: %d Kelvin. Check the sensor.', m.static_temperature)
+
+                m = col_pressure[node_id].message
+                if not 50000 < m.static_pressure < 150000:
+                    abort('Invalid pressure reading: %d Pascal. Check the sensor.', m.static_pressure)
+
+                m = col_mag[node_id].message
+                magnetic_field_scalar = numpy.linalg.norm(m.magnetic_field_ga)          # @UndefinedVariable
+                if not 0.01 < magnetic_field_scalar < 2:
+                    abort('Invalid magnetic field strength reading: %d Gauss. Check the sensor.',
+                          magnetic_field_scalar)
 
             info('Waiting for GNSS fix...')
             with time_limit(GNSS_FIX_TIMEOUT, 'GNSS fix timeout. Check the RF circuit, AFE, antenna, and receiver'):
@@ -271,16 +285,41 @@ def test_uavcan():
                     safe_spin(0.5)
                     check_everything()
                     num = col_fix[node_id].message.sats_used
-                    sys.stdout.write('%d\r' % num)
+                    sys.stdout.write('\rsats_used=%d\r' % num)
                     sys.stdout.flush()
                     if num >= GNSS_MIN_SAT_NUM:
                         break
 
             check_everything()
+
+            # Finalizing the test
+            info('Resetting the configuration to factory default...')
+            enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(                # @UndefinedVariable
+                opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_ERASE)).ok,  # @UndefinedVariable
+                'Could not erase configuration')
+
+            enforce(request(uavcan.protocol.RestartNode.Request(                        # @UndefinedVariable
+                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER)).ok,   # @UndefinedVariable
+                'Could not restart the node')
+
+            wait_for_boot()
+            wait_for_init()
+            check_status()
+            print_all_params()
         except Exception:
             for nid in nsmon.get_all_node_id():
                 print('Node state: %r' % nsmon.get(nid))
             raise
+
+    # Blocking questions are moved out of the node scope because blocking breaks CAN communications
+    if not input('Is the PPS LED blinking once per second?', yes_no=True, default_answer=True):
+        abort('PPS LED is not working')
+
+    if not input('Is the CAN1 LED glowing solid?', yes_no=True, default_answer=True):
+        abort('CAN1 LED is not working (however the interface is fine)')
+
+    if not input('Is the STATUS LED blinking once per second?', yes_no=True, default_answer=True):
+        abort('STATUS LED is not working')
 
 with CLIWaitCursor():
     firmware_data = get_firmware()
