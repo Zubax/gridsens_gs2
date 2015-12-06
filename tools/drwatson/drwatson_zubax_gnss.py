@@ -142,6 +142,10 @@ def test_uavcan():
         def safe_spin(timeout):
             try:
                 n.spin(timeout)
+            except uavcan.transport.TransferError:
+                logger.debug('Transfer error while spinning the node. '
+                             'Reporting at the DEBUG level because of https://github.com/UAVCAN/pyuavcan/issues/14',
+                             exc_info=True)
             except uavcan.UAVCANException:
                 logger.error('Node spin failure', exc_info=True)
 
