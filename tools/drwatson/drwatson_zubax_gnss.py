@@ -33,7 +33,7 @@ from contextlib import closing, contextmanager
 from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch
+    enforce, SerialCLI, catch, BackgroundSpinner
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -174,7 +174,7 @@ def test_uavcan():
             for nd in target_nodes:
                 logger.info('Discovered node %r', nd)
 
-            def request(what):
+            def request(what, fire_and_forget=False):
                 response_event = None
 
                 def cb(e):
@@ -183,10 +183,14 @@ def test_uavcan():
                         abort('Request has timed out: %r', what)
                     response_event = e  # @UnusedVariable
 
-                n.request(what, node_id, cb)
-                while response_event is None:
+                if fire_and_forget:
+                    n.request(what, node_id, lambda _: None)
                     safe_spin(0.1)
-                return response_event.response
+                else:
+                    n.request(what, node_id, cb)
+                    while response_event is None:
+                        safe_spin(0.1)
+                    return response_event.response
 
             # Starting the node and checking its self-reported diag outputs
             def wait_for_init():
@@ -245,11 +249,14 @@ def test_uavcan():
                 opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_SAVE)).ok,  # @UndefinedVariable
                 'Could not save configuration')
 
-            enforce(request(uavcan.protocol.RestartNode.Request(                        # @UndefinedVariable
-                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER)).ok,   # @UndefinedVariable
-                'Could not restart the node')
+            request(uavcan.protocol.RestartNode.Request(                                # @UndefinedVariable
+                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER),       # @UndefinedVariable
+                fire_and_forget=True)
 
-            wait_for_boot()
+            # Don't tell anybody I wrote this. I'm ashamed of this shit and too tired to redesign it. :(
+            with BackgroundSpinner(safe_spin, 0.1):
+                wait_for_boot()
+
             wait_for_init()
             check_status()
             log_all_params()
@@ -307,11 +314,13 @@ def test_uavcan():
                 opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_ERASE)).ok,  # @UndefinedVariable
                 'Could not erase configuration')
 
-            enforce(request(uavcan.protocol.RestartNode.Request(                        # @UndefinedVariable
-                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER)).ok,   # @UndefinedVariable
-                'Could not restart the node')
+            request(uavcan.protocol.RestartNode.Request(                                # @UndefinedVariable
+                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER),       # @UndefinedVariable
+                fire_and_forget=True)
 
-            wait_for_boot()
+            with BackgroundSpinner(safe_spin, 0.1):
+                wait_for_boot()
+
             wait_for_init()
             check_status()
             log_all_params()
