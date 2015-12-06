@@ -33,7 +33,7 @@ from contextlib import closing, contextmanager
 from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch, BackgroundSpinner, fatal
+    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -138,11 +138,13 @@ def wait_for_boot():
         finally:
             p.flushInput()
 
-    error('The board did not report to CLI with a correct boot message. Possible reasons:\n'
-          '1. The board could not boot properly (however it was flashed successfully).\n'
-          '2. The debug connector is not soldered properly.\n'
-          '3. The serial port is open by another application.')
-    abort('Boot error')
+    warning("The board did not report to CLI with a correct boot message, but we're going\n"
+            "to continue anyway. Possible reasons for this warning:\n"
+            '1. The board could not boot properly (however it was flashed successfully).\n'
+            '2. The debug connector is not soldered properly.\n'
+            '3. The serial port is open by another application.\n'
+            '4. Either USB-UART adapter or VM are malfunctioning.\n'
+            '   Try to re-connect the adapter or reboot the VM.')
 
 
 def test_uavcan():
@@ -426,6 +428,9 @@ def process_one_device():
     info('Testing UAVCAN interface...')
     test_uavcan()
 
+    input("Now we're going to test USB. If this application is running on a virtual\n"
+          "machine, make sure that the corresponsing USB device is made available for\n"
+          "the VM, then press ENTER.")
     info('Connecting via USB...')
     with open_serial_port(USB_CDC_ACM_GLOB) as io:
         logger.info('USB CLI is on %r', io.port)
