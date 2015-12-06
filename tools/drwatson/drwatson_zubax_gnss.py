@@ -54,18 +54,31 @@ logger = logging.getLogger('main')
 
 
 args = init('''Zubax GNSS production testing application.
-Usage instructions:
-    1. Connect a CAN adapter to this computer.
-    2. Connect exactly one DroneCode Probe to this computer.
-    3. Start this application and follow its instructions.''',
+If you're a licensed manufacturer, you should have received usage
+instructions with the manufacturing doc pack.''',
             lambda p: p.add_argument('iface', help='CAN interface or device path, e.g. "can0", "/dev/ttyACM0", etc.'),
             lambda p: p.add_argument('--firmware', '-f', help='location of the firmware file (if not provided, ' +
                                      'the firmware will be downloaded from Zubax Robotics file server)'),
             require_root=True)
 
-use_socketcan = '/' not in args.iface
+info('''
+Usage instructions:
 
-#api = make_api_context_with_user_provided_credentials()
+1. Connect a CAN adapter to this computer. Supported adapters are:
+1.1. SLCAN-compliant adapters. If you're using an SLCAN adapter,
+     use its serial port name as CAN interface name (e.g. "/dev/ttyACM0").
+1.2. SocketCAN-compatible adapters. In this case it is recommended to use
+     8devices USB2CAN. Correct interface name would be "can0".
+
+2. Connect exactly one DroneCode Probe to this computer.
+   For more info refer to https://docs.zubax.com/dronecode_probe.
+
+3. Follow the instructions printed in green. If you have any questions,
+   don't hesitate to reach licensing@zubax.com, or use the emergency
+   contacts provided to you earlier.
+''')
+
+use_socketcan = '/' not in args.iface
 
 
 def get_firmware():
@@ -114,7 +127,6 @@ def wait_for_boot():
 
     with open_serial_port(DEBUGGER_PORT_CLI_GLOB, timeout=BOOT_TIMEOUT) as p:
         try:
-            p.flushInput()
             for line in p:
                 if b'Zubax GNSS' in line:
                     return
