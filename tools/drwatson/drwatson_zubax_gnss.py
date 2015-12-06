@@ -24,13 +24,16 @@ import numpy
 import tempfile
 import logging
 import time
-import uavcan
+import yaml
+import binascii
+import uavcan  # @UnusedImport
 import uavcan.monitors
+from base64 import b64decode, b64encode
 from contextlib import closing, contextmanager
 from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce
+    enforce, SerialCLI, catch
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -40,6 +43,7 @@ FLASH_OFFSET = 0x08000000
 TOOLCHAIN_PREFIX = 'arm-none-eabi-'
 DEBUGGER_PORT_GDB_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if00'
 DEBUGGER_PORT_CLI_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if0[12]'
+USB_CDC_ACM_GLOB = '/dev/serial/by-id/*Zubax_GNSS*-if00'
 BOOT_TIMEOUT = 9
 GNSS_FIX_TIMEOUT = 60 * 10
 GNSS_MIN_SAT_TIMEOUT = 60 * 5
@@ -114,7 +118,7 @@ def wait_for_boot():
             for line in p:
                 if b'Zubax GNSS' in line:
                     return
-                print('Debug output:', line)
+                logger.info('Debug UART output:', line)
                 if time.monotonic() > deadline:
                     break
         except IOError:
@@ -201,12 +205,12 @@ def test_uavcan():
 
             info('Reconfiguring the node...')
 
-            def print_all_params():
+            def log_all_params():
                 for index in range(10000):
                     r = request(uavcan.protocol.param.GetSet.Request(index=index))  # @UndefinedVariable
                     if not r.name:
                         break
-                    print('Param %-30r %r' % (r.name.decode(), getattr(r.value, r.value.union_field)))
+                    logger.info('Param %-30r %r' % (r.name.decode(), getattr(r.value, r.value.union_field)))
 
             def set_param(name, value, union_field=None):
                 union_field = union_field or {
@@ -243,7 +247,7 @@ def test_uavcan():
             wait_for_boot()
             wait_for_init()
             check_status()
-            print_all_params()
+            log_all_params()
 
             def make_collector(data_type, timeout=0.1):
                 return uavcan.monitors.MessageCollector(n, data_type, timeout=timeout)
@@ -305,7 +309,7 @@ def test_uavcan():
             wait_for_boot()
             wait_for_init()
             check_status()
-            print_all_params()
+            log_all_params()
         except Exception:
             for nid in nsmon.get_all_node_id():
                 print('Node state: %r' % nsmon.get(nid))
@@ -328,6 +332,8 @@ def test_uavcan():
     if not input('Is the CAN2 LED glowing solid?', yes_no=True, default_answer=True):
         abort('Either CAN2 or its LED are not working')
 
+
+licensing_api = make_api_context_with_user_provided_credentials()
 
 with CLIWaitCursor():
     print('Please wait...')
@@ -359,5 +365,43 @@ def process_one_device():
     info('Testing UAVCAN interface...')
     test_uavcan()
 
+    info('Connecting via USB...')
+    with open_serial_port(USB_CDC_ACM_GLOB) as io:
+        logger.info('USB CLI is on %r', io.port)
+        cli = SerialCLI(io, 0.1)
+        cli.flush_input(0.5)
+
+        out = cli.write_line_and_read_output_lines_until_timeout('systime')
+        enforce(len(out) == 1, 'Unexpected CLI output: %r', out)
+        enforce(catch()(int)(out[0]) > 0, 'Expected integer, got this: %r', out[0])
+
+        zubax_id = cli.write_line_and_read_output_lines_until_timeout('zubax_id')
+        zubax_id = yaml.load('\n'.join(zubax_id))
+        logger.info('Zubax ID: %r', zubax_id)
+
+        unique_id = b64decode(zubax_id['hw_unique_id'])
+
+        # Getting the signature
+        info('Requesting signature for unique ID %s', binascii.hexlify(unique_id).decode())
+        gensign_response = licensing_api.generate_signature(unique_id, PRODUCT_NAME)
+        if gensign_response.new:
+            info('New signature has been generated')
+        else:
+            info('This particular device has been signed earlier, reusing existing signature')
+        base64_signature = b64encode(gensign_response.signature).decode()
+        logger.info('Generated signature in Base64: %s', base64_signature)
+
+        # Installing the signature; this may fail if the device has been signed earlier - the failure will be ignored
+        out = cli.write_line_and_read_output_lines_until_timeout('signature %s', base64_signature)
+        logger.debug('Signature installation response (may fail, which is OK): %r', out)
+
+        # Reading the signature back and verifying it
+        out = cli.write_line_and_read_output_lines_until_timeout('signature')
+        enforce(len(out) == 1, 'Could not read the signature back. Returned lines: %r', out)
+        logger.info('Installed signature in Base64: %s', out[0])
+        enforce(b64decode(out[0]) == gensign_response.signature,
+                'Written signature does not match the generated signature')
+
+        info('Signature has been installed and verified')
 
 run(process_one_device)
