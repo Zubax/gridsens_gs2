@@ -143,8 +143,8 @@ def wait_for_boot():
             '1. The board could not boot properly (however it was flashed successfully).\n'
             '2. The debug connector is not soldered properly.\n'
             '3. The serial port is open by another application.\n'
-            '4. Either USB-UART adapter or VM are malfunctioning.\n'
-            '   Try to re-connect the adapter or reboot the VM.')
+            '4. Either USB-UART adapter or VM are malfunctioning. Try to re-connect the\n'
+            '   adapter (disconnect from USB and from the board!) or reboot the VM.')
 
 
 def test_uavcan():
@@ -420,7 +420,6 @@ def process_one_device():
 
     info('Waiting for the board to boot...')
     wait_for_boot()
-    info('Booted successfully')
 
     if use_socketcan:
         execute_shell_command('ifconfig %s down && ifconfig %s up', args.iface, args.iface)
