@@ -8,7 +8,7 @@ fi
 set -o xtrace
 
 if ! which arm-none-eabi-gdb; then
-    apt-get install -y gcc-arm-none-eabi
+    apt-get install -y gcc-arm-none-eabi gdb-arm-none-eabi
 fi
 
 apt-get install -y python3 python3-pip
