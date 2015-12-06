@@ -167,7 +167,8 @@ def test_uavcan():
 
             node_id = target_nodes[0].node_id
             info('Node %r initialized', node_id)
-            print(target_nodes[0])
+            for nd in target_nodes:
+                logger.info('Discovered node %r', nd)
 
             def request(what):
                 response_event = None
@@ -329,7 +330,7 @@ def test_uavcan():
     input('1. Disconnect CAN1 and connect to CAN2\n'
           '2. Terminate CAN2\n'
           '3. Press ENTER')
-    if not input('Is the CAN2 LED glowing solid?', yes_no=True, default_answer=True):
+    if not input('Is the CAN2 LED blinking or glowing solid?', yes_no=True, default_answer=True):
         abort('Either CAN2 or its LED are not working')
 
 
