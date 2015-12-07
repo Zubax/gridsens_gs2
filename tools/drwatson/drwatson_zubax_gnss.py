@@ -287,20 +287,20 @@ def test_uavcan():
                 check_status()
 
                 try:
-                    m = col_temp[node_id].message
-                except KeyError:
-                    abort('Temperature measurements are not available. Check the sensor.')
-                else:
-                    if not 10 < (m.static_temperature - 273.15) < 50:
-                        abort('Invalid temperature reading: %d Kelvin. Check the sensor.', m.static_temperature)
-
-                try:
                     m = col_pressure[node_id].message
                 except KeyError:
                     abort('Pressure measurements are not available. Check the sensor.')
                 else:
                     if not 50000 < m.static_pressure < 150000:
                         abort('Invalid pressure reading: %d Pascal. Check the sensor.', m.static_pressure)
+
+                try:
+                    m = col_temp[node_id].message
+                except KeyError:
+                    abort('Temperature measurements are not available. Check the sensor.')
+                else:
+                    if not 10 < (m.static_temperature - 273.15) < 50:
+                        abort('Invalid temperature reading: %d Kelvin. Check the sensor.', m.static_temperature)
 
                 try:
                     m = col_mag[node_id].message
