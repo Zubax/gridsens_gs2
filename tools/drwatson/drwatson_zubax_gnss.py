@@ -421,17 +421,21 @@ with CLIWaitCursor():
 
 
 def process_one_device():
-    input('1. Connect DroneCode Probe to the debug connector\n'
-          '2. Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector\n'
-          '3. Connect USB to the device, and make sure that no other Zubax GNSS is connected\n'
-          '4. Press ENTER')
+    out = input('1. Connect DroneCode Probe to the debug connector\n'
+                '2. Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector\n'
+                '3. Connect USB to the device, and make sure that no other Zubax GNSS is connected\n'
+                '4. If you want to skip firmware upload, press F\n'
+                '5. Press ENTER')
 
-    info('Loading the firmware')
-    with CLIWaitCursor():
-        load_firmware(firmware_data)
-
-    info('Waiting for the board to boot...')
-    wait_for_boot()
+    skip_fw_upload = 'f' in out.lower()
+    if not skip_fw_upload:
+        info('Loading the firmware')
+        with CLIWaitCursor():
+            load_firmware(firmware_data)
+        info('Waiting for the board to boot...')
+        wait_for_boot()
+    else:
+        info('Firmware upload skipped')
 
     if use_socketcan:
         execute_shell_command('ifconfig %s down && ifconfig %s up', args.iface, args.iface)
