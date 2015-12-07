@@ -1,12 +1,11 @@
-# Drwatson
+# Production testing software
 
-This directory contains a production testing script for Zubax GNSS based on Drwatson.
-Drwatson is a production testing framework written in Python.
+This directory contains production testing application for Zubax GNSS based on Drwatson.
+Drwatson is a software framework written in Python for hardware production testing automation.
 
 ## Installation
 
-This application can only work on a Ubuntu-based Linux distribution.
-Other platforms are not supported.
+This application requires an Ubuntu-based Linux distribution.
 
 After checking out this repository and all of its submodules (see the main README for details),
 execute `sudo setup.sh`, and you're ready to get started:
