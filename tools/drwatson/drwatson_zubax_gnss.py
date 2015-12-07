@@ -286,19 +286,31 @@ def test_uavcan():
             def check_everything():
                 check_status()
 
-                m = col_temp[node_id].message
-                if not 10 < (m.static_temperature - 273.15) < 50:
-                    abort('Invalid temperature reading: %d Kelvin. Check the sensor.', m.static_temperature)
+                try:
+                    m = col_temp[node_id].message
+                except KeyError:
+                    abort('Temperature measurements are not available. Check the sensor.')
+                else:
+                    if not 10 < (m.static_temperature - 273.15) < 50:
+                        abort('Invalid temperature reading: %d Kelvin. Check the sensor.', m.static_temperature)
 
-                m = col_pressure[node_id].message
-                if not 50000 < m.static_pressure < 150000:
-                    abort('Invalid pressure reading: %d Pascal. Check the sensor.', m.static_pressure)
+                try:
+                    m = col_pressure[node_id].message
+                except KeyError:
+                    abort('Pressure measurements are not available. Check the sensor.')
+                else:
+                    if not 50000 < m.static_pressure < 150000:
+                        abort('Invalid pressure reading: %d Pascal. Check the sensor.', m.static_pressure)
 
-                m = col_mag[node_id].message
-                magnetic_field_scalar = numpy.linalg.norm(m.magnetic_field_ga)          # @UndefinedVariable
-                if not 0.01 < magnetic_field_scalar < 2:
-                    abort('Invalid magnetic field strength reading: %d Gauss. Check the sensor.',
-                          magnetic_field_scalar)
+                try:
+                    m = col_mag[node_id].message
+                except KeyError:
+                    abort('Magnetic field measurements are not available. Check the sensor.')
+                else:
+                    magnetic_field_scalar = numpy.linalg.norm(m.magnetic_field_ga)      # @UndefinedVariable
+                    if not 0.01 < magnetic_field_scalar < 2:
+                        abort('Invalid magnetic field strength reading: %d Gauss. Check the sensor.',
+                              magnetic_field_scalar)
 
             info('Waiting for GNSS fix...')
             with time_limit(GNSS_FIX_TIMEOUT, 'GNSS fix timeout. Check the RF circuit, AFE, antenna, and receiver'):
