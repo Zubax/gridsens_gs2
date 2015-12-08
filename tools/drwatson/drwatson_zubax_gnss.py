@@ -38,7 +38,7 @@ from functools import partial
 
 PRODUCT_NAME = 'com.zubax.gnss'
 DEFAULT_FIRMWARE_GLOB = 'https://files.zubax.com/products/%s/*.compound.bin' % PRODUCT_NAME
-CAN_BITRATE = 1000000
+CAN_BITRATE = 125000
 FLASH_OFFSET = 0x08000000
 TOOLCHAIN_PREFIX = 'arm-none-eabi-'
 DEBUGGER_PORT_GDB_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if00'
