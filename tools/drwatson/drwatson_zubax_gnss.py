@@ -78,8 +78,6 @@ Usage instructions:
    contacts provided to you earlier.
 ''')
 
-use_socketcan = '/' not in args.iface
-
 
 def get_firmware():
     if args.firmware:
@@ -131,7 +129,7 @@ def wait_for_boot():
               'hardware or its drivers. Please disconnect all USB devices currently connected to this computer, '
               "then connect them back and restart Drwatson. If you're using a virtual machine, please reboot it.")
 
-    with BackgroundDelay(BOOT_TIMEOUT * 2, handle_serial_port_hanging):
+    with BackgroundDelay(BOOT_TIMEOUT * 5, handle_serial_port_hanging):
         with open_serial_port(DEBUGGER_PORT_CLI_GLOB, timeout=BOOT_TIMEOUT) as p:
             try:
                 for line in p:
@@ -158,7 +156,9 @@ def test_uavcan():
     node_info = uavcan.protocol.GetNodeInfo.Response()  # @UndefinedVariable
     node_info.name.encode('com.zubax.drwatson.zubax_gnss')
 
-    with closing(uavcan.make_node(args.iface, bitrate=CAN_BITRATE, node_id=127,
+    iface = init_can_iface()
+
+    with closing(uavcan.make_node(iface, bitrate=CAN_BITRATE, node_id=127,
                                   mode=uavcan.protocol.NodeStatus().MODE_OPERATIONAL)) as n:  # @UndefinedVariable
         def safe_spin(timeout):
             try:
@@ -380,9 +380,38 @@ def test_uavcan():
         abort('Either CAN2 or its LED are not working')
 
 
-def init_socketcan_iface():
-    return execute_shell_command('ifconfig %s down && ip link set %s up type can bitrate %d sample-point 0.875',
-                                 args.iface, args.iface, CAN_BITRATE, ignore_failure=True)
+def init_can_iface():
+    if '/' not in args.iface:
+        logger.debug('Using iface %r as SocketCAN', args.iface)
+        execute_shell_command('ifconfig %s down && ip link set %s up type can bitrate %d sample-point 0.875',
+                              args.iface, args.iface, CAN_BITRATE)
+        return args.iface
+    else:
+        logger.debug('Using iface %r as SLCAN', args.iface)
+
+        speed_code = {
+            1000000: 8,
+            500000: 6,
+            250000: 5,
+            125000: 4,
+            100000: 3
+        }[CAN_BITRATE]
+
+        execute_shell_command('killall -INT slcand &> /dev/null', ignore_failure=True)
+        time.sleep(1)
+
+        tty = os.path.realpath(args.iface).replace('/dev/', '')
+        logger.debug('TTY %r', tty)
+
+        execute_shell_command('slcan_attach -f -o -s%d /dev/%s', speed_code, tty)
+        execute_shell_command('slcand %s', tty)
+
+        iface_name = 'slcan0'
+        time.sleep(1)
+        execute_shell_command('ifconfig %s up', iface_name)
+        execute_shell_command('ifconfig %s txqueuelen 1000', iface_name)
+
+        return iface_name
 
 
 def check_interfaces():
@@ -400,14 +429,13 @@ def check_interfaces():
     info('Checking interfaces...')
     ok = test_serial_port(DEBUGGER_PORT_GDB_GLOB, 'GDB') and ok
     ok = test_serial_port(DEBUGGER_PORT_CLI_GLOB, 'CLI') and ok
-    if use_socketcan:
-        if 0 != init_socketcan_iface():
-            error('SocketCAN interface is not working')
-            ok = False
-        else:
-            info('SocketCAN interface is OK')
-    else:
-        ok = test_serial_port(args.iface, 'CAN adapter') and ok
+    try:
+        init_can_iface()
+        info('CAN interface is OK')
+    except Exception:
+        logging.debug('CAN check error', exc_info=True)
+        error('CAN interface is not working')
+        ok = False
 
     if not ok:
         fatal('Required interfaces are not available. Please check your hardware configuration.\n'
@@ -421,10 +449,6 @@ licensing_api = make_api_context_with_user_provided_credentials()
 with CLIWaitCursor():
     print('Please wait...')
     firmware_data = get_firmware()
-
-    # Initializing the CAN interface. If we're using SLCAN, entire initialization will be done by pyuavcan.
-    if use_socketcan:
-        init_socketcan_iface()
 
 
 def process_one_device():
@@ -443,9 +467,6 @@ def process_one_device():
         wait_for_boot()
     else:
         info('Firmware upload skipped')
-
-    if use_socketcan:
-        execute_shell_command('ifconfig %s down && ifconfig %s up', args.iface, args.iface)
 
     info('Testing UAVCAN interface...')
     test_uavcan()

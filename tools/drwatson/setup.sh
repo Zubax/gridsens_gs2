@@ -11,6 +11,6 @@ if ! which arm-none-eabi-gdb; then
     apt-get install -y gcc-arm-none-eabi gdb-arm-none-eabi
 fi
 
-apt-get install -y python3 python3-pip
+apt-get install -y python3 python3-pip can-utils
 
 pip3 install colorama easywebdav pyserial numpy pyyaml
