@@ -125,7 +125,7 @@ def wait_for_boot():
 
     def handle_serial_port_hanging():
         fatal('DRWATSON HAS DETECTED A PROBLEM WITH CONNECTED HARDWARE AND NEEDS TO TERMINATE.\n'
-              'The serial port operation has timed out. This usually indicates a problem with the connected '
+              'A serial port operation has timed out. This usually indicates a problem with the connected '
               'hardware or its drivers. Please disconnect all USB devices currently connected to this computer, '
               "then connect them back and restart Drwatson. If you're using a virtual machine, please reboot it.",
               use_abort=True)
