@@ -20,6 +20,9 @@ import os
 import sys
 sys.path.insert(1, os.path.join(sys.path[0], 'pyuavcan'))
 
+from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
+    info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
+    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning, BackgroundDelay
 import numpy
 import tempfile
 import logging
@@ -31,9 +34,6 @@ import uavcan.monitors
 from base64 import b64decode, b64encode
 from contextlib import closing, contextmanager
 from functools import partial
-from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
-    info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning, BackgroundDelay
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
