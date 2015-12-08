@@ -33,7 +33,7 @@ from contextlib import closing, contextmanager
 from functools import partial
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning
+    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning, BackgroundDelay
 
 
 PRODUCT_NAME = 'com.zubax.gnss'
@@ -125,18 +125,25 @@ def load_firmware(firmware_data):
 def wait_for_boot():
     deadline = time.monotonic() + BOOT_TIMEOUT
 
-    with open_serial_port(DEBUGGER_PORT_CLI_GLOB, timeout=BOOT_TIMEOUT) as p:
-        try:
-            for line in p:
-                if b'Zubax GNSS' in line:
-                    return
-                logger.info('Debug UART output: %s', line)
-                if time.monotonic() > deadline:
-                    break
-        except IOError:
-            logging.info('Boot error', exc_info=True)
-        finally:
-            p.flushInput()
+    def handle_serial_port_hanging():
+        fatal('DRWATSON HAS DETECTED A PROBLEM WITH CONNECTED HARDWARE AND NEEDS TO TERMINATE.\n'
+              'The serial port operation has timed out. This usually indicates a problem with the connected '
+              'hardware or its drivers. Please disconnect all USB devices currently connected to this computer, '
+              "then connect them back and restart Drwatson. If you're using a virtual machine, please reboot it.")
+
+    with BackgroundDelay(BOOT_TIMEOUT * 2, handle_serial_port_hanging):
+        with open_serial_port(DEBUGGER_PORT_CLI_GLOB, timeout=BOOT_TIMEOUT) as p:
+            try:
+                for line in p:
+                    if b'Zubax GNSS' in line:
+                        return
+                    logger.info('Debug UART output: %s', line)
+                    if time.monotonic() > deadline:
+                        break
+            except IOError:
+                logging.info('Boot error', exc_info=True)
+            finally:
+                p.flushInput()
 
     warning("The board did not report to CLI with a correct boot message, but we're going\n"
             "to continue anyway. Possible reasons for this warning:\n"
