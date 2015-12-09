@@ -42,9 +42,9 @@ std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
     using uavcan::protocol::NodeStatus;
 
     const auto health = node::getWorstComponentHealth();
-    if (health == NodeStatus::HEALTH_OK)      { return {100, 900}; }
-    if (health == NodeStatus::HEALTH_WARNING) { return {100, 200}; }
-    return {100, 100};  // ERROR/CRITICAL
+    if (health == NodeStatus::HEALTH_OK)      { return {50, 950}; }
+    if (health == NodeStatus::HEALTH_WARNING) { return {50, 250}; }
+    return {50, 50};  // ERROR/CRITICAL
 }
 
 }
