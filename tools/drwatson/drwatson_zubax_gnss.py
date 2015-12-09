@@ -22,7 +22,7 @@ sys.path.insert(1, os.path.join(sys.path[0], 'pyuavcan'))
 
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning, BackgroundDelay
+    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning, BackgroundDelay, imperative
 import numpy
 import tempfile
 import logging
@@ -45,8 +45,9 @@ DEBUGGER_PORT_GDB_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if00'
 DEBUGGER_PORT_CLI_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if0[12]'
 USB_CDC_ACM_GLOB = '/dev/serial/by-id/*Zubax_GNSS*-if00'
 BOOT_TIMEOUT = 9
+# GNSS constants are very pessimistic, because they largely depend on the environment where boards are tested.
 GNSS_FIX_TIMEOUT = 60 * 10
-GNSS_MIN_SAT_TIMEOUT = 60 * 5
+GNSS_MIN_SAT_TIMEOUT = 60 * 15
 GNSS_MIN_SAT_NUM = 6
 
 
@@ -144,13 +145,13 @@ def wait_for_boot():
             finally:
                 p.flushInput()
 
-    warning("The board did not report to CLI with a correct boot message, but we're going\n"
+    warning("The board did not report to CLI with a correct boot message, but we're going "
             "to continue anyway. Possible reasons for this warning:\n"
             '1. The board could not boot properly (however it was flashed successfully).\n'
             '2. The debug connector is not soldered properly.\n'
             '3. The serial port is open by another application.\n'
-            '4. Either USB-UART adapter or VM are malfunctioning. Try to re-connect the\n'
-            '   adapter (disconnect from USB and from the board!) or reboot the VM.')
+            '4. Either USB-UART adapter or VM are malfunctioning. Try to re-connect the '
+            'adapter (disconnect from USB and from the board!) or reboot the VM.')
 
 
 def test_uavcan():
@@ -287,6 +288,7 @@ def test_uavcan():
                 return uavcan.monitors.MessageCollector(n, data_type, timeout=timeout)
 
             col_fix = make_collector(uavcan.equipment.gnss.Fix, 0.2)                    # @UndefinedVariable
+            col_aux = make_collector(uavcan.equipment.gnss.Auxiliary, 0.2)              # @UndefinedVariable
             col_mag = make_collector(uavcan.equipment.ahrs.MagneticFieldStrength)       # @UndefinedVariable
             col_pressure = make_collector(uavcan.equipment.air_data.StaticPressure)     # @UndefinedVariable
             col_temp = make_collector(uavcan.equipment.air_data.StaticTemperature)      # @UndefinedVariable
@@ -320,27 +322,44 @@ def test_uavcan():
                         abort('Invalid magnetic field strength reading: %d Gauss. Check the sensor.',
                               magnetic_field_scalar)
 
+            imperative('Testing GNSS performance. Place the device close to a window to ensure decent GNSS reception. '
+                       'Please note that this test is very crude, it can only detect whether GNSS circuit is working '
+                       'at all or not. If GNSS performance is degraded due to improper manufacturing process, '
+                       'this test may fail to detect it, so please double check that your manufacturing process '
+                       'adheres to the documentation.')
             info('Waiting for GNSS fix...')
             with time_limit(GNSS_FIX_TIMEOUT, 'GNSS fix timeout. Check the RF circuit, AFE, antenna, and receiver'):
                 while True:
                     safe_spin(1)
                     check_everything()
+                    sats_visible = col_aux[node_id].message.sats_visible
+                    sats_used = col_aux[node_id].message.sats_used
+                    sys.stdout.write('\rsat stats: visible %d, used %d   \r' % (sats_visible, sats_used))
+                    sys.stdout.flush()
                     if col_fix[node_id].message.status >= 3:
                         break
 
             info('Waiting for %d satellites...', GNSS_MIN_SAT_NUM)
             with time_limit(GNSS_MIN_SAT_TIMEOUT,
-                            'GNSS performance is degraded. Could be caused by poor assembly of the RF circuit'):
+                            'GNSS performance is degraded. Could be caused by incorrectly assembled RF circuit.'):
                 while True:
                     safe_spin(0.5)
                     check_everything()
                     num = col_fix[node_id].message.sats_used
-                    sys.stdout.write('\rsats_used=%d\r' % num)
+                    pos_cov = list(col_fix[node_id].message.position_covariance)
+                    sys.stdout.write('\r%d sats, pos covariance: %r      \r' % (num, pos_cov))
                     sys.stdout.flush()
                     if num >= GNSS_MIN_SAT_NUM:
                         break
 
             check_everything()
+
+            info('Last sampled sensor measurements are provided below. They appear to be correct.')
+            info('GNSS fix: %r', col_fix[node_id].message)
+            info('GNSS aux: %r', col_aux[node_id].message)
+            info('Magnetic field [Ga]: %r', col_mag[node_id].message)
+            info('Pressure [Pa]: %r', col_pressure[node_id].message)
+            info('Temperature [K]: %r', col_temp[node_id].message)
 
             # Finalizing the test
             info('Resetting the configuration to factory default...')
@@ -439,8 +458,8 @@ def check_interfaces():
         ok = False
 
     if not ok:
-        fatal('Required interfaces are not available. Please check your hardware configuration.\n'
-              'If this application is running on a virtual machine, make sure that hardware\n'
+        fatal('Required interfaces are not available. Please check your hardware configuration. '
+              'If this application is running on a virtual machine, make sure that hardware '
               'sharing is configured correctly.')
 
 check_interfaces()
@@ -456,7 +475,7 @@ def process_one_device():
     out = input('1. Connect DroneCode Probe to the debug connector\n'
                 '2. Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector\n'
                 '3. Connect USB to the device, and make sure that no other Zubax GNSS is connected\n'
-                '4. If you want to skip firmware upload, press F\n'
+                '4. If you want to skip firmware upload, type F\n'
                 '5. Press ENTER')
 
     skip_fw_upload = 'f' in out.lower()
@@ -472,8 +491,8 @@ def process_one_device():
     info('Testing UAVCAN interface...')
     test_uavcan()
 
-    input("Now we're going to test USB. If this application is running on a virtual\n"
-          "machine, make sure that the corresponsing USB device is made available for\n"
+    input("Now we're going to test USB. If this application is running on a virtual "
+          "machine, make sure that the corresponsing USB device is made available for "
           "the VM, then press ENTER.")
     info('Connecting via USB...')
     with open_serial_port(USB_CDC_ACM_GLOB) as io:
