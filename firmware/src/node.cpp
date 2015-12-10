@@ -333,14 +333,7 @@ class : public chibios_rt::BaseStaticThread<3000>
                 bitrate = bootloader_interface::getInheritedCanBusBitRate();
             }
 
-            if (bitrate == 0)
-            {
-                ::lowsyslog("CAN auto bit rate detection...\n");
-            }
-            else
-            {
-                ::lowsyslog("CAN bit rate is fixed at %u bps\n", unsigned(bitrate));
-            }
+            const bool autodetect = bitrate == 0;
 
             res = can.init([]() { ::usleep(can.getRecommendedListeningDelay().toUSec()); },
                            bitrate);
@@ -350,13 +343,10 @@ class : public chibios_rt::BaseStaticThread<3000>
                 ::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
                 active_can_bus_bit_rate = bitrate;
             }
-            else if (param_can_bitrate.get() > 0)
-            {
-                ::lowsyslog("CAN init failed, will retry; error %d\n", res);
-            }
             else
             {
-                ;
+                ::lowsyslog("Could not init CAN; status: %d, autodetect: %d, bitrate: %u\n",
+                            res, int(autodetect), unsigned(bitrate));
             }
         }
         while (res < 0);
