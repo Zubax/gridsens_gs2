@@ -352,6 +352,10 @@ class : public chibios_rt::BaseStaticThread<3000>
                 ::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
                 active_can_bus_bit_rate = bitrate;
             }
+            else if (autodetect && (res == -uavcan_stm32::ErrBitRateNotDetected))
+            {
+                ; // Nothing to do
+            }
             else
             {
                 ::lowsyslog("Could not init CAN; status: %d, autodetect: %d, bitrate: %u\n",
