@@ -32,7 +32,7 @@
 #include "air_sensor.hpp"
 #include "magnetometer.hpp"
 #include "gnss.hpp"
-#include "cli/cli.hpp"
+#include "usb/cli.hpp"
 
 namespace
 {

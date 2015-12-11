@@ -18,8 +18,8 @@
  */
 
 #include "base64.hpp"
-#include "usb_cli.hpp"
-#include <cli/cli.hpp>
+#include "usb_cdc_acm.hpp"
+#include <usb/cli.hpp>
 #include <gnss.hpp>
 #include <bootloader_interface.hpp>
 #include <board/board.hpp>
@@ -68,9 +68,9 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     };
 
     SerialDriver* const gnss_port = &gnss::getSerialPort();
-    SerialUSBDriver* const cli_port  = usb_cli::getSerialUSBDriver();
+    SerialUSBDriver* const cli_port  = usb_cdc_acm::getSerialUSBDriver();
 
-    while (usb_cli::isConnected())
+    while (usb_cdc_acm::isConnected())
     {
         copy_once(&gnss_port->iqueue, &cli_port->oqueue);
         copy_once(&cli_port->iqueue, &gnss_port->oqueue);
@@ -210,7 +210,7 @@ class : public chibios_rt::BaseStaticThread<1024>
 {
     static void initUSB()
     {
-        usb_cli::DeviceSerialNumber sn;
+        usb_cdc_acm::DeviceSerialNumber sn;
 
         board::UniqueID unique_id;
         board::readUniqueID(unique_id);
@@ -218,7 +218,7 @@ class : public chibios_rt::BaseStaticThread<1024>
         std::fill(std::begin(sn), std::end(sn), 0);
         std::copy(std::begin(unique_id), std::end(unique_id), std::begin(sn));
 
-        usb_cli::init(sn);
+        usb_cdc_acm::init(sn);
     }
 
 public:
@@ -234,7 +234,7 @@ public:
 
         static const ShellConfig shell_config
         {
-            reinterpret_cast<BaseSequentialStream*>(usb_cli::getSerialUSBDriver()),
+            reinterpret_cast<BaseSequentialStream*>(usb_cdc_acm::getSerialUSBDriver()),
             HandlerTable
         };
 
@@ -245,7 +245,7 @@ public:
         {
             ::sleep(1);
 
-            if ((shelltp == nullptr) && usb_cli::isConnected())
+            if ((shelltp == nullptr) && usb_cdc_acm::isConnected())
             {
                 ::lowsyslog("Starting shell\n");
                 shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);

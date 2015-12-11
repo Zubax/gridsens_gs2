@@ -23,7 +23,7 @@
 #include <array>
 #include <cstdint>
 
-namespace usb_cli
+namespace usb_cdc_acm
 {
 
 typedef std::array<std::uint8_t, 16> DeviceSerialNumber;

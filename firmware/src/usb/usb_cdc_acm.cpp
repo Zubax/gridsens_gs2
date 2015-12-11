@@ -20,9 +20,9 @@
 #include <cstdint>
 #include <ch.hpp>
 #include <hal.h>
-#include "usb_cli.hpp"
+#include "usb_cdc_acm.hpp"
 
-namespace usb_cli
+namespace usb_cdc_acm
 {
 
 using std::uint8_t;
