@@ -34,4 +34,6 @@ SerialUSBDriver* getSerialUSBDriver();
 
 bool isConnected();
 
+std::uint32_t getBaudRate();
+
 }

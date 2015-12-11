@@ -247,7 +247,7 @@ public:
 
             if ((shelltp == nullptr) && usb_cdc_acm::isConnected())
             {
-                ::lowsyslog("Starting shell\n");
+                ::lowsyslog("Starting shell [%u]\n", unsigned(usb_cdc_acm::getBaudRate()));
                 shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
                 sysSetStdOutStream(shell_config.sc_channel);
             }

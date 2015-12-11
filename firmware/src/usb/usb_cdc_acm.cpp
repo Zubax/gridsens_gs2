@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <ch.hpp>
 #include <hal.h>
+#include <cstring>
 #include "usb_cdc_acm.hpp"
 
 namespace usb_cdc_acm
@@ -342,6 +343,47 @@ static void usb_event(USBDriver *usbp, usbevent_t event)
     }
 }
 
+/**
+ * Current line coding settings
+ */
+struct LineCoding : public cdc_linecoding_t
+{
+    std::uint32_t getBaudRate() const
+    {
+        std::uint32_t val = 0;
+        std::memcpy(&val, this->dwDTERate, 4);
+        return val;
+    }
+} static line_coding;
+
+/**
+ * This function wraps the ChibiOS internal SDU hook in order to intercept line coding access.
+ */
+bool sduRequestsHookWrapper(USBDriver* usbp)
+{
+    if ((usbp->setup[0] & USB_RTYPE_TYPE_MASK) == USB_RTYPE_TYPE_CLASS)
+    {
+        switch (usbp->setup[1])
+        {
+        case CDC_GET_LINE_CODING:
+        {
+            usbSetupTransfer(usbp, reinterpret_cast<uint8_t*>(&line_coding), sizeof(line_coding), NULL);
+            return true;
+        }
+        case CDC_SET_LINE_CODING:
+        {
+            usbSetupTransfer(usbp, reinterpret_cast<uint8_t*>(&line_coding), sizeof(line_coding), NULL);
+            return true;
+        }
+        default:
+        {
+            return sduRequestsHook(usbp);
+        }
+        }
+    }
+    return false;
+}
+
 /*
  * USB driver configuration.
  */
@@ -349,7 +391,7 @@ static const USBConfig usbcfg =
 {
     usb_event,
     get_descriptor,
-    sduRequestsHook,
+    sduRequestsHookWrapper,
     NULL
 };
 
@@ -412,6 +454,11 @@ SerialUSBDriver* getSerialUSBDriver()
 bool isConnected()
 {
     return SDU1.config->usbp->state == USB_ACTIVE;
+}
+
+std::uint32_t getBaudRate()
+{
+    return line_coding.getBaudRate();
 }
 
 }
