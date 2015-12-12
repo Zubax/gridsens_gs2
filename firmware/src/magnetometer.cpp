@@ -53,6 +53,9 @@ zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-mag",
                                                   uavcan::TransferPriority::NumericallyMin,
                                                   uavcan::TransferPriority::NumericallyMax);
 
+chibios_rt::Mutex last_sample_mutex;
+Sample last_sample;
+
 void publish(float field[3], float variance)
 {
     if (!node::isStarted())
@@ -327,6 +330,11 @@ public:
                 transformToNEDFrame(vector);
                 publish(vector, variance);
                 setStatus(estimateStatusFromMeasurement(vector));
+
+                last_sample_mutex.lock();
+                last_sample.seq_id++;
+                std::copy(std::begin(vector), std::end(vector), last_sample.magnetic_field_strength);
+                chibios_rt::BaseThread::unlockMutex();
             }
             else
             {
@@ -347,6 +355,16 @@ public:
 void init()
 {
     (void)mag_thread.start(HIGHPRIO);
+}
+
+Sample getLastSample()
+{
+    struct L
+    {
+        L() { last_sample_mutex.lock(); }
+        ~L() { chibios_rt::BaseThread::unlockMutex(); }
+    } lock;
+    return last_sample;
 }
 
 }

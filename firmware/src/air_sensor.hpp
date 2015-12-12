@@ -19,9 +19,20 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace air_sensor
 {
 
 void init();
+
+struct Sample
+{
+    std::uint32_t seq_id = 0;
+    float pressure_pa = 0.0f;
+    float temperature_k = 0.0f;
+};
+
+Sample getLastSample();
 
 }

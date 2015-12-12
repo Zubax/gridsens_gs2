@@ -17,10 +17,14 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
+#include <cmath>
 #include <nmea/nmea.hpp>
 #include <uavcan/uavcan.hpp>            // Needed for array type
 #include <zubax_chibios/sys/sys.h>
 #include <unistd.h>
+
+#include <magnetometer.hpp>
+#include <air_sensor.hpp>
 
 namespace nmea
 {
@@ -172,37 +176,123 @@ public:
     }
 };
 
-/**
- * This thread exits automatically if there are no active outputs.
- */
+
+static void handleOneOutput(OutputQueue* const out, const char* line)
+{
+    chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
+    chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
+}
+
+void outputSentence(SentenceBuilder& b)
+{
+    output_registry_.forEach(&handleOneOutput, b.compile().c_str());
+}
+
+void processMagnetometer()
+{
+    static auto seq_id = magnetometer::getLastSample().seq_id;
+
+    auto s = magnetometer::getLastSample();
+    if (s.seq_id == seq_id)
+    {
+        return;
+    }
+    seq_id = s.seq_id;
+
+    const auto x = s.magnetic_field_strength[0];
+    const auto y = s.magnetic_field_strength[1];
+
+    float heading_deg = std::atan2(y, x) * 180.f / M_PI;
+    if (heading_deg < 0.f)
+    {
+        heading_deg += 360.f;
+    }
+    if (heading_deg > 360.f)
+    {
+        heading_deg -= 360.f;
+    }
+
+    // http://edu-observatory.org/gps/NMEA_0183.txt
+    // http://www.catb.org/gpsd/NMEA.html
+    SentenceBuilder b("HCHDG");
+    b.addField("%.3f", heading_deg);
+    b.addEmptyField();
+    b.addEmptyField();
+    b.addEmptyField();
+    b.addEmptyField();
+
+    outputSentence(b);
+}
+
+
+void processAirSensor()
+{
+    static auto seq_id = air_sensor::getLastSample().seq_id;
+
+    auto s = air_sensor::getLastSample();
+    if (s.seq_id == seq_id)
+    {
+        return;
+    }
+    seq_id = s.seq_id;
+
+    const float pressure_bar = s.pressure_pa * 1e-5f;
+    const float temperature_degc = s.temperature_k - 273.15f;
+
+    // http://edu-observatory.org/gps/NMEA_0183.txt
+    // http://www.catb.org/gpsd/NMEA.html
+    {
+        SentenceBuilder b("YXXDR");
+        b.addField("P");
+        b.addField("%.6f", pressure_bar);
+        b.addField("B");
+        outputSentence(b);
+    }
+    {
+        SentenceBuilder b("YXXDR");
+        b.addField("C");
+        b.addField("%.1f", temperature_degc);
+        b.addField("C");
+        outputSentence(b);
+    }
+}
+
+
 class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
 {
-    static void handleOneOutput(OutputQueue* const out, const char* line)
-    {
-        chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
-        chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
-    }
+    static constexpr unsigned MinSensorPeriodMSec = 100;
 
     msg_t main() override
     {
         setName("nmea");
 
+        systime_t sleep_until = chibios_rt::System::getTime();
+
+        static constexpr void(*HandlerTable[])() =
+        {
+            processMagnetometer,
+            processAirSensor
+        };
+        static constexpr unsigned NumHandlers = sizeof(HandlerTable) / sizeof(HandlerTable[0]);
+
+        unsigned selector = 0;
+
         for (;;)
         {
-            /*
-             * Doing nothing as long as there are no outputs
-             */
             while (output_registry_.empty())
             {
-                ::usleep(1000000);
+                ::usleep(100000);
+                sleep_until = chibios_rt::System::getTime();
             }
 
-            ::usleep(100000);
+            HandlerTable[selector++]();
+            if (selector >= NumHandlers)
+            {
+                selector = 0;
+            }
 
-            /*
-             * Writing all outputs at once.
-             */
-            output_registry_.forEach(&NMEAOutputThread::handleOneOutput, "$NMEA,*12");
+            sleep_until += MS2ST(MinSensorPeriodMSec / NumHandlers);
+            sysSleepUntilChTime(sleep_until);
         }
 
         return 0;

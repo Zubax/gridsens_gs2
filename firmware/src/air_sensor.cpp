@@ -55,6 +55,9 @@ zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-pres",
 zubax_chibios::config::Param<float> param_pressure_variance("pres.variance", 100.0, 1.0, 4000.0);
 zubax_chibios::config::Param<float> param_temperature_variance("temp.variance", 4.0, 1.0, 100.0);
 
+chibios_rt::Mutex last_sample_mutex;
+Sample last_sample;
+
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
     float pressure_variance = 0;
@@ -70,6 +73,12 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 
     void publish(float pressure_pa, float temperature_degc) const
     {
+        last_sample_mutex.lock();
+        last_sample.seq_id++;
+        last_sample.pressure_pa = pressure_pa;
+        last_sample.temperature_k = temperature_degc + DegreesCelsiusToKelvinOffset;
+        chibios_rt::BaseThread::unlockMutex();
+
         if (!node::isStarted())
         {
             return;
@@ -197,6 +206,16 @@ void init()
         node::markComponentInitialized(node::ComponentID::AirSensor);
         lowsyslog("Air sensor disabled\n");
     }
+}
+
+Sample getLastSample()
+{
+    struct L
+    {
+        L() { last_sample_mutex.lock(); }
+        ~L() { chibios_rt::BaseThread::unlockMutex(); }
+    } lock;
+    return last_sample;
 }
 
 }

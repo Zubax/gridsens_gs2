@@ -19,9 +19,19 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace magnetometer
 {
 
 void init();
+
+struct Sample
+{
+    std::uint32_t seq_id = 0;
+    float magnetic_field_strength[3] = {};
+};
+
+Sample getLastSample();
 
 }
