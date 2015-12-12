@@ -38,7 +38,7 @@ static constexpr unsigned MinSatsForGoodFix = 6;
 
 static constexpr unsigned TypicalSentenceLength = 50;
 static constexpr unsigned MinRealBaudRate = 115200;                             ///< For physical UART (not USB)
-static constexpr unsigned SentenceTransmissionTimeoutMs = TypicalSentenceLength * 1000 / (MinRealBaudRate / 10);
+static constexpr unsigned DelayAfterSentenceTransmissionMs = TypicalSentenceLength * 1000 / (MinRealBaudRate / 10);
 
 struct Locker
 {
@@ -259,7 +259,11 @@ void outputSentence(SentenceBuilder& b)
 
     output_registry_.forEach(send_one, b.compile().c_str());
 
-    chThdSleepMilliseconds(SentenceTransmissionTimeoutMs);
+    /*
+     * This delay makes buffer utilization more uniform and predictable.
+     * Also, it avoids buffer overruns when sending packages of multiple long messages, e.g. GSV.
+     */
+    chThdSleepMilliseconds(DelayAfterSentenceTransmissionMs);
 }
 
 void processMagnetometer()
