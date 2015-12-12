@@ -25,6 +25,7 @@
 #include "base64.hpp"
 #include "usb_cdc_acm.hpp"
 #include <usb/usb.hpp>
+#include <nmea/nmea.hpp>
 #include <gnss.hpp>
 #include <bootloader_interface.hpp>
 #include <board/board.hpp>
@@ -211,8 +212,10 @@ const ::ShellCommand HandlerTable[] =
     {nullptr, nullptr}
 };
 
-class : public chibios_rt::BaseStaticThread<1024>
+class USBControlThread : public chibios_rt::BaseStaticThread<1024>
 {
+    static constexpr unsigned NMEABaudrateThreshold = 115200;
+
     static void initUSB()
     {
         usb_cdc_acm::DeviceSerialNumber sn;
@@ -226,7 +229,6 @@ class : public chibios_rt::BaseStaticThread<1024>
         usb_cdc_acm::init(sn);
     }
 
-public:
     msg_t main() override
     {
         setName("usb_ctl");
@@ -245,16 +247,43 @@ public:
 
         static WORKING_AREA(wa_shell, 2048);
 
+        auto& usb_output = usb_cdc_acm::getSerialUSBDriver()->oqueue;
+
         Thread* shelltp = nullptr;
         for (;;)
         {
             ::sleep(1);
 
-            if ((shelltp == nullptr) && usb_cdc_acm::isConnected())
+            if (usb_cdc_acm::isConnected())
             {
-                ::lowsyslog("Starting shell [%u]\n", unsigned(usb_cdc_acm::getBaudRate()));
-                shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
-                sysSetStdOutStream(shell_config.sc_channel);
+                const auto baudrate = usb_cdc_acm::getBaudRate();
+
+                if (shelltp == nullptr)
+                {
+                    ::lowsyslog("Starting shell [%u]\n", unsigned(baudrate));
+                    shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
+                    sysSetStdOutStream(shell_config.sc_channel);
+                }
+
+                if ((baudrate < NMEABaudrateThreshold) && !nmea::hasOutput(&usb_output))
+                {
+                    ::lowsyslog("Adding USB NMEA output\n");
+                    nmea::addOutput(&usb_output);
+                }
+
+                if ((baudrate >= NMEABaudrateThreshold) && nmea::hasOutput(&usb_output))
+                {
+                    ::lowsyslog("Removing USB NMEA output [baudrate]\n");
+                    nmea::removeOutput(&usb_output);
+                }
+            }
+            else
+            {
+                if (nmea::hasOutput(&usb_output))
+                {
+                    ::lowsyslog("Removing USB NMEA output [disconnected]\n");
+                    nmea::removeOutput(&usb_output);
+                }
             }
 
             if ((shelltp != nullptr) && chThdTerminated(shelltp))

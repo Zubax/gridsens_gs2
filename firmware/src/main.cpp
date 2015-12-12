@@ -25,6 +25,7 @@
 
 #include <zubax_chibios/sys/sys.h>
 #include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/config/config.hpp>
 
 #include "bootloader_interface.hpp"
 #include "board/board.hpp"
@@ -33,9 +34,12 @@
 #include "magnetometer.hpp"
 #include "gnss.hpp"
 #include "usb/usb.hpp"
+#include "nmea/nmea.hpp"
 
 namespace
 {
+
+zubax_chibios::config::Param<bool> nmea_uart_on("nmea.uart_on", false);
 
 std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 {
@@ -51,20 +55,35 @@ std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 
 int main()
 {
+    /*
+     * Component initialization; threads start here.
+     */
     bootloader_interface::init();
     board::init();
     node::init();
     air_sensor::init();
     gnss::init();
     magnetometer::init();
+    nmea::init();
 
     zubax_chibios::watchdog::Timer wdt;
     wdt.startMSec(1100);
 
     usb::init();
 
+    /*
+     * Higher-level initialization.
+     */
     chibios_rt::BaseThread::setPriority(LOWPRIO);
 
+    if (nmea_uart_on)
+    {
+        nmea::addOutput(&STDOUT_SD.oqueue);
+    }
+
+    /*
+     * Main loop.
+     */
     while (!node::hasPendingRestartRequest())
     {
         const auto on_off = getStatusLedOnOffMSecDurations();
