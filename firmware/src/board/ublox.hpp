@@ -107,6 +107,8 @@ struct Auxiliary
     {
         msg::GnssID gnss_id;
         std::uint8_t sat_id;
+        std::int8_t elevation;
+        std::int16_t azimuth;
         std::uint8_t signal_noise_ratio;
         std::uint8_t used :1;
     };

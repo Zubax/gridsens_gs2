@@ -36,6 +36,10 @@ namespace
 
 static constexpr unsigned MinSatsForGoodFix = 6;
 
+static constexpr unsigned TypicalSentenceLength = 50;
+static constexpr unsigned MinRealBaudRate = 115200;                             ///< For physical UART (not USB)
+static constexpr unsigned SentenceTransmissionTimeoutMs = TypicalSentenceLength * 1000 / (MinRealBaudRate / 10);
+
 struct Locker
 {
     Locker(chibios_rt::Mutex& m)
@@ -128,8 +132,7 @@ class SentenceBuilder
      * Sample:
      * $GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
      */
-    static constexpr unsigned MaxSentenceLength = 82;   ///< Explicitly specified
-
+    static constexpr unsigned MaxSentenceLength = 100;
     typedef typename uavcan::MakeString<MaxSentenceLength>::Type Buffer;
 
     Buffer buffer_;
@@ -246,15 +249,17 @@ public:
 };
 
 
-static void handleOneOutput(OutputQueue* const out, const char* line)
-{
-    chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
-    chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
-}
-
 void outputSentence(SentenceBuilder& b)
 {
-    output_registry_.forEach(&handleOneOutput, b.compile().c_str());
+    static const auto send_one = [](OutputQueue* const out, const char* line)
+    {
+        chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
+        chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
+    };
+
+    output_registry_.forEach(send_one, b.compile().c_str());
+
+    chThdSleepMilliseconds(SentenceTransmissionTimeoutMs);
 }
 
 void processMagnetometer()
@@ -337,12 +342,6 @@ void processGNSSAux()
         return;
     }
 
-    static Decimator decimator(10);
-    if (!decimator.step())
-    {
-        return;
-    }
-
     static bool alternator = false;
 
     /*
@@ -360,7 +359,6 @@ void processGNSSAux()
      *     |                                3 = 3D
      *     +--------------------------Mode: M = Manual, forced to operate in 2D or 3D mode
      *                                         A = Automatic, allowed to automatically switch 2D/3D
-     *
      * xx,xx,xx,xx,xx,x.x,x.x,x.x*hh<CR><LF>
      * |  |  |  |  |   |   |   |
      * |  |  |  |  |   |   |   +------VDOP
@@ -371,6 +369,25 @@ void processGNSSAux()
      * |  |  +-----------------------|
      * |  +--------------------------|
      * +-----------------------------|
+     *
+     * $--GSV,x,x,xx,xx,xx,xxx,xx __________ ...
+     *     | | |  |  |   |  |      |
+     *     | | |  |  |   |  |      |
+     *     | | |  |  |   |  |      +-2nd - 3rd SV [2]
+     *     | | |  |  |   |  |
+     *     | | |  |  |   |  +--------\SNR (C/No) 00-99 dB, null when not tracking
+     *     | | |  |  |   +-----------|Azimuth,   degrees True, 000 to 359
+     *     | | |  |  +---------------|Elevation, degrees, 90 deg maximum
+     *     | | |  +------------------/Satellite PRN number
+     *     | | +----------------------Total number of satellites in view
+     *     | +------------------------Message number, 1 to 3   [1]
+     *     +--------------------------Total number of messages [1]
+     * xx,xx,xxx,xx*hh<CR><LF>
+     * |  |   |  |
+     * |  |   |  +-------------------\
+     * |  |   +----------------------|
+     * |  +--------------------------|
+     * +-----------------------------/4th SV
      */
     if (alternator)
     {
@@ -383,7 +400,7 @@ void processGNSSAux()
         // Sat numbers
         constexpr unsigned TargetNumber = 12;
         unsigned num_added = 0;
-        for (unsigned sat_idx = 0; sat_idx < auxiliary.MaxSats; sat_idx++)
+        for (unsigned sat_idx = 0; sat_idx < auxiliary.num_sats; sat_idx++)
         {
             if (auxiliary.sats[sat_idx].used)
             {
@@ -409,7 +426,55 @@ void processGNSSAux()
     }
     else
     {
+        // Counting satellites first
+        static const auto is_valid_sv = [](const gnss::Auxiliary::Sat& s)
+            {
+                return (s.elevation >= 0 && s.elevation <= 90) && (s.signal_noise_ratio > 0);
+            };
 
+        unsigned total_num_sats = 0;
+        for (unsigned i = 0; i < auxiliary.num_sats; i++)
+        {
+            if (is_valid_sv(auxiliary.sats[i]))
+            {
+                total_num_sats++;
+            }
+        }
+
+        // Now sending the messages
+        unsigned sat_index = 0;
+        unsigned remaining_sats = total_num_sats;
+        const unsigned num_messages = (total_num_sats + 3) / 4;
+        for (unsigned msg_num = 1; msg_num <= num_messages; msg_num++)
+        {
+            SentenceBuilder b("GNGSV");
+
+            // Common fields
+            b.addField("%u", num_messages);
+            b.addField("%u", msg_num);
+            b.addField("%u", total_num_sats);
+
+            // Per sat info
+            unsigned remaining_sats_in_message = 4;
+            while (remaining_sats_in_message > 0 && remaining_sats > 0)
+            {
+                const auto& sat = auxiliary.sats[sat_index++];
+                if (!is_valid_sv(sat))
+                {
+                    continue;
+                }
+
+                b.addField("%02u", sat.sat_id);
+                b.addField("%02d", sat.elevation);
+                b.addField("%03d", sat.azimuth);
+                b.addField("%02d", sat.signal_noise_ratio);
+
+                remaining_sats_in_message--;
+                remaining_sats--;
+            }
+
+            outputSentence(b);
+        }
     }
 
     alternator = !alternator;

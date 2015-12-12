@@ -461,6 +461,8 @@ void Driver::handleSAT(const Timestamps& ts, const msg::NAV_SAT& sat)
 
         dst.gnss_id = src.gnssId;
         dst.sat_id = src.svId;
+        dst.elevation = src.elev;
+        dst.azimuth = src.azim;
         dst.signal_noise_ratio = src.cno;
         dst.used = (src.flags & msg::NAV_SAT::Sv::FlagsMask::svUsed) != 0;
     }
