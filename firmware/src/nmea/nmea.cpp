@@ -18,6 +18,8 @@
  */
 
 #include <cmath>
+#include <ctime>
+#include <cstdio>
 #include <nmea/nmea.hpp>
 #include <uavcan/uavcan.hpp>            // Needed for array type
 #include <zubax_chibios/sys/sys.h>
@@ -25,6 +27,7 @@
 
 #include <magnetometer.hpp>
 #include <air_sensor.hpp>
+#include <gnss.hpp>
 
 namespace nmea
 {
@@ -139,6 +142,21 @@ class SentenceBuilder
         return c & 0xFFU;
     }
 
+    struct DegMinSign
+    {
+        int deg;
+        double min;
+        char sign;
+    };
+
+    DegMinSign degToDegMinSign(double x, char pos, char neg)
+    {
+        const auto deg = int(x);
+        const auto min = 60 * double(x - deg);
+        const auto ch = (x >= 0) ? pos : neg;
+        return { std::abs(deg), std::abs(min), ch };
+    };
+
 public:
     SentenceBuilder(const char* identifier)
     {
@@ -159,9 +177,38 @@ public:
         buffer_ += value;
     }
 
+    void addField(char value)
+    {
+        buffer_ += ",";
+        buffer_.push_back(value);
+    }
+
+    template <typename... Args>
+    void addComplexField(const char* const format, Args... args)
+    {
+        using namespace std;
+        char buf[32];           // Should be enough for any RTCM field
+        snprintf(buf, sizeof(buf), format, args...);
+        addField(buf);
+    }
+
     void addEmptyField()
     {
         buffer_ += ",";
+    }
+
+    void addLatitude(double deg)
+    {
+        const auto t = degToDegMinSign(deg, 'N', 'S');
+        addComplexField("%02u%09.6f", t.deg, t.min);
+        addField(t.sign);
+    }
+
+    void addLongitude(double deg)
+    {
+        const auto t = degToDegMinSign(deg, 'E', 'W');
+        addComplexField("%03u%09.6f", t.deg, t.min);
+        addField(t.sign);
     }
 
     const Buffer& compile()
@@ -173,6 +220,26 @@ public:
             buffer_.appendFormatted("*%02X", checksum);
         }
         return buffer_;
+    }
+};
+
+
+class Decimator
+{
+    const unsigned ratio_;
+    unsigned counter_ = 0;
+
+public:
+    Decimator(unsigned ratio) : ratio_(ratio) { }
+
+    bool step()
+    {
+        if (++counter_ >= ratio_)
+        {
+            counter_ = 0;
+            return true;
+        }
+        return false;
     }
 };
 
@@ -202,20 +269,16 @@ void processMagnetometer()
     const auto x = s.magnetic_field_strength[0];
     const auto y = s.magnetic_field_strength[1];
 
-    float heading_deg = std::atan2(y, x) * 180.f / M_PI;
+    float heading_deg = std::atan2(y, x) * float(180.0 / M_PI);
     if (heading_deg < 0.f)
     {
         heading_deg += 360.f;
-    }
-    if (heading_deg > 360.f)
-    {
-        heading_deg -= 360.f;
     }
 
     // http://edu-observatory.org/gps/NMEA_0183.txt
     // http://www.catb.org/gpsd/NMEA.html
     SentenceBuilder b("HCHDG");
-    b.addField("%.3f", heading_deg);
+    b.addField("%.1f", heading_deg);
     b.addEmptyField();
     b.addEmptyField();
     b.addEmptyField();
@@ -243,17 +306,107 @@ void processAirSensor()
     // http://www.catb.org/gpsd/NMEA.html
     {
         SentenceBuilder b("YXXDR");
-        b.addField("P");
-        b.addField("%.6f", pressure_bar);
-        b.addField("B");
+        b.addField('P');
+        b.addField("%.5f", pressure_bar);
+        b.addField('B');
         outputSentence(b);
     }
+
+    static Decimator temp_decimator(10);
+    if (temp_decimator.step())
     {
         SentenceBuilder b("YXXDR");
-        b.addField("C");
+        b.addField('C');
         b.addField("%.1f", temperature_degc);
-        b.addField("C");
+        b.addField('C');
         outputSentence(b);
+    }
+}
+
+
+void processGNSSFix()
+{
+    static gnss::Fix fix;
+    if (!gnss::getFixIfUpdatedSince(fix.ts.mono_usec, fix))
+    {
+        return;
+    }
+
+    /*
+     * http://edu-observatory.org/gps/NMEA_0183.txt
+     * http://www.catb.org/gpsd/NMEA.html
+     *
+     * $--RMC,hhmmss.ss,A,llll.ll,a,...
+     *         |       |   |     |
+     *         |       |   |     +-----\N/S North or South
+     *         |       |   +-----------/Latitude
+     *         |       +----------------Status: V = Nav. receiver warning
+     *         +------------------------UTC of position fix
+     *
+     * yyyyy.yy,a,x.x,x.x,xxxxxx,...
+     *     |      |  |   |    |
+     *     |      |  |   |    +---------Date: dd|mm|yy
+     *     |      |  |   +--------------Track made good, degrees True
+     *     |      |  +------------------Speed over ground, knots
+     *     |      +--------------------\E/W East or West
+     *     +---------------------------/Longitude
+     *
+     * x.x,a*hh<CR><LF>
+     *     |  | |
+     *     |  | +------------------------Checksum, mandatory for RMC
+     *     |  +-------------------------\E/W East or West [1]
+     *     +----------------------------/Magnetic variation, degrees
+     */
+    {
+        SentenceBuilder b("GPRMC");
+
+        // Time
+        const std::time_t unix_time = static_cast<std::time_t>(fix.utc_usec / 1000000U);
+        const auto tm = std::gmtime(&unix_time);
+        b.addComplexField("%02d%02d%02d.%03u",
+                          tm->tm_hour, tm->tm_min, tm->tm_sec,
+                          static_cast<unsigned>((fix.utc_usec / 1000U) % 1000U));
+
+        // Status
+        const bool valid = fix.utc_valid && (fix.mode >= fix.Mode::Fix3D);
+        b.addField(valid ? 'A' : 'V');
+
+        // Lat/Lon
+        b.addLatitude(fix.lat);
+        b.addLongitude(fix.lon);
+
+        // Speed [knots]
+        const float speed = std::sqrt(fix.ned_velocity[0] * fix.ned_velocity[0] +
+                                      fix.ned_velocity[1] * fix.ned_velocity[1]);
+        b.addField("%06.2f", speed * 1.943844f);
+
+        // Track [degrees]
+        float track_deg = std::atan2(fix.ned_velocity[1], fix.ned_velocity[0]) * float(180.0 / M_PI);
+        if (track_deg < 0)
+        {
+            track_deg += 360.0f;
+        }
+        b.addField("%05.1f", track_deg);
+
+        // Date
+        b.addComplexField("%02d%02d%02d",
+                          tm->tm_mday, tm->tm_mon + 1, tm->tm_year - 100);
+
+        // Magnetic variation [degrees], east/west
+        b.addEmptyField();
+        b.addEmptyField();
+
+        outputSentence(b);
+    }
+}
+
+
+void processGNSSAux()
+{
+    static gnss::Auxiliary aux;
+    if (!gnss::getAuxiliaryIfUpdatedSince(aux.ts.mono_usec, aux))
+    {
+        return;
     }
 }
 
@@ -271,7 +424,9 @@ class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
         static constexpr void(*HandlerTable[])() =
         {
             processMagnetometer,
-            processAirSensor
+            processAirSensor,
+            processGNSSFix,
+            processGNSSAux
         };
         static constexpr unsigned NumHandlers = sizeof(HandlerTable) / sizeof(HandlerTable[0]);
 

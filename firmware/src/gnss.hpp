@@ -21,14 +21,21 @@
 
 #include <ch.hpp>
 #include <hal.h>
+#include <board/ublox.hpp>
 
 namespace gnss
 {
+
+using ublox::Auxiliary;
+using ublox::Fix;
 
 void init();
 
 void stop();
 
 SerialDriver& getSerialPort();
+
+bool getAuxiliaryIfUpdatedSince(std::uint64_t ts_mono_usec, Auxiliary& out_aux);
+bool getFixIfUpdatedSince(std::uint64_t ts_mono_usec, Fix& out_fix);
 
 }

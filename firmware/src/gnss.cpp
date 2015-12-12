@@ -18,7 +18,6 @@
  */
 
 #include "gnss.hpp"
-#include "board/ublox.hpp"
 #include "node.hpp"
 #include "execute_once.hpp"
 
@@ -59,13 +58,24 @@ zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.
 zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
 
 
+chibios_rt::Mutex last_sample_mutex;
+Auxiliary last_sample_aux;
+Fix last_sample_fix;
+
+struct LastSampleMutexLocker
+{
+    LastSampleMutexLocker()  { last_sample_mutex.lock(); }
+    ~LastSampleMutexLocker() { chibios_rt::BaseThread::unlockMutex(); }
+};
+
+
 std::uint16_t computeNumLeapSecondsFromGpsLeapSeconds(std::uint16_t gps_leaps)
 {
     return gps_leaps + 9;
 }
 
 
-void publishFix(const ublox::Fix& data, const ublox::GpsLeapSeconds& leaps)
+void publishFix(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 {
     static uavcan::equipment::gnss::Fix msg;
     msg = uavcan::equipment::gnss::Fix();
@@ -94,15 +104,15 @@ void publishFix(const ublox::Fix& data, const ublox::GpsLeapSeconds& leaps)
     std::copy(std::begin(data.ned_velocity), std::end(data.ned_velocity), std::begin(msg.ned_velocity));
 
     // Mode
-    if (data.mode == ublox::Fix::Mode::Time)
+    if (data.mode == Fix::Mode::Time)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_TIME_ONLY;
     }
-    else if (data.mode == ublox::Fix::Mode::Fix2D)
+    else if (data.mode == Fix::Mode::Fix2D)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_2D_FIX;
     }
-    else if (data.mode == ublox::Fix::Mode::Fix3D)
+    else if (data.mode == Fix::Mode::Fix3D)
     {
         msg.status = uavcan::equipment::gnss::Fix::STATUS_3D_FIX;
     }
@@ -134,7 +144,7 @@ void publishFix(const ublox::Fix& data, const ublox::GpsLeapSeconds& leaps)
     (void)pub.broadcast(msg);
 }
 
-void publishAuxiliary(const ublox::Fix& fix, const ublox::Auxiliary& aux)
+void publishAuxiliary(const Fix& fix, const Auxiliary& aux)
 {
     static uavcan::equipment::gnss::Auxiliary msg;
     msg = uavcan::equipment::gnss::Auxiliary();
@@ -249,7 +259,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         while (shouldKeepGoing() && driver_.areRatesValid());
     }
 
-    void handleFix(const ublox::Fix& fix) const
+    void handleFix(const Fix& fix) const
     {
         // Publish the new GNSS solution onto the bus
         publishFix(fix, driver_.getGpsLeapSeconds());
@@ -266,6 +276,10 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
             auto adj = uavcan::UtcTime::fromUSec(fix.utc_usec) - uavcan::UtcTime::fromUSec(fix.ts.real_usec);
             node::adjustUtcTimeFromLocalSource(adj);
         }
+
+        // This is very slow, updating in the last order in order to not delay the data
+        LastSampleMutexLocker locker;
+        last_sample_fix = fix;
     }
 
 public:
@@ -278,7 +292,13 @@ public:
         warn_min_sats_used_ = param_gnss_warn_min_sats_used.get();
 
         driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
-        driver_.on_aux = [this](const ublox::Auxiliary& aux) { publishAuxiliary(driver_.getFix(), aux); };
+        driver_.on_aux = [this](const Auxiliary& aux)
+            {
+                publishAuxiliary(driver_.getFix(), aux);
+                // This is very slow, updating in the last order in order to not delay the data
+                LastSampleMutexLocker locker;
+                last_sample_aux = aux;
+            };
 
         pauseOneSec();  // Waiting for the receiver to boot
 
@@ -322,6 +342,28 @@ void stop()
 SerialDriver& getSerialPort()
 {
     return *serial_port;
+}
+
+bool getAuxiliaryIfUpdatedSince(std::uint64_t ts_mono_usec, Auxiliary& out_aux)
+{
+    LastSampleMutexLocker locker;
+    if (last_sample_aux.ts.mono_usec > ts_mono_usec)
+    {
+        out_aux = last_sample_aux;
+        return true;
+    }
+    return false;
+}
+
+bool getFixIfUpdatedSince(std::uint64_t ts_mono_usec, Fix& out_fix)
+{
+    LastSampleMutexLocker locker;
+    if (last_sample_fix.ts.mono_usec > ts_mono_usec)
+    {
+        out_fix = last_sample_fix;
+        return true;
+    }
+    return false;
 }
 
 }
