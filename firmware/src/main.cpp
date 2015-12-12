@@ -32,7 +32,7 @@
 #include "air_sensor.hpp"
 #include "magnetometer.hpp"
 #include "gnss.hpp"
-#include "usb/cli.hpp"
+#include "usb/usb.hpp"
 
 namespace
 {
@@ -61,7 +61,7 @@ int main()
     zubax_chibios::watchdog::Timer wdt;
     wdt.startMSec(1100);
 
-    cli::init();
+    usb::init();
 
     chibios_rt::BaseThread::setPriority(LOWPRIO);
 

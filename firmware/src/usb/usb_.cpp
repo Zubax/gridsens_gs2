@@ -17,9 +17,14 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
+/*
+ * The file is weirdly named because the build system of ChibiOS does not allow having multiple files with
+ * identical names.
+ */
+
 #include "base64.hpp"
 #include "usb_cdc_acm.hpp"
-#include <usb/cli.hpp>
+#include <usb/usb.hpp>
 #include <gnss.hpp>
 #include <bootloader_interface.hpp>
 #include <board/board.hpp>
@@ -33,7 +38,7 @@
 #include <hal.h>
 #include <shell.h>
 
-namespace cli
+namespace usb
 {
 
 namespace
@@ -224,13 +229,13 @@ class : public chibios_rt::BaseStaticThread<1024>
 public:
     msg_t main() override
     {
-        setName("cli_ctl");
+        setName("usb_ctl");
 
         initUSB();
 
         ::shellInit();
 
-        ::lowsyslog("USB & CLI inited\n");
+        ::lowsyslog("USB inited\n");
 
         static const ShellConfig shell_config
         {
@@ -262,13 +267,13 @@ public:
 
         return 0;
     }
-} cli_control_thread;
+} usb_control_thread;
 
 } // namespace
 
 void init()
 {
-    cli_control_thread.start(LOWPRIO + 1);
+    usb_control_thread.start(LOWPRIO + 1);
 }
 
 }

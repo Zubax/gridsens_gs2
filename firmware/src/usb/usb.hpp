@@ -19,7 +19,7 @@
 
 #pragma once
 
-namespace cli
+namespace usb
 {
 
 void init();
