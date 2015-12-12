@@ -34,6 +34,8 @@ namespace nmea
 namespace
 {
 
+static constexpr unsigned MinSatsForGoodFix = 6;
+
 struct Locker
 {
     Locker(chibios_rt::Mutex& m)
@@ -324,6 +326,18 @@ void processAirSensor()
 }
 
 
+// This structure is shared with processGNSSFix()
+static gnss::Auxiliary auxiliary;
+
+void processGNSSAux()
+{
+    if (!gnss::getAuxiliaryIfUpdatedSince(auxiliary.ts.mono_usec, auxiliary))
+    {
+        return;
+    }
+}
+
+
 void processGNSSFix()
 {
     static gnss::Fix fix;
@@ -331,6 +345,14 @@ void processGNSSFix()
     {
         return;
     }
+
+    /*
+     * Common values
+     */
+    const std::time_t unix_time = static_cast<std::time_t>(fix.utc_usec / 1000000U);
+    const auto tm = std::gmtime(&unix_time);
+
+    const bool fix_valid = fix.utc_valid && (fix.mode >= fix.Mode::Fix3D) && (fix.sats_used >= MinSatsForGoodFix);
 
     /*
      * http://edu-observatory.org/gps/NMEA_0183.txt
@@ -358,18 +380,15 @@ void processGNSSFix()
      *     +----------------------------/Magnetic variation, degrees
      */
     {
-        SentenceBuilder b("GPRMC");
+        SentenceBuilder b("GNRMC");
 
         // Time
-        const std::time_t unix_time = static_cast<std::time_t>(fix.utc_usec / 1000000U);
-        const auto tm = std::gmtime(&unix_time);
         b.addComplexField("%02d%02d%02d.%03u",
                           tm->tm_hour, tm->tm_min, tm->tm_sec,
                           static_cast<unsigned>((fix.utc_usec / 1000U) % 1000U));
 
         // Status
-        const bool valid = fix.utc_valid && (fix.mode >= fix.Mode::Fix3D);
-        b.addField(valid ? 'A' : 'V');
+        b.addField(fix_valid ? 'A' : 'V');
 
         // Lat/Lon
         b.addLatitude(fix.lat);
@@ -398,15 +417,68 @@ void processGNSSFix()
 
         outputSentence(b);
     }
-}
 
-
-void processGNSSAux()
-{
-    static gnss::Auxiliary aux;
-    if (!gnss::getAuxiliaryIfUpdatedSince(aux.ts.mono_usec, aux))
+    /*
+     * $--GGA,hhmmss.ss,llll.ll,a,...
+     *             |      |     |
+     *             |      |     +-------\N/S North or South
+     *             |      +-------------/Latitude
+     *             +---------------------UTC of position
+     *
+     *
+     * yyyyy.yy,a,x,xx,x.x,x.x,M,...
+     *     |      | | |   |   |  |
+     *     |      | | |   |   |  +-----\Units of antenna altitude, meters
+     *     |      | | |   |   +--------/Antenna altitude above/below mean-sea-level (geoid)
+     *     |      | | |   +-------------Horizontal dilution of precision
+     *     |      | | +-----------------Number of satellites in use, 00-12,
+     *     |      | |                   may be different from the number in view
+     *     |      | +-------------------GPS quality indicator [1]
+     *     |      +--------------------\E/W East or West
+     *     +---------------------------/Longitude
+     *
+     *
+     * x.x,M,x.x,xxxx*hh<CR><LF>
+     *     |  |  |   |
+     *     |  |  |   +-------------------Differential reference station ID, 0000-1023
+     *     |  |  +-----------------------Age of Differential GPS data [2]
+     *     |  +-------------------------\Units of geoidal seperation, meters
+     *     +----------------------------/Geoidal seperation [3]
+     */
     {
-        return;
+        SentenceBuilder b("GNGGA");
+
+        // Time
+        b.addComplexField("%02d%02d%02d.%03u",
+                          tm->tm_hour, tm->tm_min, tm->tm_sec,
+                          static_cast<unsigned>((fix.utc_usec / 1000U) % 1000U));
+
+        // Lat/Lon
+        b.addLatitude(fix.lat);
+        b.addLongitude(fix.lon);
+
+        // Quality indicator [0 - no fix, 1 - valid fix, 2 - differential fix]
+        b.addField("%u", fix_valid ? 1 : 0);
+
+        // Sats in use
+        b.addField("%02u", fix.sats_used);
+
+        // HDOP (if HDOP is not initialized yet, use PDOP)
+        b.addField("%.1f", (auxiliary.hdop > 1e-9f) ? auxiliary.hdop : fix.pdop);
+
+        // Altitude [meters]
+        b.addField("%.3f", fix.height_amsl);
+        b.addField('M');
+
+        // Geoidal separation
+        b.addField("%.1f", fix.height_wgs84 - fix.height_amsl);
+        b.addField('M');
+
+        // Differential data
+        b.addEmptyField();
+        b.addEmptyField();
+
+        outputSentence(b);
     }
 }
 
