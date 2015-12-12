@@ -326,8 +326,9 @@ void processAirSensor()
 }
 
 
-// This structure is shared with processGNSSFix()
+// This structures are shared
 static gnss::Auxiliary auxiliary;
+static gnss::Fix fix;
 
 void processGNSSAux()
 {
@@ -335,12 +336,88 @@ void processGNSSAux()
     {
         return;
     }
+
+    static Decimator decimator(10);
+    if (!decimator.step())
+    {
+        return;
+    }
+
+    static bool alternator = false;
+
+    /*
+     * $--GSA,a,x,xx,xx,xx,xx,xx,xx,xx,...
+     *     | | |  |  |  |  |  |  |
+     *     | | |  |  |  |  |  |  +---|
+     *     | | |  |  |  |  |  +------|
+     *     | | |  |  |  |  +---------|
+     *     | | |  |  |  +------------|
+     *     | | |  |  +---------------|
+     *     | | |  +------------------|PRN numbers of satellites used in
+     *     | | +---------------------/solution (null for unused fileds)
+     *     | +------------------------Mode: 1 = Fix not available
+     *     |                                2 = 2D
+     *     |                                3 = 3D
+     *     +--------------------------Mode: M = Manual, forced to operate in 2D or 3D mode
+     *                                         A = Automatic, allowed to automatically switch 2D/3D
+     *
+     * xx,xx,xx,xx,xx,x.x,x.x,x.x*hh<CR><LF>
+     * |  |  |  |  |   |   |   |
+     * |  |  |  |  |   |   |   +------VDOP
+     * |  |  |  |  |   |   +----------HDOP
+     * |  |  |  |  |   +--------------PDOP
+     * |  |  |  |  +-----------------\
+     * |  |  |  +--------------------|
+     * |  |  +-----------------------|
+     * |  +--------------------------|
+     * +-----------------------------|
+     */
+    if (alternator)
+    {
+        SentenceBuilder b("GNGSA");
+
+        // Mode
+        b.addField('A');
+        b.addField("%u", (fix.mode == fix.Mode::Fix2D) ? 2 : ((fix.mode == fix.Mode::Fix3D) ? 3 : 1));
+
+        // Sat numbers
+        constexpr unsigned TargetNumber = 12;
+        unsigned num_added = 0;
+        for (unsigned sat_idx = 0; sat_idx < auxiliary.MaxSats; sat_idx++)
+        {
+            if (auxiliary.sats[sat_idx].used)
+            {
+                b.addField("%u", auxiliary.sats[sat_idx].sat_id);
+                num_added++;
+                if (num_added >= TargetNumber)
+                {
+                    break;
+                }
+            }
+        }
+        while (num_added++ < TargetNumber)
+        {
+            b.addEmptyField();
+        }
+
+        // PDOP, HDOP, VDOP
+        b.addField("%.1f", auxiliary.pdop);
+        b.addField("%.1f", auxiliary.hdop);
+        b.addField("%.1f", auxiliary.vdop);
+
+        outputSentence(b);
+    }
+    else
+    {
+
+    }
+
+    alternator = !alternator;
 }
 
 
 void processGNSSFix()
 {
-    static gnss::Fix fix;
     if (!gnss::getFixIfUpdatedSince(fix.ts.mono_usec, fix))
     {
         return;
@@ -425,7 +502,6 @@ void processGNSSFix()
      *             |      +-------------/Latitude
      *             +---------------------UTC of position
      *
-     *
      * yyyyy.yy,a,x,xx,x.x,x.x,M,...
      *     |      | | |   |   |  |
      *     |      | | |   |   |  +-----\Units of antenna altitude, meters
@@ -436,7 +512,6 @@ void processGNSSFix()
      *     |      | +-------------------GPS quality indicator [1]
      *     |      +--------------------\E/W East or West
      *     +---------------------------/Longitude
-     *
      *
      * x.x,M,x.x,xxxx*hh<CR><LF>
      *     |  |  |   |
