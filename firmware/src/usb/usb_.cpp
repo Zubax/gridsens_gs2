@@ -76,7 +76,7 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     SerialDriver* const gnss_port = &gnss::getSerialPort();
     SerialUSBDriver* const cli_port  = usb_cdc_acm::getSerialUSBDriver();
 
-    while (usb_cdc_acm::isConnected())
+    while (usb_cdc_acm::getState() == usb_cdc_acm::State::Connected)
     {
         copy_once(&gnss_port->iqueue, &cli_port->oqueue);
         copy_once(&cli_port->iqueue, &gnss_port->oqueue);
@@ -214,7 +214,11 @@ const ::ShellCommand HandlerTable[] =
 
 class USBControlThread : public chibios_rt::BaseStaticThread<1024>
 {
-    static constexpr unsigned NMEABaudrateThreshold = 115200;
+    static bool isBaudrateValidForNMEA(unsigned baudrate)
+    {
+        // These are standard baud rates
+        return (baudrate >= 4800) && (baudrate <= 38400);
+    }
 
     static void initUSB()
     {
@@ -252,28 +256,30 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
         Thread* shelltp = nullptr;
         for (;;)
         {
-            ::sleep(1);
+            const bool connected = usb_cdc_acm::waitForStateChange(1000) == usb_cdc_acm::State::Connected;
 
-            if (usb_cdc_acm::isConnected())
+            if (connected)
             {
-                const auto baudrate = usb_cdc_acm::getBaudRate();
+                const auto baudrate = unsigned(usb_cdc_acm::getBaudRate());
 
                 if (shelltp == nullptr)
                 {
-                    ::lowsyslog("Starting shell [%u]\n", unsigned(baudrate));
+                    ::lowsyslog("Starting shell [br %u]\n", baudrate);
                     shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
                     sysSetStdOutStream(shell_config.sc_channel);
                 }
 
-                if ((baudrate < NMEABaudrateThreshold) && !nmea::hasOutput(&usb_output))
+                const bool nmea_baudrate = isBaudrateValidForNMEA(baudrate);
+
+                if (nmea_baudrate && !nmea::hasOutput(&usb_output))
                 {
-                    ::lowsyslog("Adding USB NMEA output\n");
+                    ::lowsyslog("Adding USB NMEA output [br %u]\n", baudrate);
                     nmea::addOutput(&usb_output);
                 }
 
-                if ((baudrate >= NMEABaudrateThreshold) && nmea::hasOutput(&usb_output))
+                if (!nmea_baudrate && nmea::hasOutput(&usb_output))
                 {
-                    ::lowsyslog("Removing USB NMEA output [baudrate]\n");
+                    ::lowsyslog("Removing USB NMEA output [br %u]\n", baudrate);
                     nmea::removeOutput(&usb_output);
                 }
             }

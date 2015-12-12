@@ -70,8 +70,8 @@
  * instead it must be configured as output and set to high level, which is done here.
  */
 #define VAL_GPIOACRL            0x88888A88                      // 7..0
-#define VAL_GPIOACRH            0x88800828                      // 15..8
-#define VAL_GPIOAODR            ((1 << 9))                      // USB requires that PA9 is HIGH
+#define VAL_GPIOACRH            0x88800888                      // 15..8
+#define VAL_GPIOAODR            0x00000000
 
 #define VAL_GPIOBCRL            0xEE222888
 #define VAL_GPIOBCRH            0x88488A48

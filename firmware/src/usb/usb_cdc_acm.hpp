@@ -32,7 +32,15 @@ void init(const DeviceSerialNumber& device_serial);
 
 SerialUSBDriver* getSerialUSBDriver();
 
-bool isConnected();
+enum class State
+{
+    Disconnected,
+    Connected
+};
+
+State waitForStateChange(unsigned timeout_ms);
+
+State getState();
 
 std::uint32_t getBaudRate();
 

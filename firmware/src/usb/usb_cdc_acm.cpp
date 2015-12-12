@@ -296,10 +296,24 @@ static const USBEndpointConfig ep2config =      ///< EP1 initialization structur
 static SerialUSBDriver SDU1;
 
 /*
+ * This semaphore allows to block until USB event occurs.
+ */
+static chibios_rt::CounterSemaphore usb_event_semaphore(0);
+
+static void signalUsbEvent(USBDriver*)
+{
+    chSysLockFromIsr();
+    usb_event_semaphore.signalI();
+    chSysUnlockFromIsr();
+}
+
+/*
  * Handles the USB driver global events.
  */
-static void usb_event(USBDriver *usbp, usbevent_t event)
+static void usb_event(USBDriver* usbp, usbevent_t event)
 {
+    signalUsbEvent(usbp);
+
     switch (event)
     {
     case USB_EVENT_RESET:
@@ -361,18 +375,20 @@ struct LineCoding : public cdc_linecoding_t
  */
 bool sduRequestsHookWrapper(USBDriver* usbp)
 {
+    signalUsbEvent(usbp);
+
     if ((usbp->setup[0] & USB_RTYPE_TYPE_MASK) == USB_RTYPE_TYPE_CLASS)
     {
         switch (usbp->setup[1])
         {
         case CDC_GET_LINE_CODING:
         {
-            usbSetupTransfer(usbp, reinterpret_cast<uint8_t*>(&line_coding), sizeof(line_coding), NULL);
+            usbSetupTransfer(usbp, reinterpret_cast<uint8_t*>(&line_coding), sizeof(line_coding), &signalUsbEvent);
             return true;
         }
         case CDC_SET_LINE_CODING:
         {
-            usbSetupTransfer(usbp, reinterpret_cast<uint8_t*>(&line_coding), sizeof(line_coding), NULL);
+            usbSetupTransfer(usbp, reinterpret_cast<uint8_t*>(&line_coding), sizeof(line_coding), &signalUsbEvent);
             return true;
         }
         default:
@@ -451,9 +467,15 @@ SerialUSBDriver* getSerialUSBDriver()
     return &SDU1;
 }
 
-bool isConnected()
+State waitForStateChange(unsigned timeout_ms)
 {
-    return SDU1.config->usbp->state == USB_ACTIVE;
+    (void)usb_event_semaphore.waitTimeout(MS2ST(timeout_ms));
+    return getState();
+}
+
+State getState()
+{
+    return (USBD1.state == USB_ACTIVE) ? State::Connected : State::Disconnected;
 }
 
 std::uint32_t getBaudRate()
