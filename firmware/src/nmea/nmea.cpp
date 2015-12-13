@@ -205,14 +205,14 @@ public:
     void addLatitude(double deg)
     {
         const auto t = degToDegMinSign(deg, 'N', 'S');
-        addComplexField("%02u%09.6f", t.deg, t.min);
+        addComplexField("%02u%08.5f", t.deg, t.min);
         addField(t.sign);
     }
 
     void addLongitude(double deg)
     {
         const auto t = degToDegMinSign(deg, 'E', 'W');
-        addComplexField("%03u%09.6f", t.deg, t.min);
+        addComplexField("%03u%08.5f", t.deg, t.min);
         addField(t.sign);
     }
 
@@ -395,7 +395,7 @@ void processGNSSAux()
      */
     if (alternator)
     {
-        SentenceBuilder b("GNGSA");
+        SentenceBuilder b("GPGSA");
 
         // Mode
         b.addField('A');
@@ -408,7 +408,7 @@ void processGNSSAux()
         {
             if (auxiliary.sats[sat_idx].used)
             {
-                b.addField("%u", auxiliary.sats[sat_idx].sat_id);
+                b.addField("%02u", auxiliary.sats[sat_idx].sat_id);
                 num_added++;
                 if (num_added >= TargetNumber)
                 {
@@ -422,9 +422,9 @@ void processGNSSAux()
         }
 
         // PDOP, HDOP, VDOP
-        b.addField("%.1f", auxiliary.pdop);
-        b.addField("%.1f", auxiliary.hdop);
-        b.addField("%.1f", auxiliary.vdop);
+        b.addField("%.2f", auxiliary.pdop);
+        b.addField("%.2f", auxiliary.hdop);
+        b.addField("%.2f", auxiliary.vdop);
 
         outputSentence(b);
     }
@@ -451,12 +451,12 @@ void processGNSSAux()
         const unsigned num_messages = (total_num_sats + 3) / 4;
         for (unsigned msg_num = 1; msg_num <= num_messages; msg_num++)
         {
-            SentenceBuilder b("GNGSV");
+            SentenceBuilder b("GPGSV");
 
             // Common fields
             b.addField("%u", num_messages);
             b.addField("%u", msg_num);
-            b.addField("%u", total_num_sats);
+            b.addField("%02u", total_num_sats);
 
             // Per sat info
             unsigned remaining_sats_in_message = 4;
@@ -526,12 +526,12 @@ void processGNSSFix()
      *     +----------------------------/Magnetic variation, degrees
      */
     {
-        SentenceBuilder b("GNRMC");
+        SentenceBuilder b("GPRMC");
 
         // Time
-        b.addComplexField("%02d%02d%02d.%03u",
+        b.addComplexField("%02d%02d%02d.%02u",
                           tm->tm_hour, tm->tm_min, tm->tm_sec,
-                          static_cast<unsigned>((fix.utc_usec / 1000U) % 1000U));
+                          static_cast<unsigned>((fix.utc_usec / 10000U) % 100U));
 
         // Status
         b.addField(fix_valid ? 'A' : 'V');
@@ -543,7 +543,7 @@ void processGNSSFix()
         // Speed [knots]
         const float speed = std::sqrt(fix.ned_velocity[0] * fix.ned_velocity[0] +
                                       fix.ned_velocity[1] * fix.ned_velocity[1]);
-        b.addField("%06.2f", speed * 1.943844f);
+        b.addField("%.3f", speed * 1.943844f);
 
         // Track [degrees]
         float track_deg = std::atan2(fix.ned_velocity[1], fix.ned_velocity[0]) * float(180.0 / M_PI);
@@ -590,12 +590,12 @@ void processGNSSFix()
      *     +----------------------------/Geoidal seperation [3]
      */
     {
-        SentenceBuilder b("GNGGA");
+        SentenceBuilder b("GPGGA");
 
         // Time
-        b.addComplexField("%02d%02d%02d.%03u",
+        b.addComplexField("%02d%02d%02d.%02u",
                           tm->tm_hour, tm->tm_min, tm->tm_sec,
-                          static_cast<unsigned>((fix.utc_usec / 1000U) % 1000U));
+                          static_cast<unsigned>((fix.utc_usec / 10000U) % 100U));
 
         // Lat/Lon
         b.addLatitude(fix.lat);
@@ -608,7 +608,7 @@ void processGNSSFix()
         b.addField("%02u", fix.sats_used);
 
         // HDOP (if HDOP is not initialized yet, use PDOP)
-        b.addField("%.1f", (auxiliary.hdop > 1e-9f) ? auxiliary.hdop : fix.pdop);
+        b.addField("%.2f", (auxiliary.hdop > 1e-9f) ? auxiliary.hdop : fix.pdop);
 
         // Altitude [meters]
         b.addField("%.3f", fix.height_amsl);

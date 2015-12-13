@@ -217,7 +217,7 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
     static bool isBaudrateValidForNMEA(unsigned baudrate)
     {
         // These are standard baud rates
-        return (baudrate >= 4800) && (baudrate <= 38400);
+        return (baudrate >= 4800) && (baudrate <= 57600);
     }
 
     static void initUSB()
