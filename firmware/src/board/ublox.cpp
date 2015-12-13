@@ -355,6 +355,9 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
     fix_.ned_velocity[1] = pvt.velE / 1e3F;
     fix_.ned_velocity[2] = pvt.velD / 1e3F;
 
+    // Heading of motion
+    fix_.heading_of_motion = pvt.headMot * 1e-5F;
+
     // Uncertainties
     static const auto variance_1e3 = [](const std::uint32_t x) { return (x / 1e3F) * (x / 1e3F); };
 

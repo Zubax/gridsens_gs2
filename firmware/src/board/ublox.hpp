@@ -93,6 +93,7 @@ struct Fix
     float height_wgs84;           ///< meters
     float height_amsl;            ///< meters
     float ned_velocity[3];        ///< North-east-down, m/s
+    float heading_of_motion;      ///< deg
     float pdop;
     float position_covariance[9]; ///< Lat-lon-alt, row major, m^2
     float velocity_covariance[9]; ///< North-east-down, row major, (m/s)^2

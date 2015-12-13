@@ -546,12 +546,7 @@ void processGNSSFix()
         b.addField("%.3f", speed * 1.943844f);
 
         // Track [degrees]
-        float track_deg = std::atan2(fix.ned_velocity[1], fix.ned_velocity[0]) * float(180.0 / M_PI);
-        if (track_deg < 0)
-        {
-            track_deg += 360.0f;
-        }
-        b.addField("%05.1f", track_deg);
+        b.addField("%05.1f", fix.heading_of_motion);
 
         // Date
         b.addComplexField("%02d%02d%02d",
