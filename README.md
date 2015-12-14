@@ -5,8 +5,8 @@ Zubax GNSS is a high performance open source positioning module for outdoor envi
 interfaced via doubly redundant [UAVCAN bus](http://uavcan.org) and USB.
 It includes a state of the art GPS/GLONASS receiver, a high precision barometer and a thermocompensated 3-axis compass.
 
-* [LEARN MORE](http://zubax.com/product/zubax-gnss)
-* [DOCUMENTATION AND TUTORIALS](http://docs.zubax.com/Zubax_GNSS)
+* [**LEARN MORE**](http://zubax.com/product/zubax-gnss-2)
+* [**DOCUMENTATION AND TUTORIALS**](http://docs.zubax.com/zubax_gnss_2)
 
 ## Revisions
 
