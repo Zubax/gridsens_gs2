@@ -1,9 +1,12 @@
 Zubax GNSS
 ==========
 
-Zubax GNSS is a high performance open source positioning module for outdoor environments,
-interfaced via doubly redundant [UAVCAN bus](http://uavcan.org) and USB.
-It includes a state of the art GPS/GLONASS receiver, a high precision barometer and a thermocompensated 3-axis compass.
+Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
+It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter,
+and a 3-axis compass with thermal compensation.
+Zubax GNSS 2 supports variety of standard protocols, which ensures compatibility with most of existing
+software and hardware: [UAVCAN](/uavcan) (over CAN bus), NMEA 0183 (over USB and UART),
+and u-Blox M8 protocol.
 
 * [**LEARN MORE**](http://zubax.com/product/zubax-gnss-2)
 * [**DOCUMENTATION AND TUTORIALS**](http://docs.zubax.com/zubax_gnss_2)
