@@ -280,10 +280,15 @@ void processMagnetometer()
     const auto x = s.magnetic_field_strength[0];
     const auto y = s.magnetic_field_strength[1];
 
-    float heading_deg = std::atan2(y, x) * float(180.0 / M_PI);
+    float heading_deg = std::atan2(x, y) * float(180.0 / M_PI);
+    heading_deg -= 90.f;
     if (heading_deg < 0.f)
     {
         heading_deg += 360.f;
+    }
+    if (heading_deg > 360.f)
+    {
+        heading_deg -= 360.f;
     }
 
     // http://edu-observatory.org/gps/NMEA_0183.txt
