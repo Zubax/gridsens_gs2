@@ -80,7 +80,7 @@ SERIAL_CLI_PORT_NUMBER = 3
 CPPWARN := -Wundef -Wno-error=undef
 
 RELEASE_OPT = -Os -fomit-frame-pointer
-DEBUG_OPT = -Os -g3
+DEBUG_OPT = -Os -g3 -DDISABLE_WATCHDOG=1
 
 LDSCRIPT = ld.ld
 
