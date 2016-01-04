@@ -98,15 +98,9 @@ class AppDescriptor(object):
 
 
 class FirmwareImage(object):
-    def __init__(self, path_or_file, mode="r"):
-        if getattr(path_or_file, "read", None):
-            self._file = path_or_file
-            self._do_close = False
-            self._padding = 0
-        else:
-            self._file = open(path_or_file, (mode + "b").replace("bb", "b"))
-            self._do_close = True
-            self._padding = 4
+    def __init__(self, path, mode="r"):
+        self._file = open(path, (mode + "b").replace("bb", "b"))
+        self._padding = 4
 
         if "r" in mode:
             self._contents = BytesIO(self._file.read())
@@ -138,8 +132,7 @@ class FirmwareImage(object):
             if self._padding:
                 self._file.write(b'\xff' * self._padding)
 
-        if self._do_close:
-            self._file.close()
+        self._file.close()
 
     def _write_descriptor_raw(self):
         # Seek to the appropriate location, write the serialized
@@ -195,7 +188,7 @@ class FirmwareImage(object):
             self._contents.seek(0, os.SEEK_END)
             self._length = self._contents.tell()
             if self._padding:
-                fill = self._length % self._padding
+                fill = self._padding - (self._length % self._padding)
                 if fill:
                     self._length += fill
                 self._padding = fill
