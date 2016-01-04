@@ -83,6 +83,12 @@ bool io(const std::array<uint8_t, TxSize>& tx, std::array<uint8_t, RxSize>& rx)
     const unsigned Address = 0x1E;
     i2cAcquireBus(&I2CD);
     const msg_t status = i2cMasterTransmitTimeout(&I2CD, Address, tx.data(), TxSize, rx.data(), RxSize, MS2ST(5));
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
+    if (status != MSG_OK)
+    {
+        os::lowsyslog("Mag i2c st %d err %u\n", int(status), unsigned(i2cGetErrors(&I2CD)));
+    }
+#endif
     i2cReleaseBus(&I2CD);
     return status == MSG_OK;
 }
