@@ -239,14 +239,17 @@ public:
 
 void outputSentence(SentenceBuilder& b)
 {
-    // TODO: Lock the stdout mutex
-    static const auto send_one = [](::BaseChannel* const out, const char* line)
     {
-        chnWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
-        chnWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
-    };
+        os::MutexLocker mlock(os::getStdIOMutex());
 
-    output_registry_.forEach(send_one, b.compile().c_str());
+        static const auto send_one = [](::BaseChannel* const out, const char* line)
+        {
+            chnWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
+            chnWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
+        };
+
+        output_registry_.forEach(send_one, b.compile().c_str());
+    }
 
     /*
      * This delay makes buffer utilization more uniform and predictable.
