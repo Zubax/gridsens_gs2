@@ -625,6 +625,9 @@ class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
 
     void main() override
     {
+        os::watchdog::Timer wdt;
+        wdt.startMSec(1000);
+
         setName("nmea");
 
         systime_t sleep_until = chibios_rt::System::getTime();
@@ -642,10 +645,13 @@ class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
 
         for (;;)
         {
+            wdt.reset();
+
             while (output_registry_.empty())
             {
                 ::usleep(100000);
                 sleep_until = chibios_rt::System::getTime();
+                wdt.reset();
             }
 
             HandlerTable[selector++]();
