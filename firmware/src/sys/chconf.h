@@ -21,7 +21,7 @@
 
 // There is no 32-bit timers on STM32F105
 #define CH_CFG_ST_RESOLUTION            16
-#define CH_CFG_ST_FREQUENCY             1000
+#define CH_CFG_ST_FREQUENCY             2000
 
 #define CH_CFG_USE_SEMAPHORES           TRUE
 

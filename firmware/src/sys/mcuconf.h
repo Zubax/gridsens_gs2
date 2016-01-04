@@ -33,13 +33,13 @@
 #define STM32_PLL2MUL_VALUE                 16
 #define STM32_PLL3MUL_VALUE                 16
 #define STM32_HPRE                          STM32_HPRE_DIV1
-#define STM32_PPRE1                         STM32_PPRE1_DIV4
-#define STM32_PPRE2                         STM32_PPRE2_DIV4
+#define STM32_PPRE1                         STM32_PPRE1_DIV2
+#define STM32_PPRE2                         STM32_PPRE2_DIV2
 #define STM32_ADCPRE                        STM32_ADCPRE_DIV4
 #define STM32_OTG_CLOCK_REQUIRED            TRUE
 #define STM32_OTGFSPRE                      STM32_OTGFSPRE_DIV3
 #define STM32_I2S_CLOCK_REQUIRED            FALSE
-#define STM32_MCOSEL                        STM32_MCOSEL_PLL3
+#define STM32_MCOSEL                        STM32_MCOSEL_NOCLOCK
 #define STM32_RTCSEL                        STM32_RTCSEL_HSEDIV
 #define STM32_PVD_ENABLE                    FALSE
 #define STM32_PLS                           STM32_PLS_LEV0
