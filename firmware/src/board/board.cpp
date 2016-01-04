@@ -50,8 +50,8 @@ namespace board
 static const I2CConfig I2CCfg1 =
 {
     OPMODE_I2C,
-    400000,
-    FAST_DUTY_CYCLE_2,
+    100000,
+    STD_DUTY_CYCLE,
 };
 
 void init()
