@@ -26,9 +26,7 @@
 #include <uavcan/equipment/ahrs/MagneticFieldStrength.hpp>
 
 #include <ch.hpp>
-#include <zubax_chibios/sys/sys.h>
-#include <zubax_chibios/config/config.hpp>
-#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
 namespace magnetometer
@@ -43,15 +41,14 @@ const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   
 
 const float GaussScale = 0.92e-03;
 
-zubax_chibios::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
+os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
-zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-mag",
-                                                         20000, 20000, 1000000);
+os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 20000, 20000, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-mag",
-                                                  16,
-                                                  uavcan::TransferPriority::NumericallyMin,
-                                                  uavcan::TransferPriority::NumericallyMax);
+os::config::Param<unsigned> param_prio("uavcan.prio-mag",
+                                       16,
+                                       uavcan::TransferPriority::NumericallyMin,
+                                       uavcan::TransferPriority::NumericallyMax);
 
 chibios_rt::Mutex last_sample_mutex;
 Sample last_sample;
@@ -87,7 +84,7 @@ bool io(const std::array<uint8_t, TxSize>& tx, std::array<uint8_t, RxSize>& rx)
     i2cAcquireBus(&I2CD);
     const msg_t status = i2cMasterTransmitTimeout(&I2CD, Address, tx.data(), TxSize, rx.data(), RxSize, MS2ST(5));
     i2cReleaseBus(&I2CD);
-    return status == RDY_OK;
+    return status == MSG_OK;
 }
 
 bool writeCraCrbMode(uint8_t cra, uint8_t crb, uint8_t mode)
@@ -128,7 +125,7 @@ bool tryReadRawData(int16_t out_xyz[3])
     std::array<uint8_t, 6> rx;
     if (!io(tx, rx))
     {
-        ::lowsyslog("Mag read failed\n");
+        ::os::lowsyslog("Mag read failed\n");
         return false;
     }
     out_xyz[0] = (((int16_t)rx[0]) << 8) | rx[1];  // X
@@ -149,7 +146,7 @@ bool trySelfTest(const bool polarity)
                          0b11100000,                         // Reg B: Gain=7
                          0b00000000))                        // Mode: Continuous-measurement mode
     {
-        ::lowsyslog("Mag: Failed to begin self test\n");
+        ::os::lowsyslog("Mag: Failed to begin self test\n");
         return false;
     }
 
@@ -166,7 +163,7 @@ bool trySelfTest(const bool polarity)
         }
     }
 
-    ::lowsyslog("Mag self test sample, %s, x/y/z: %d %d %d\n", polarity ? "positive": "negative",
+    ::os::lowsyslog("Mag self test sample, %s, x/y/z: %d %d %d\n", polarity ? "positive": "negative",
                 int(raw_xyz[0]), int(raw_xyz[1]), int(raw_xyz[2]));
 
     /*
@@ -177,7 +174,7 @@ bool trySelfTest(const bool polarity)
         const auto normalized = polarity ? a : -a;
         if ((normalized < LowLimit) || (normalized > HighLimit))
         {
-            ::lowsyslog("Mag self test sample %d is invalid\n", int(a));
+            ::os::lowsyslog("Mag self test sample %d is invalid\n", int(a));
             return false;
         }
     }
@@ -192,13 +189,13 @@ bool tryInit()
      */
     if (!trySelfTest(true))
     {
-        ::lowsyslog("Mag positive self test failed\n");
+        ::os::lowsyslog("Mag positive self test failed\n");
         return false;
     }
 
     if (!trySelfTest(false))
     {
-        ::lowsyslog("Mag negative self test failed\n");
+        ::os::lowsyslog("Mag negative self test failed\n");
         return false;
     }
 
@@ -209,7 +206,7 @@ bool tryInit()
                          0b00100000,  // Reg B: Default gain
                          0b00000000)) // Mode: Continuous measurement
     {
-        ::lowsyslog("Mag: Failed to begin normal operation\n");
+        ::os::lowsyslog("Mag: Failed to begin normal operation\n");
         return false;
     }
 
@@ -294,9 +291,9 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
     }
 
 public:
-    msg_t main() override
+    void main() override
     {
-        zubax_chibios::watchdog::Timer wdt;
+        os::watchdog::Timer wdt;
         wdt.startMSec(1000);
         setName("mag");
 
@@ -308,7 +305,7 @@ public:
         while (!tryInit() && !node::hasPendingRestartRequest())
         {
             setStatus(uavcan::protocol::NodeStatus::HEALTH_ERROR);
-            lowsyslog("Mag init failed, will retry...\n");
+            os::lowsyslog("Mag init failed, will retry...\n");
             ::usleep(500000);
             wdt.reset();
         }
@@ -331,22 +328,20 @@ public:
                 publish(vector, variance);
                 setStatus(estimateStatusFromMeasurement(vector));
 
-                last_sample_mutex.lock();
+                os::MutexLocker mlock(last_sample_mutex);
                 last_sample.seq_id++;
                 std::copy(std::begin(vector), std::end(vector), last_sample.magnetic_field_strength);
-                chibios_rt::BaseThread::unlockMutex();
             }
             else
             {
                 setStatus(uavcan::protocol::NodeStatus::HEALTH_ERROR);
             }
 
-            sysSleepUntilChTime(sleep_until);
+            os::sleepUntilChTime(sleep_until);
             wdt.reset();
         }
 
-        lowsyslog("Mag driver terminated\n");
-        return msg_t();
+        os::lowsyslog("Mag driver terminated\n");
     }
 } mag_thread;
 
@@ -359,11 +354,7 @@ void init()
 
 Sample getLastSample()
 {
-    struct L
-    {
-        L() { last_sample_mutex.lock(); }
-        ~L() { chibios_rt::BaseThread::unlockMutex(); }
-    } lock;
+    os::MutexLocker mlock(last_sample_mutex);
     return last_sample;
 }
 

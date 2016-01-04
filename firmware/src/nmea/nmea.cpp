@@ -22,7 +22,7 @@
 #include <cstdio>
 #include <nmea/nmea.hpp>
 #include <uavcan/uavcan.hpp>            // Needed for array type
-#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
 #include <magnetometer.hpp>
@@ -40,31 +40,19 @@ static constexpr unsigned TypicalSentenceLength = 50;
 static constexpr unsigned MinRealBaudRate = 115200;                             ///< For physical UART (not USB)
 static constexpr unsigned DelayAfterSentenceTransmissionMs = TypicalSentenceLength * 1000 / (MinRealBaudRate / 10);
 
-struct Locker
-{
-    Locker(chibios_rt::Mutex& m)
-    {
-        m.lock();
-    }
-    ~Locker()
-    {
-        chibios_rt::BaseThread::unlockMutex();
-    }
-};
-
 
 class OutputRegistry
 {
     static constexpr unsigned MaxOutputs = 3;
-    OutputQueue* outputs_[MaxOutputs] = {};
+    ::BaseChannel* outputs_[MaxOutputs] = {};
     unsigned size_ = 0;
 
     mutable chibios_rt::Mutex mutex_;
 
 public:
-    void add(OutputQueue* const out)
+    void add(::BaseChannel* const out)
     {
-        Locker locker(mutex_);
+        os::MutexLocker locker(mutex_);
         for (auto& x : outputs_)
         {
             if (x == nullptr)
@@ -76,9 +64,9 @@ public:
         }
     }
 
-    void remove(const OutputQueue* const out)
+    void remove(const ::BaseChannel* const out)
     {
-        Locker locker(mutex_);
+        os::MutexLocker locker(mutex_);
         for (auto& x : outputs_)
         {
             if (x == out)
@@ -89,9 +77,9 @@ public:
         }
     }
 
-    bool exists(const OutputQueue* const out) const
+    bool exists(const ::BaseChannel* const out) const
     {
-        Locker locker(mutex_);
+        os::MutexLocker locker(mutex_);
         for (auto& x : outputs_)
         {
             if (x == out)
@@ -104,14 +92,14 @@ public:
 
     bool empty() const
     {
-        Locker locker(mutex_);
+        os::MutexLocker locker(mutex_);
         return 0 == size_;
     }
 
     template <typename Target, typename... Args>
     void forEach(Target target, Args... args)
     {
-        Locker locker(mutex_);
+        os::MutexLocker locker(mutex_);
         for (auto& x : outputs_)
         {
             if (x != nullptr)
@@ -251,10 +239,11 @@ public:
 
 void outputSentence(SentenceBuilder& b)
 {
-    static const auto send_one = [](OutputQueue* const out, const char* line)
+    // TODO: Lock the stdout mutex
+    static const auto send_one = [](::BaseChannel* const out, const char* line)
     {
-        chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
-        chOQWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
+        chnWriteTimeout(out, reinterpret_cast<const unsigned char*>(line), std::strlen(line), TIME_IMMEDIATE);
+        chnWriteTimeout(out, reinterpret_cast<const unsigned char*>("\r\n"), 2, TIME_IMMEDIATE);
     };
 
     output_registry_.forEach(send_one, b.compile().c_str());
@@ -631,7 +620,7 @@ class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
 {
     static constexpr unsigned MinSensorPeriodMSec = 100;
 
-    msg_t main() override
+    void main() override
     {
         setName("nmea");
 
@@ -663,10 +652,8 @@ class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
             }
 
             sleep_until += MS2ST(MinSensorPeriodMSec / NumHandlers);
-            sysSleepUntilChTime(sleep_until);
+            os::sleepUntilChTime(sleep_until);
         }
-
-        return 0;
     }
 } nmea_output_thread;
 
@@ -677,17 +664,17 @@ void init()
     nmea_output_thread.start(LOWPRIO + 3);
 }
 
-void addOutput(OutputQueue* const output)
+void addOutput(::BaseChannel* const output)
 {
     output_registry_.add(output);
 }
 
-void removeOutput(const OutputQueue* const output)
+void removeOutput(const ::BaseChannel* const output)
 {
     output_registry_.remove(output);
 }
 
-bool hasOutput(const OutputQueue* const output)
+bool hasOutput(const ::BaseChannel* const output)
 {
     return output_registry_.exists(output);
 }

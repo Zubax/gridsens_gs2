@@ -19,7 +19,7 @@
 
 #include "ublox.hpp"
 #include <ctime>
-#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/os.hpp>
 
 namespace ublox
 {
@@ -49,7 +49,7 @@ bool MessageReceiver::nextByte(const Timestamps& ts, std::uint8_t byte)
 {
     bool ret_value = false;
 
-    //lowsyslog("%02x ", int(byte));
+    //os::lowsyslog("%02x ", int(byte));
 
     switch (state)
     {
@@ -104,7 +104,7 @@ bool MessageReceiver::nextByte(const Timestamps& ts, std::uint8_t byte)
         else
         {
             // The message is too long, likely invalid
-            lowsyslog("ublox: Msg too long %d\n", int(payload_len_expected));
+            os::lowsyslog("ublox: Msg too long %d\n", int(payload_len_expected));
             reset();
         }
         break;
@@ -141,7 +141,7 @@ bool MessageReceiver::nextByte(const Timestamps& ts, std::uint8_t byte)
         ret_value = (ckc.checksum_a == checksum_a) && (ckc.checksum_b == checksum_b);
         if (!ret_value)
         {
-            lowsyslog("ublox: Invalid checksum\n");
+            os::lowsyslog("ublox: Invalid checksum\n");
         }
         break;
     }
@@ -192,7 +192,7 @@ constexpr unsigned IOManager::ValidBaudRates[];
 
 void IOManager::handleReceivedMessage(const RxMessage& raw_msg)
 {
-    //lowsyslog("ublox: Rx 0x%02x 0x%02x %d\n", int(raw_msg.cls), int(raw_msg.id), int(raw_msg.len));
+    //os::lowsyslog("ublox: Rx 0x%02x 0x%02x %d\n", int(raw_msg.cls), int(raw_msg.id), int(raw_msg.len));
 
     if (auto msg = raw_msg.tryCastTo<msg::ACK_ACK>())
     {
@@ -202,7 +202,7 @@ void IOManager::handleReceivedMessage(const RxMessage& raw_msg)
     }
     else if (auto msg = raw_msg.tryCastTo<msg::ACK_NAK>())
     {
-        lowsyslog("ublox: NAK 0x%02x 0x%02x\n", int(msg->clsID), int(msg->msgID));
+        os::lowsyslog("ublox: NAK 0x%02x 0x%02x\n", int(msg->clsID), int(msg->msgID));
         return;
     }
     else
@@ -214,7 +214,7 @@ void IOManager::handleReceivedMessage(const RxMessage& raw_msg)
     }
 }
 
-bool IOManager::configure(zubax_chibios::watchdog::Timer& wdt)
+bool IOManager::configure(os::watchdog::Timer& wdt)
 {
     auto prt_uart = msg::CFG_PRT_UART();
     prt_uart.portID = msg::CFG_PRT_UART::PortID::UART1;
@@ -229,7 +229,7 @@ bool IOManager::configure(zubax_chibios::watchdog::Timer& wdt)
         wdt.reset();
         const auto last_msg_ts = last_received_msg_.mono_usec;
 
-        lowsyslog("ublox: Trying baudrate %u...\n", baudrate);
+        os::lowsyslog("ublox: Trying baudrate %u...\n", baudrate);
         rx_.reset();
         platform_.portSetBaudRate(baudrate);
 
@@ -237,7 +237,7 @@ bool IOManager::configure(zubax_chibios::watchdog::Timer& wdt)
         prt_uart.baudRate = baudrate;
         if (sendAndWaitAck(Message::make(prt_uart)) || (last_received_msg_.mono_usec > last_msg_ts))
         {
-            lowsyslog("ublox: Baudrate match %u\n", baudrate);
+            os::lowsyslog("ublox: Baudrate match %u\n", baudrate);
             baudrate_detected = true;
             break;
         }
@@ -245,7 +245,7 @@ bool IOManager::configure(zubax_chibios::watchdog::Timer& wdt)
 
     if (!baudrate_detected)
     {
-        lowsyslog("Failed to detect baudrate\n");
+        os::lowsyslog("Failed to detect baudrate\n");
         return false;
     }
 
@@ -451,7 +451,7 @@ void Driver::handleSAT(const Timestamps& ts, const msg::NAV_SAT& sat)
     (void)ts;
     if (sat.version != msg::NAV_SAT::MsgVersion)
     {
-        lowsyslog("ublox: NAV-SAT of unsupported version %i\n", int(sat.version));
+        os::lowsyslog("ublox: NAV-SAT of unsupported version %i\n", int(sat.version));
         return;
     }
 
@@ -507,7 +507,7 @@ void Driver::handleReceivedMessage(const RxMessage& raw_msg)
     }
     else
     {
-        lowsyslog("ublox: Unknown message: class=0x%02x id=0x%02x payload_len=%d\n",
+        os::lowsyslog("ublox: Unknown message: class=0x%02x id=0x%02x payload_len=%d\n",
                   int(raw_msg.cls), int(raw_msg.id), int(raw_msg.len));
     }
 }
@@ -521,7 +521,7 @@ bool Driver::configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_
     return io_.sendAndWaitAck(Message::make(msg));
 }
 
-bool Driver::configureGnss(zubax_chibios::watchdog::Timer& wdt)
+bool Driver::configureGnss(os::watchdog::Timer& wdt)
 {
     // Nav rate
     wdt.reset();
@@ -536,7 +536,7 @@ bool Driver::configureGnss(zubax_chibios::watchdog::Timer& wdt)
         rate->timeRef = msg::CFG_RATE::TimeRef::UTC;
         if (!io_.sendAndWaitAck(Message::make(*rate)))
         {
-            lowsyslog("ublox: CFG-RATE failed\n");
+            os::lowsyslog("ublox: CFG-RATE failed\n");
             return false;
         }
     }
@@ -548,12 +548,12 @@ bool Driver::configureGnss(zubax_chibios::watchdog::Timer& wdt)
         auto mon_gnss_ptr = io_.poll<msg::MON_GNSS>();
         if (mon_gnss_ptr == nullptr)
         {
-            lowsyslog("ublox: Failed to poll MON-GNSS\n");
+            os::lowsyslog("ublox: Failed to poll MON-GNSS\n");
             return false;
         }
         mon_gnss = *mon_gnss_ptr;
     }
-    lowsyslog("ublox: MON-GNSS supported=%u default=%u enabled=%u simultaneous=%u\n",
+    os::lowsyslog("ublox: MON-GNSS supported=%u default=%u enabled=%u simultaneous=%u\n",
               unsigned(mon_gnss.supported), unsigned(mon_gnss.default_),
               unsigned(mon_gnss.enabled), unsigned(mon_gnss.simultaneous));
     /*
@@ -569,7 +569,7 @@ bool Driver::configureGnss(zubax_chibios::watchdog::Timer& wdt)
         nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_2g;
         if (!io_.sendAndWaitAck(Message::make(*nav5)))
         {
-            lowsyslog("ublox: CFG-NAV5 failed\n");
+            os::lowsyslog("ublox: CFG-NAV5 failed\n");
             return false;
         }
     }
@@ -608,7 +608,7 @@ bool Driver::configureMessages()
     return true;
 }
 
-bool Driver::configure(const Config& cfg, zubax_chibios::watchdog::Timer& wdt)
+bool Driver::configure(const Config& cfg, os::watchdog::Timer& wdt)
 {
     wdt.reset();
     if (!io_.on_message)

@@ -22,6 +22,7 @@
 #include <hal.h>
 #include <cstring>
 #include "usb_cdc_acm.hpp"
+#include <zubax_chibios/os.hpp>
 
 namespace usb_cdc_acm
 {
@@ -302,9 +303,8 @@ static chibios_rt::CounterSemaphore usb_event_semaphore(0);
 
 static void signalUsbEvent(USBDriver*)
 {
-    chSysLockFromIsr();
+    os::CriticalSectionLocker csl;
     usb_event_semaphore.signalI();
-    chSysUnlockFromIsr();
 }
 
 /*
@@ -326,7 +326,7 @@ static void usb_event(USBDriver* usbp, usbevent_t event)
     }
     case USB_EVENT_CONFIGURED:
     {
-        chSysLockFromIsr();
+        os::CriticalSectionLocker csl;
 
         /*
          * Enables the endpoints specified into the configuration.
@@ -338,8 +338,6 @@ static void usb_event(USBDriver* usbp, usbevent_t event)
 
         // Resetting the state of the CDC subsystem.
         sduConfigureHookI(&SDU1);
-
-        chSysUnlockFromIsr();
         return;
     }
     case USB_EVENT_SUSPEND:
@@ -469,7 +467,7 @@ SerialUSBDriver* getSerialUSBDriver()
 
 State waitForStateChange(unsigned timeout_ms)
 {
-    (void)usb_event_semaphore.waitTimeout(MS2ST(timeout_ms));
+    (void)usb_event_semaphore.wait(MS2ST(timeout_ms));
     return getState();
 }
 

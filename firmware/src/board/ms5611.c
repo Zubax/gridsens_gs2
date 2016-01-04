@@ -160,7 +160,7 @@ bool ms5611Reset(Ms5611* ms5611)
     (void)ms5611;
 
     uint8_t buf_tx[] = { Ms5611Cmd_Reset };
-    msg_t status = RDY_OK;
+    msg_t status = MSG_OK;
 
     i2cAcquireBus(&I2CD1);
     {
@@ -169,7 +169,7 @@ bool ms5611Reset(Ms5611* ms5611)
     i2cReleaseBus(&I2CD1);
 
     chThdSleepMilliseconds(5);
-    return status == RDY_OK;
+    return status == MSG_OK;
 }
 
 /**
@@ -184,7 +184,7 @@ bool ms5611GetProm(Ms5611* ms5611)
     {
         const uint8_t tx_arr[] = { Ms5611Cmd_PromBase + (i * 2) };
         uint8_t rx_arr[] = { 0x00, 0x00 };
-        msg_t status = ~RDY_OK;
+        msg_t status = ~MSG_OK;
 
         i2cAcquireBus(&I2CD1);
         {
@@ -192,7 +192,7 @@ bool ms5611GetProm(Ms5611* ms5611)
         }
         i2cReleaseBus(&I2CD1);
 
-        if (status != RDY_OK)
+        if (status != MSG_OK)
         {
             return false;
         }
@@ -218,7 +218,7 @@ static bool convertDx(Ms5611Cmd cmd, uint32_t* out)
     }
 
     uint8_t rx_arr[] = { 0, 0, 0 };
-    msg_t status = ~RDY_OK;
+    msg_t status = ~MSG_OK;
 
     /*
      * Request conversion
@@ -230,7 +230,7 @@ static bool convertDx(Ms5611Cmd cmd, uint32_t* out)
     }
     i2cReleaseBus(&I2CD1);
 
-    if (status != RDY_OK)
+    if (status != MSG_OK)
     {
         return false;
     }
@@ -247,7 +247,7 @@ static bool convertDx(Ms5611Cmd cmd, uint32_t* out)
     }
     i2cReleaseBus(&I2CD1);
 
-    if (status != RDY_OK)
+    if (status != MSG_OK)
     {
         return false;
     }

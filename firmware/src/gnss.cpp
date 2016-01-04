@@ -26,9 +26,7 @@
 #include <uavcan/equipment/gnss/Auxiliary.hpp>
 
 #include <ch.hpp>
-#include <zubax_chibios/sys/sys.h>
-#include <zubax_chibios/config/config.hpp>
-#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
 namespace gnss
@@ -38,35 +36,29 @@ namespace
 
 SerialDriver* const serial_port = &SD2;
 
-zubax_chibios::config::Param<unsigned> param_gnss_fix_period_usec("uavcan.pubp-fix",
-                                                                  100000, 66666, 2000000);
+os::config::Param<unsigned> param_gnss_fix_period_usec("uavcan.pubp-fix",
+                                                       100000, 66666, 2000000);
 
-zubax_chibios::config::Param<unsigned> param_gnss_aux_period_usec("uavcan.pubp-aux",
-                                                                  1000000, 100000, 1000000);
+os::config::Param<unsigned> param_gnss_aux_period_usec("uavcan.pubp-aux",
+                                                       1000000, 100000, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-fix",
-                                                           16,
-                                                           uavcan::TransferPriority::NumericallyMin,
-                                                           uavcan::TransferPriority::NumericallyMax);
+os::config::Param<unsigned> param_gnss_fix_prio("uavcan.prio-fix",
+                                                16,
+                                                uavcan::TransferPriority::NumericallyMin,
+                                                uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-aux",
-                                                           20,
-                                                           uavcan::TransferPriority::NumericallyMin,
-                                                           uavcan::TransferPriority::NumericallyMax);
+os::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-aux",
+                                                20,
+                                                uavcan::TransferPriority::NumericallyMin,
+                                                uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.warn_dimens", 0, 0, 3);
-zubax_chibios::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
+os::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.warn_dimens", 0, 0, 3);
+os::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
 
 
 chibios_rt::Mutex last_sample_mutex;
 Auxiliary last_sample_aux;
 Fix last_sample_fix;
-
-struct LastSampleMutexLocker
-{
-    LastSampleMutexLocker()  { last_sample_mutex.lock(); }
-    ~LastSampleMutexLocker() { chibios_rt::BaseThread::unlockMutex(); }
-};
 
 
 std::uint16_t computeNumLeapSecondsFromGpsLeapSeconds(std::uint16_t gps_leaps)
@@ -218,7 +210,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     unsigned warn_min_fix_dimensions_ = 0;
     unsigned warn_min_sats_used_ = 0;
 
-    mutable zubax_chibios::watchdog::Timer watchdog_;
+    mutable os::watchdog::Timer watchdog_;
     mutable Platform platform_;
     mutable ublox::Driver driver_ = ublox::Driver(platform_);
 
@@ -244,7 +236,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
         while (shouldKeepGoing() && !driver_.configure(cfg, watchdog_))
         {
-            lowsyslog("GNSS driver init failed\n");
+            os::lowsyslog("GNSS driver init failed\n");
             pauseOneSec();
         }
     }
@@ -278,12 +270,12 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         }
 
         // This is very slow, updating in the last order in order to not delay the data
-        LastSampleMutexLocker locker;
+        os::MutexLocker mlock(last_sample_mutex);
         last_sample_fix = fix;
     }
 
 public:
-    msg_t main() override
+    void main() override
     {
         watchdog_.startMSec(1000);
         setName("gnss");
@@ -296,7 +288,7 @@ public:
             {
                 publishAuxiliary(driver_.getFix(), aux);
                 // This is very slow, updating in the last order in order to not delay the data
-                LastSampleMutexLocker locker;
+                os::MutexLocker mlock(last_sample_mutex);
                 last_sample_aux = aux;
             };
 
@@ -307,18 +299,17 @@ public:
         while (shouldKeepGoing())
         {
             pauseOneSec();
-            lowsyslog("GNSS init...\n");
+            os::lowsyslog("GNSS init...\n");
             tryInit();
             tryRun();
             node::setComponentHealth(node::ComponentID::Gnss, uavcan::protocol::NodeStatus::HEALTH_ERROR);
         }
 
-        lowsyslog("GNSS driver terminated\n");
+        os::lowsyslog("GNSS driver terminated\n");
         while (true)
         {
             pauseOneSec();   // We don't exit the thread because GNSS driver termination is not fatal
         }
-        return msg_t();
     }
 
     void stop() override
@@ -346,7 +337,7 @@ SerialDriver& getSerialPort()
 
 bool getAuxiliaryIfUpdatedSince(std::uint64_t ts_mono_usec, Auxiliary& out_aux)
 {
-    LastSampleMutexLocker locker;
+    os::MutexLocker mlock(last_sample_mutex);
     if (last_sample_aux.ts.mono_usec > ts_mono_usec)
     {
         out_aux = last_sample_aux;
@@ -357,7 +348,7 @@ bool getAuxiliaryIfUpdatedSince(std::uint64_t ts_mono_usec, Auxiliary& out_aux)
 
 bool getFixIfUpdatedSince(std::uint64_t ts_mono_usec, Fix& out_fix)
 {
-    LastSampleMutexLocker locker;
+    os::MutexLocker mlock(last_sample_mutex);
     if (last_sample_fix.ts.mono_usec > ts_mono_usec)
     {
         out_fix = last_sample_fix;

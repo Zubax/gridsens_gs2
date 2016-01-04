@@ -20,14 +20,15 @@
 #pragma once
 
 #include <ch.hpp>
+#include <hal.h>
 
 namespace nmea
 {
 
 void init();
 
-void addOutput(OutputQueue* output);
-void removeOutput(const OutputQueue* output);
-bool hasOutput(const OutputQueue* output);
+void addOutput(::BaseChannel* output);
+void removeOutput(const ::BaseChannel* output);
+bool hasOutput(const ::BaseChannel* output);
 
 }

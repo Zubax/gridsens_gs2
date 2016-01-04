@@ -22,9 +22,7 @@
 #include <cstring>
 #include <ch.hpp>
 #include <hal.h>
-#include <zubax_chibios/sys/sys.h>
-#include <zubax_chibios/watchdog/watchdog.hpp>
-#include <zubax_chibios/config/config.hpp>
+#include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
 #if CORTEX_VTOR_INIT == 0
@@ -62,19 +60,19 @@ void init()
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
 
-    lowsyslog("Zubax GNSS %d.%d.%x\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, GIT_HASH);
-    zubax_chibios::watchdog::init();
+    os::lowsyslog("Zubax GNSS %d.%d.%x\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, GIT_HASH);
+    os::watchdog::init();
 
     i2cStart(&I2CD1, &I2CCfg1);
 
     while (true)
     {
-        const int res = zubax_chibios::config::init();
+        const int res = os::config::init();
         if (res >= 0)
         {
             break;
         }
-        lowsyslog("Config init failed %i\n", res);
+        os::lowsyslog("Config init failed %i\n", res);
         ::sleep(1);
     }
 }
@@ -82,7 +80,7 @@ void init()
 __attribute__((noreturn))
 void die(int error)
 {
-    lowsyslog("Fatal error %i\n", error);
+    os::lowsyslog("Fatal error %i\n", error);
     while (1)
     {
         setStatusLed(false);
@@ -129,7 +127,7 @@ void enterBootloader()
     {
         NVIC->ICER[i] = NVIC->IABR[i];
     }
-    SCB_ICSR = ICSR_PENDSVCLR;   // Clear all pending interrupts
+    SCB->ICSR = SCB_ICSR_PENDSVCLR;   // Clear all pending interrupts
 
     // Reset RCC
     RCC->CR   |= 0x00000001UL;

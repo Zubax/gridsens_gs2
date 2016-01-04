@@ -31,9 +31,7 @@
 #include <uavcan/protocol/dynamic_node_id_client.hpp>
 #include <uavcan/protocol/file/BeginFirmwareUpdate.hpp>
 
-#include <zubax_chibios/config/config.hpp>
-#include <zubax_chibios/watchdog/watchdog.hpp>
-#include <zubax_chibios/sys/sys.h>
+#include <zubax_chibios/os.hpp>
 
 namespace node
 {
@@ -43,24 +41,24 @@ namespace
 const unsigned MinTimeSyncPubPeriodUSec = 500000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
-zubax_chibios::config::Param<unsigned> param_can_bitrate("uavcan.bit_rate", 0, 0, 1000000);
-zubax_chibios::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125);
+os::config::Param<unsigned> param_can_bitrate("uavcan.bit_rate", 0, 0, 1000000);
+os::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125);
 
-zubax_chibios::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-time",
+os::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-time",
                                                                    0, 0, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_time_sync_prio("uavcan.prio-time",
+os::config::Param<unsigned> param_time_sync_prio("uavcan.prio-time",
                                                             1,
                                                             uavcan::TransferPriority::NumericallyMin,
                                                             uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<unsigned> param_node_status_pub_interval_usec(
+os::config::Param<unsigned> param_node_status_pub_interval_usec(
     "uavcan.pubp-stat",
     200000,
     uavcan::protocol::NodeStatus::MIN_BROADCASTING_PERIOD_MS * 1000,
     uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS * 1000);
 
-zubax_chibios::config::Param<unsigned> param_node_status_prio("uavcan.prio-stat",
+os::config::Param<unsigned> param_node_status_prio("uavcan.prio-stat",
                                                               20,
                                                               uavcan::TransferPriority::NumericallyMin,
                                                               uavcan::TransferPriority::NumericallyMax);
@@ -280,7 +278,7 @@ class RestartRequestHandler : public uavcan::IRestartRequestHandler
 {
     bool handleRestartRequest(uavcan::NodeID request_source) override
     {
-        lowsyslog("Restart request from %i\n", int(request_source.get()));
+        os::lowsyslog("Restart request from %i\n", int(request_source.get()));
         pending_restart_request = true;
         return true;
     }
@@ -306,7 +304,7 @@ void handleBeginFirmwareUpdateRequest(
 {
     static bool in_progress = false;
 
-    ::lowsyslog("BeginFirmwareUpdate request from %d\n", int(request.getSrcNodeID().get()));
+    ::os::lowsyslog("BeginFirmwareUpdate request from %d\n", int(request.getSrcNodeID().get()));
 
     if (in_progress)
     {
@@ -349,7 +347,7 @@ class : public chibios_rt::BaseStaticThread<3000>
 
             if (res >= 0)
             {
-                ::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
+                ::os::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
                 active_can_bus_bit_rate = bitrate;
             }
             else if (autodetect && (res == -uavcan_stm32::ErrBitRateNotDetected))
@@ -358,7 +356,7 @@ class : public chibios_rt::BaseStaticThread<3000>
             }
             else
             {
-                ::lowsyslog("Could not init CAN; status: %d, autodetect: %d, bitrate: %u\n",
+                ::os::lowsyslog("Could not init CAN; status: %d, autodetect: %d, bitrate: %u\n",
                             res, int(autodetect), unsigned(bitrate));
             }
         }
@@ -394,7 +392,7 @@ class : public chibios_rt::BaseStaticThread<3000>
             getNode().setNodeID((param_node_id.get() > 0) ?
                                 static_cast<std::uint8_t>(param_node_id.get()) :
                                 bootloader_interface::getInheritedNodeID());
-            lowsyslog("Using static node ID %d\n", int(getNode().getNodeID().get()));
+            os::lowsyslog("Using static node ID %d\n", int(getNode().getNodeID().get()));
         }
         else
         {
@@ -409,7 +407,7 @@ class : public chibios_rt::BaseStaticThread<3000>
                 }
             }
 
-            lowsyslog("Waiting for dynamic node ID allocation...\n");
+            os::lowsyslog("Waiting for dynamic node ID allocation...\n");
 
             while (!dnid_client.isAllocationComplete())
             {
@@ -418,7 +416,7 @@ class : public chibios_rt::BaseStaticThread<3000>
                 spinOnce();
             }
 
-            lowsyslog("Dynamic node ID %d allocated by %d\n",
+            os::lowsyslog("Dynamic node ID %d allocated by %d\n",
                       int(dnid_client.getAllocatedNodeID().get()), int(dnid_client.getAllocatorNodeID().get()));
 
             getNode().setNodeID(dnid_client.getAllocatedNodeID());
@@ -450,7 +448,7 @@ class : public chibios_rt::BaseStaticThread<3000>
 
             const auto period_usec = std::max(MinTimeSyncPubPeriodUSec, param_time_sync_period_usec.get());
 
-            lowsyslog("Time sync enabled, period %f sec\n", period_usec * 1e-6F);
+            os::lowsyslog("Time sync enabled, period %f sec\n", period_usec * 1e-6F);
 
             static uavcan::Timer tsm_timer(getNode());
             tsm_timer.setCallback(&publishTimeSync);
@@ -459,7 +457,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         else
         {
             time_sync_master_enabled = false;
-            lowsyslog("Time sync disabled\n");
+            os::lowsyslog("Time sync disabled\n");
         }
 
         // Firmware update server
@@ -470,7 +468,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         started = true;
-        lowsyslog("UAVCAN node started, ID %i\n", int(getNode().getNodeID().get()));
+        os::lowsyslog("UAVCAN node started, ID %i\n", int(getNode().getNodeID().get()));
 
         return 0;
     }
@@ -482,7 +480,7 @@ class : public chibios_rt::BaseStaticThread<3000>
         const int spin_res = getNode().spin(uavcan::MonotonicDuration::fromUSec(500));
         if (spin_res < 0)
         {
-            lowsyslog("UAVCAN spin failure: %i\n", spin_res);
+            os::lowsyslog("UAVCAN spin failure: %i\n", spin_res);
         }
 
         // Iface LED update
@@ -498,7 +496,7 @@ class : public chibios_rt::BaseStaticThread<3000>
     }
 
 public:
-    msg_t main() override
+    void main() override
     {
         setName("uavcan");
         initCanBus();
@@ -512,11 +510,11 @@ public:
             {
                 break;
             }
-            ::lowsyslog("UAVCAN node init failed [%i], will retry\n", res);
+            ::os::lowsyslog("UAVCAN node init failed [%i], will retry\n", res);
             ::sleep(3);
         }
 
-        zubax_chibios::watchdog::Timer wdt;
+        os::watchdog::Timer wdt;
         wdt.startMSec(100);
 
         while (!hasPendingRestartRequest())
@@ -537,8 +535,7 @@ public:
             spinOnce();
         }
 
-        lowsyslog("UAVCAN terminated\n");
-        return msg_t();
+        os::lowsyslog("UAVCAN terminated\n");
     }
 } node_thread;
 

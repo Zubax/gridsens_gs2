@@ -1,37 +1,41 @@
 /*
-    ChibiOS/RT - Copyright (C) 2006-2013 Giovanni Di Sirio
-                               2015      Pavel Kirienko <pavel.kirienko@zubax.com>
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-*/
-
-/*
- * ST32F107xC memory setup.
+ * Copyright (C) 2015  Zubax Robotics  <info@zubax.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
+
+ /*
+  * Based on a ChibiOS demo app.
+  */
+
 __main_stack_size__     = 0x0800;
 __process_stack_size__  = 0x0800;
 
 MEMORY
 {
-    flash : org = 0x08004000, len = 240k
-    ram : org = 0x20000000, len = 64k
+    flash : org = 0x08000000, len = 240k
+    ram   : org = 0x20000000, len = 64k
 }
 
-__ram_start__           = ORIGIN(ram);
-__ram_size__            = LENGTH(ram);
-__ram_end__             = __ram_start__ + __ram_size__;
 
-ENTRY(ResetHandler)
+__ram_start__          = ORIGIN(ram);
+__ram_size__           = LENGTH(ram);
+__ram_end__            = __ram_start__ + __ram_size__;
+
+ENTRY(Reset_Handler)
 
 PROVIDE(DeviceSignatureStorage = ORIGIN(flash) - 256);
 
@@ -42,7 +46,7 @@ SECTIONS
 
     startup : ALIGN(16) SUBALIGN(16)
     {
-        KEEP(*(vectors));
+        KEEP(*(.vectors))
         . = ALIGN(8);
         KEEP(*(.app_descriptor));
         . = ALIGN(8);
@@ -69,7 +73,7 @@ SECTIONS
      */
     .padding1 :
     {
-        /* 
+        /*
          * Filling is important: if it is not specified, gaps between aligned sections will be filled with zero when
          * exporting binaries, and will be skipped (i.e. set to 0xFF) when flashing .elf directly during debugging.
          * The discrepancy causes the firmware CRC to mismatch, preventing the bootloader from running it.
@@ -85,7 +89,6 @@ SECTIONS
 
     .text : ALIGN(16) SUBALIGN(16)
     {
-        *(.text.startup.*)
         *(.text)
         *(.text.*)
         *(.rodata)
@@ -100,7 +103,8 @@ SECTIONS
         *(.ARM.extab* .gnu.linkonce.armextab.*)
     } > flash
 
-    .ARM.exidx : {
+    .ARM.exidx :
+    {
         PROVIDE(__exidx_start = .);
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
         PROVIDE(__exidx_end = .);
@@ -115,7 +119,7 @@ SECTIONS
     {
         *(.eh_frame)
     } > flash
-    
+
     .textalign : ONLY_IF_RO
     {
         . = ALIGN(8);
@@ -125,13 +129,17 @@ SECTIONS
     _etext = .;
     _textdata = _etext;
 
-    .stacks :
+    .mstack :
     {
         . = ALIGN(8);
         __main_stack_base__ = .;
         . += __main_stack_size__;
         . = ALIGN(8);
         __main_stack_end__ = .;
+    } > ram
+
+    .pstack :
+    {
         __process_stack_base__ = .;
         __main_thread_stack_base__ = .;
         . += __process_stack_size__;
@@ -140,7 +148,7 @@ SECTIONS
         __main_thread_stack_end__ = .;
     } > ram
 
-    .data ALIGN(4) : ALIGN(4)
+    .data : ALIGN(4)
     {
         . = ALIGN(4);
         PROVIDE(_data = .);
@@ -151,7 +159,7 @@ SECTIONS
         PROVIDE(_edata = .);
     } > ram AT > flash
 
-    .bss ALIGN(4) : ALIGN(4)
+    .bss : ALIGN(4)
     {
         . = ALIGN(4);
         PROVIDE(_bss_start = .);
@@ -160,11 +168,20 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         PROVIDE(_bss_end = .);
-    } > ram    
+        PROVIDE(end = .);
+    } > ram
+
+    .ram (NOLOAD) : ALIGN(4)
+    {
+        . = ALIGN(4);
+        *(.ram)
+        *(.ram.*)
+        . = ALIGN(4);
+        __ram_free__ = .;
+    } > ram
 }
 
-PROVIDE(end = .);
-_end            = .;
-
-__heap_base__   = _end;
+/* Heap default boundaries, it is defaulted to be the non-used part of ram region.*/
+__heap_base__   = __ram_free__;
 __heap_end__    = __ram_end__;
+

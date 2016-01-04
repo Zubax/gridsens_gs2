@@ -31,10 +31,7 @@
 #include <board/board.hpp>
 #include <unistd.h>
 #include <cstdio>
-#include <zubax_chibios/sys/sys.h>
-#include <zubax_chibios/sys/assert_always.h>
-#include <zubax_chibios/config/cli.hpp>
-#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/os.hpp>
 #include <ch.hpp>
 #include <hal.h>
 #include <shell.h>
@@ -47,7 +44,7 @@ namespace
 
 void cmd_cfg(BaseSequentialStream*, int argc, char* argv[])
 {
-    zubax_chibios::config::executeCliCommand(argc, argv);
+    os::config::executeCLICommand(argc, argv);
 }
 
 void cmd_reboot(BaseSequentialStream*, int, char**)
@@ -63,7 +60,7 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     gnss::stop();
     ::sleep(1);
 
-    static const auto copy_once = [](InputQueue* src, OutputQueue* dst)
+    static const auto copy_once = [](input_queue_t* src, output_queue_t* dst)
     {
         uint8_t buffer[128];
         const unsigned sz = chIQReadTimeout(src, buffer, sizeof(buffer), TIME_IMMEDIATE);
@@ -89,7 +86,7 @@ void cmd_bootloader(BaseSequentialStream*, int, char**)
     ::usleep(100000);
 
     // Suppress the watchdog - set the maximum possible interval
-    zubax_chibios::watchdog::Timer().startMSec(1000000);
+    os::watchdog::Timer().startMSec(1000000);
 
     board::enterBootloader();
 }
@@ -165,14 +162,14 @@ void cmd_zubax_id(BaseSequentialStream*, int, char**)
 
 void cmd_threads(BaseSequentialStream*, int, char**)
 {
-    static const char* ThreadStateNames[] = { THD_STATE_NAMES };
+    static const char* ThreadStateNames[] = { CH_STATE_NAMES };
 
-    static const auto gauge_free_stack = [](const Thread* tp)
+    static const auto gauge_free_stack = [](const thread_t* tp)
     {
         const std::uint8_t* limit = reinterpret_cast<std::uint8_t*>(tp->p_stklimit);
         const unsigned current = reinterpret_cast<unsigned>(tp->p_ctx.r13);
         unsigned num_bytes = 0;
-        while ((*limit++ == CH_STACK_FILL_VALUE) &&
+        while ((*limit++ == CH_DBG_STACK_FILL_VALUE) &&
                (reinterpret_cast<unsigned>(limit) < current))
         {
             num_bytes++;
@@ -180,17 +177,16 @@ void cmd_threads(BaseSequentialStream*, int, char**)
         return num_bytes;
     };
 
-    puts("Name             State     FStk Prio Time");
-    puts("--------------------------------------------");
-    Thread* tp = chRegFirstThread();
+    puts("Name             State     FStk Prio");
+    puts("-------------------------------------");
+    thread_t* tp = chRegFirstThread();
     do
     {
-        printf("%-16s %-9s %-4u %-4u %u\r\n",
+        printf("%-16s %-9s %-4u %-4u\r\n",
                tp->p_name,
                ThreadStateNames[tp->p_state],
                gauge_free_stack(tp),
-               static_cast<unsigned>(tp->p_prio),
-               static_cast<unsigned>(tp->p_time));
+               static_cast<unsigned>(tp->p_prio));
         tp = chRegNextThread(tp);
     }
     while (tp != nullptr);
@@ -233,7 +229,7 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
         usb_cdc_acm::init(sn);
     }
 
-    msg_t main() override
+    void main() override
     {
         setName("usb_ctl");
 
@@ -241,7 +237,7 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
 
         ::shellInit();
 
-        ::lowsyslog("USB inited\n");
+        ::os::lowsyslog("USB inited\n");
 
         static const ShellConfig shell_config
         {
@@ -249,11 +245,12 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
             HandlerTable
         };
 
-        static WORKING_AREA(wa_shell, 2048);
+        static THD_WORKING_AREA(wa_shell, 2048);
 
-        auto& usb_output = usb_cdc_acm::getSerialUSBDriver()->oqueue;
+        const auto usb_output = reinterpret_cast<::BaseChannel*>(usb_cdc_acm::getSerialUSBDriver());
+        const auto uart_output = reinterpret_cast<::BaseChannel*>(&STDOUT_SD);
 
-        Thread* shelltp = nullptr;
+        thread_t* shelltp = nullptr;
         for (;;)
         {
             const bool connected = usb_cdc_acm::waitForStateChange(1000) == usb_cdc_acm::State::Connected;
@@ -264,43 +261,41 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
 
                 if (shelltp == nullptr)
                 {
-                    ::lowsyslog("Starting shell [br %u]\n", baudrate);
+                    os::lowsyslog("Starting shell [br %u]\n", baudrate);
                     shelltp = shellCreateStatic(&shell_config, &wa_shell, sizeof(wa_shell), LOWPRIO);
-                    sysSetStdOutStream(shell_config.sc_channel);
+                    os::setStdIOStream(usb_output);
                 }
 
                 const bool nmea_baudrate = isBaudrateValidForNMEA(baudrate);
 
-                if (nmea_baudrate && !nmea::hasOutput(&usb_output))
+                if (nmea_baudrate && !nmea::hasOutput(usb_output))
                 {
-                    ::lowsyslog("Adding USB NMEA output [br %u]\n", baudrate);
-                    nmea::addOutput(&usb_output);
+                    os::lowsyslog("Adding USB NMEA output [br %u]\n", baudrate);
+                    nmea::addOutput(usb_output);
                 }
 
-                if (!nmea_baudrate && nmea::hasOutput(&usb_output))
+                if (!nmea_baudrate && nmea::hasOutput(usb_output))
                 {
-                    ::lowsyslog("Removing USB NMEA output [br %u]\n", baudrate);
-                    nmea::removeOutput(&usb_output);
+                    os::lowsyslog("Removing USB NMEA output [br %u]\n", baudrate);
+                    nmea::removeOutput(usb_output);
                 }
             }
             else
             {
-                if (nmea::hasOutput(&usb_output))
+                if (nmea::hasOutput(usb_output))
                 {
-                    ::lowsyslog("Removing USB NMEA output [disconnected]\n");
-                    nmea::removeOutput(&usb_output);
+                    os::lowsyslog("Removing USB NMEA output [disconnected]\n");
+                    nmea::removeOutput(usb_output);
                 }
             }
 
-            if ((shelltp != nullptr) && chThdTerminated(shelltp))
+            if ((shelltp != nullptr) && chThdTerminatedX(shelltp))
             {
-                sysSetStdOutStream(reinterpret_cast<BaseSequentialStream*>(&STDOUT_SD));
+                os::setStdIOStream(uart_output);
                 shelltp = NULL;
-                ::lowsyslog("Shell terminated\n");
+                os::lowsyslog("Shell terminated\n");
             }
         }
-
-        return 0;
     }
 } usb_control_thread;
 

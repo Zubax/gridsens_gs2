@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <functional>
 #include <algorithm>
-#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/os.hpp>
 
 namespace ublox
 {
@@ -226,7 +226,7 @@ public:
         : platform_(arg_platform)
     { }
 
-    bool configure(zubax_chibios::watchdog::Timer& wdt);
+    bool configure(os::watchdog::Timer& wdt);
 
     void spin(unsigned timeout_ms);
 
@@ -298,7 +298,7 @@ class Driver
     void handleReceivedMessage(const RxMessage& msg);
 
     bool configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_t rate);
-    bool configureGnss(zubax_chibios::watchdog::Timer& wdt);
+    bool configureGnss(os::watchdog::Timer& wdt);
     bool configureMessages();
 
 public:
@@ -306,7 +306,7 @@ public:
         : io_(arg_platform)
     { }
 
-    bool configure(const Config& cfg, zubax_chibios::watchdog::Timer& wdt);
+    bool configure(const Config& cfg, os::watchdog::Timer& wdt);
 
     void spin(unsigned timeout_ms);
 

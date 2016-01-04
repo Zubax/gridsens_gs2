@@ -23,9 +23,7 @@
 #include <cassert>
 #include <utility>
 
-#include <zubax_chibios/sys/sys.h>
-#include <zubax_chibios/watchdog/watchdog.hpp>
-#include <zubax_chibios/config/config.hpp>
+#include <zubax_chibios/os.hpp>
 
 #include "bootloader_interface.hpp"
 #include "board/board.hpp"
@@ -39,7 +37,7 @@
 namespace
 {
 
-zubax_chibios::config::Param<bool> nmea_uart_on("nmea.uart_on", false);
+os::config::Param<bool> nmea_uart_on("nmea.uart_on", false);
 
 std::pair<unsigned, unsigned> getStatusLedOnOffMSecDurations()
 {
@@ -66,7 +64,7 @@ int main()
     magnetometer::init();
     nmea::init();
 
-    zubax_chibios::watchdog::Timer wdt;
+    os::watchdog::Timer wdt;
     wdt.startMSec(1100);
 
     usb::init();
@@ -78,7 +76,7 @@ int main()
 
     if (nmea_uart_on)
     {
-        nmea::addOutput(&STDOUT_SD.oqueue);
+        nmea::addOutput(reinterpret_cast<::BaseChannel*>(&STDOUT_SD));
     }
 
     /*

@@ -26,9 +26,7 @@
 #include <uavcan/equipment/air_data/StaticTemperature.hpp>
 
 #include <ch.hpp>
-#include <zubax_chibios/sys/sys.h>
-#include <zubax_chibios/config/config.hpp>
-#include <zubax_chibios/watchdog/watchdog.hpp>
+#include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
 namespace air_sensor
@@ -44,16 +42,16 @@ const float OperatingTemperatureRangeDegC[] = { -30, 60 };        ///< Operating
 
 const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
 
-zubax_chibios::config::Param<unsigned> param_period_usec("uavcan.pubp-pres",
-                                                         0, 0, 1000000);
+os::config::Param<unsigned> param_period_usec("uavcan.pubp-pres",
+                                              0, 0, 1000000);
 
-zubax_chibios::config::Param<unsigned> param_prio("uavcan.prio-pres",
-                                                  16,
-                                                  uavcan::TransferPriority::NumericallyMin,
-                                                  uavcan::TransferPriority::NumericallyMax);
+os::config::Param<unsigned> param_prio("uavcan.prio-pres",
+                                       16,
+                                       uavcan::TransferPriority::NumericallyMin,
+                                       uavcan::TransferPriority::NumericallyMax);
 
-zubax_chibios::config::Param<float> param_pressure_variance("pres.variance", 100.0, 1.0, 4000.0);
-zubax_chibios::config::Param<float> param_temperature_variance("temp.variance", 4.0, 1.0, 100.0);
+os::config::Param<float> param_pressure_variance("pres.variance", 100.0, 1.0, 4000.0);
+os::config::Param<float> param_temperature_variance("temp.variance", 4.0, 1.0, 100.0);
 
 chibios_rt::Mutex last_sample_mutex;
 Sample last_sample;
@@ -63,7 +61,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
     float pressure_variance = 0;
     float temperature_variance = 0;
 
-    mutable zubax_chibios::watchdog::Timer watchdog_;
+    mutable os::watchdog::Timer watchdog_;
     mutable ::Ms5611 sens = ::Ms5611();
 
     static bool isInRange(float value, const float range_min_max[2])
@@ -73,11 +71,12 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 
     void publish(float pressure_pa, float temperature_degc) const
     {
-        last_sample_mutex.lock();
-        last_sample.seq_id++;
-        last_sample.pressure_pa = pressure_pa;
-        last_sample.temperature_k = temperature_degc + DegreesCelsiusToKelvinOffset;
-        chibios_rt::BaseThread::unlockMutex();
+        {
+            os::MutexLocker mlock(last_sample_mutex);
+            last_sample.seq_id++;
+            last_sample.pressure_pa = pressure_pa;
+            last_sample.temperature_k = temperature_degc + DegreesCelsiusToKelvinOffset;
+        }
 
         if (!node::isStarted())
         {
@@ -146,12 +145,12 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_OK);
             }
 
-            sysSleepUntilChTime(sleep_until);
+            os::sleepUntilChTime(sleep_until);
         }
     }
 
 public:
-    msg_t main() override
+    void main() override
     {
         watchdog_.startMSec(1100);
         setName("air_sensor");
@@ -167,29 +166,28 @@ public:
 
             if (!ms5611Reset(&sens))
             {
-                lowsyslog("Air sensor reset failed, will retry...\n");
+                os::lowsyslog("Air sensor reset failed, will retry...\n");
                 continue;
             }
 
             if (!ms5611GetProm(&sens))
             {
-                lowsyslog("Air sensor PROM read failed, will retry...\n");
+                os::lowsyslog("Air sensor PROM read failed, will retry...\n");
                 continue;
             }
 
-            lowsyslog("Air sensor init OK\n");
+            os::lowsyslog("Air sensor init OK\n");
 
             node::markComponentInitialized(node::ComponentID::AirSensor);
             tryRun();
             if (!node::hasPendingRestartRequest())
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
-                lowsyslog("Air sensor is about to restart...\n");
+                os::lowsyslog("Air sensor is about to restart...\n");
             }
         }
 
-        lowsyslog("Air sensor driver terminated\n");
-        return msg_t();
+        os::lowsyslog("Air sensor driver terminated\n");
     }
 } air_sensor_thread;
 
@@ -204,17 +202,13 @@ void init()
     else
     {
         node::markComponentInitialized(node::ComponentID::AirSensor);
-        lowsyslog("Air sensor disabled\n");
+        os::lowsyslog("Air sensor disabled\n");
     }
 }
 
 Sample getLastSample()
 {
-    struct L
-    {
-        L() { last_sample_mutex.lock(); }
-        ~L() { chibios_rt::BaseThread::unlockMutex(); }
-    } lock;
+    os::MutexLocker mlock(last_sample_mutex);
     return last_sample;
 }
 

@@ -14,6 +14,8 @@
 
 #define STM32F107_MCUCONF
 
+#define STM32_ST_USE_TIMER                  5
+
 /*
  * HAL driver system settings.
  */
@@ -31,8 +33,8 @@
 #define STM32_PLL2MUL_VALUE                 16
 #define STM32_PLL3MUL_VALUE                 16
 #define STM32_HPRE                          STM32_HPRE_DIV1
-#define STM32_PPRE1                         STM32_PPRE1_DIV2
-#define STM32_PPRE2                         STM32_PPRE2_DIV2
+#define STM32_PPRE1                         STM32_PPRE1_DIV4
+#define STM32_PPRE2                         STM32_PPRE2_DIV4
 #define STM32_ADCPRE                        STM32_ADCPRE_DIV4
 #define STM32_OTG_CLOCK_REQUIRED            TRUE
 #define STM32_OTGFSPRE                      STM32_OTGFSPRE_DIV3
