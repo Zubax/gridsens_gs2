@@ -240,6 +240,28 @@ void boardInit(void)
     AFIO->MAPR = mapr | AFIO_MAPR_CAN_REMAP_REMAP2;
 
     /*
+     * Making sure the CAN controller is disabled!
+     * The bootloader may or may not leave it enabled.
+     * Let paranoia begin.
+     */
+    RCC->APB1RSTR |=  (RCC_APB1RSTR_CAN1RST | RCC_APB1RSTR_CAN2RST);
+    RCC->APB1RSTR &= ~(RCC_APB1RSTR_CAN1RST | RCC_APB1RSTR_CAN2RST);
+
+    CAN1->IER = CAN2->IER = 0;                                  // Disable interrupts
+    CAN1->MCR = CAN2->MCR = CAN_MCR_SLEEP | CAN_MCR_RESET;      // Software reset
+
+    NVIC_ClearPendingIRQ(CAN1_RX0_IRQn);
+    NVIC_ClearPendingIRQ(CAN1_RX1_IRQn);
+    NVIC_ClearPendingIRQ(CAN1_TX_IRQn);
+    NVIC_ClearPendingIRQ(CAN1_SCE_IRQn);
+
+    NVIC_ClearPendingIRQ(CAN2_RX0_IRQn);
+    NVIC_ClearPendingIRQ(CAN2_RX1_IRQn);
+    NVIC_ClearPendingIRQ(CAN2_TX_IRQn);
+    NVIC_ClearPendingIRQ(CAN2_SCE_IRQn);
+    // End of paranoia here.
+
+    /*
      * Enabling the CAN controllers, then configuring GPIO functions for CAN_TX.
      * Order matters, otherwise the CAN_TX pins will twitch, disturbing the CAN bus.
      * This is why we can't perform this initialization using ChibiOS GPIO configuration.
