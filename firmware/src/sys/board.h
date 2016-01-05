@@ -64,11 +64,6 @@
  * Please refer to the STM32 Reference Manual for details.
  */
 
-/*
- * USB on STM32F1xx requires that the pin OTG_FS_VBUS (PA9) is set to high level.
- * It has been proven empirically that configuring the pin as input with pull-up is not enough to make USB work,
- * instead it must be configured as output and set to high level, which is done here.
- */
 #define VAL_GPIOACRL            0x88888A88                      // 7..0
 #define VAL_GPIOACRH            0x88800888                      // 15..8
 #define VAL_GPIOAODR            0x00000000
