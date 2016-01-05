@@ -80,17 +80,6 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     }
 }
 
-void cmd_bootloader(BaseSequentialStream*, int, char**)
-{
-    ::puts("\nENTERING THE BOOTLOADER\n");
-    ::usleep(100000);
-
-    // Suppress the watchdog - set the maximum possible interval
-    os::watchdog::Timer().startMSec(1000000);
-
-    board::enterBootloader();
-}
-
 void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 {
     if (argc < 1)
@@ -199,7 +188,6 @@ const ::ShellCommand HandlerTable[] =
     {"cfg",        &cmd_cfg},
     {"reboot",     &cmd_reboot},
     {"gnssbridge", &cmd_gnssbridge},
-    {"bootloader", &cmd_bootloader},
     {"signature",  &cmd_signature},
     {"zubax_id",   &cmd_zubax_id},
 #if defined(DEBUG_BUILD) && DEBUG_BUILD
