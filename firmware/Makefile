@@ -98,9 +98,9 @@ binaries: build/$(PROJECT).bin build/$(PROJECT).elf
 	cd build && cat padded_bootloader.tmp.bin $(PROJECT).bin >$(COMPOUND_IMAGE_FILE)
 	
 	# Generating the signed image for the bootloader
-	cd build && ../make_can_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION_MAJOR_MINOR)     \
-	                                           --also-patch-descriptor-in=$(PROJECT).elf               \
-	                                           --also-patch-descriptor-in=$(COMPOUND_IMAGE_FILE)
+	cd build && ../zubax_chibios/tools/make_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION_MAJOR_MINOR) \
+	                                                           --also-patch-descriptor-in=$(PROJECT).elf           \
+	                                                           --also-patch-descriptor-in=$(COMPOUND_IMAGE_FILE)
 	
 	# Injecting the bootloader into the final ELF
 	cd build && $(TOOLCHAIN_PREFIX)-objcopy --add-section bootloader=../bootloader.bin     \
