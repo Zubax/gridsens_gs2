@@ -20,7 +20,6 @@
 #include "air_sensor.hpp"
 #include "board/ms5611.h"
 #include "node.hpp"
-#include "execute_once.hpp"
 
 #include <uavcan/equipment/air_data/StaticPressure.hpp>
 #include <uavcan/equipment/air_data/StaticTemperature.hpp>

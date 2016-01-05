@@ -19,7 +19,6 @@
 
 #include "gnss.hpp"
 #include "node.hpp"
-#include "execute_once.hpp"
 
 #include <uavcan/equipment/gnss/RTCMStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>

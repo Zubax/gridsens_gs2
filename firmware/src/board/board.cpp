@@ -18,11 +18,11 @@
  */
 
 #include "board.hpp"
-#include "stm32_flash_writer.hpp"
 #include <cstring>
 #include <ch.hpp>
 #include <hal.h>
 #include <unistd.h>
+#include <zubax_chibios/platform/stm32/flash_writer.hpp>
 
 #if CORTEX_VTOR_INIT == 0
 # error CORTEX_VTOR_INIT
@@ -168,7 +168,7 @@ bool tryWriteDeviceSignature(const DeviceSignature& sign)
     alignas(4) std::uint8_t aligned_buffer[std::tuple_size<DeviceSignature>::value];
     std::copy(std::begin(sign), std::end(sign), std::begin(aligned_buffer));
 
-    stm32_flash_writer::Writer writer;
+    os::stm32::FlashWriter writer;
 
     return writer.write(&DeviceSignatureStorage[0], &aligned_buffer[0], sizeof(aligned_buffer));
 }

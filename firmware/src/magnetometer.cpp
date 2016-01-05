@@ -19,7 +19,6 @@
 
 #include "magnetometer.hpp"
 #include "node.hpp"
-#include "execute_once.hpp"
 
 #include <array>
 
