@@ -95,8 +95,8 @@
  */
 #define STM32_I2C_USE_I2C1                  TRUE
 #define STM32_I2C_USE_I2C2                  FALSE
-#define STM32_I2C_I2C1_IRQ_PRIORITY         5
-#define STM32_I2C_I2C2_IRQ_PRIORITY         5
+#define STM32_I2C_I2C1_IRQ_PRIORITY         2
+#define STM32_I2C_I2C2_IRQ_PRIORITY         2
 #define STM32_I2C_I2C1_DMA_PRIORITY         3
 #define STM32_I2C_I2C2_DMA_PRIORITY         3
 #define STM32_I2C_DMA_ERROR_HOOK(i2cp)      osalSysHalt("DMA failure")
