@@ -42,12 +42,14 @@ UDEFS = -DFW_VERSION_MAJOR=$(FW_VERSION_MAJOR)           \
 
 #
 # UAVCAN library
+# On CAN IRQ priority read this: http://forum.chibios.org/phpbb/viewtopic.php?f=25&t=3085
 #
 
-UDEFS += -DUAVCAN_STM32_TIMER_NUMBER=7    \
-         -DUAVCAN_STM32_NUM_IFACES=2      \
-         -DUAVCAN_STM32_CHIBIOS=1         \
-         -DUAVCAN_CPP_VERSION=UAVCAN_CPP11
+UDEFS += -DUAVCAN_STM32_TIMER_NUMBER=7          \
+         -DUAVCAN_STM32_NUM_IFACES=2            \
+         -DUAVCAN_STM32_CHIBIOS=1               \
+         -DUAVCAN_CPP_VERSION=UAVCAN_CPP11      \
+         -DUAVCAN_STM32_IRQ_PRIORITY_MASK=4
 
 include libuavcan/libuavcan/include.mk
 CPPSRC += $(LIBUAVCAN_SRC)

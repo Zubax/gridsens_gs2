@@ -92,6 +92,7 @@
 
 /*
  * I2C driver system settings.
+ * On IRQ priority levels: http://forum.chibios.org/phpbb/viewtopic.php?f=25&t=3085&p=23830
  */
 #define STM32_I2C_USE_I2C1                  TRUE
 #define STM32_I2C_USE_I2C2                  FALSE
