@@ -500,9 +500,11 @@ def process_one_device():
         cli = SerialCLI(io, 0.1)
         cli.flush_input(0.5)
 
-        out = cli.write_line_and_read_output_lines_until_timeout('systime')
-        enforce(len(out) == 1, 'Unexpected CLI output: %r', out)
-        enforce(catch()(int)(out[0]) > 0, 'Expected integer, got this: %r', out[0])
+        try:
+            # Using first command to get rid of any garbage lingering in the buffers
+            cli.write_line_and_read_output_lines_until_timeout('systime')
+        except Exception:
+            pass
 
         zubax_id = cli.write_line_and_read_output_lines_until_timeout('zubax_id')
         zubax_id = yaml.load('\n'.join(zubax_id))
