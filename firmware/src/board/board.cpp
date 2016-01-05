@@ -22,7 +22,6 @@
 #include <cstring>
 #include <ch.hpp>
 #include <hal.h>
-#include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
 #if CORTEX_VTOR_INIT == 0
@@ -54,27 +53,39 @@ static const I2CConfig I2CCfg1 =
     STD_DUTY_CYCLE,
 };
 
-void init()
+os::watchdog::Timer init(unsigned wdt_timeout_ms)
 {
+    /*
+     * OS
+     */
     halInit();
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
-
-    os::lowsyslog("Zubax GNSS %d.%d.%x\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, GIT_HASH);
-    os::watchdog::init();
-
     i2cStart(&I2CD1, &I2CCfg1);
 
-    while (true)
+    /*
+     * Watchdog
+     */
+    os::watchdog::init();
+    os::watchdog::Timer wdt;
+    wdt.startMSec(wdt_timeout_ms);
+
+    /*
+     * Configuration manager
+     */
+    const int config_init_res = os::config::init();
+    if (config_init_res < 0)
     {
-        const int res = os::config::init();
-        if (res >= 0)
-        {
-            break;
-        }
-        os::lowsyslog("Config init failed %i\n", res);
-        ::sleep(1);
+        die(config_init_res);
     }
+
+    /*
+     * Prompt
+     */
+    os::lowsyslog(PRODUCT_NAME_STRING " %d.%d.%08x / %d %s\n",
+                  FW_VERSION_MAJOR, FW_VERSION_MINOR, GIT_HASH, config_init_res,
+                  watchdogTriggeredLastReset() ? "WDTRESET" : "OK");
+    return wdt;
 }
 
 __attribute__((noreturn))

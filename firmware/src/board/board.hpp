@@ -21,11 +21,12 @@
 
 #include <cstdint>
 #include <array>
+#include <zubax_chibios/os.hpp>
 
 namespace board
 {
 
-void init();
+os::watchdog::Timer init(unsigned wdt_timeout_ms);
 
 __attribute__((noreturn))
 void die(int error);

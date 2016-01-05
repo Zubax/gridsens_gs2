@@ -57,15 +57,12 @@ int main()
      * Component initialization; threads start here.
      */
     bootloader_interface::init();
-    board::init();
+    auto wdt = board::init(1100);
     node::init();
     air_sensor::init();
     gnss::init();
     magnetometer::init();
     nmea::init();
-
-    os::watchdog::Timer wdt;
-    wdt.startMSec(1100);
 
     usb::init();
 
