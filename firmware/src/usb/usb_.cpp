@@ -22,7 +22,6 @@
  * identical names.
  */
 
-#include "base64.hpp"
 #include "usb_cdc_acm.hpp"
 #include <usb/usb.hpp>
 #include <nmea/nmea.hpp>
@@ -32,6 +31,7 @@
 #include <unistd.h>
 #include <cstdio>
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/base64.hpp>
 #include <ch.hpp>
 #include <hal.h>
 #include <shell.h>
@@ -88,8 +88,8 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 
         if (board::tryReadDeviceSignature(sign))
         {
-            char buf[base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
-            std::puts(base64::encode(sign, buf));
+            char buf[os::base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
+            std::puts(os::base64::encode(sign, buf));
         }
         else
         {
@@ -101,7 +101,7 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
         const char* const encoded = argv[0];
         board::DeviceSignature sign;
 
-        if (!base64::decode(sign, encoded))
+        if (!os::base64::decode(sign, encoded))
         {
             std::puts("Error: Invalid base64");
             return;
@@ -129,7 +129,7 @@ void cmd_zubax_id(BaseSequentialStream*, int, char**)
     auto hw_version = board::detectHardwareVersion();
     printf("hw_version   : '%u.%u'\n", hw_version.major, hw_version.minor);
 
-    char base64_buf[base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
+    char base64_buf[os::base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
 
     std::array<std::uint8_t, 16> uid_128;
     std::fill(std::begin(uid_128), std::end(uid_128), 0);
@@ -138,12 +138,12 @@ void cmd_zubax_id(BaseSequentialStream*, int, char**)
         board::readUniqueID(uid);
         std::copy(std::begin(uid), std::end(uid), std::begin(uid_128));
     }
-    printf("hw_unique_id : '%s'\n", base64::encode(uid_128, base64_buf));
+    printf("hw_unique_id : '%s'\n", os::base64::encode(uid_128, base64_buf));
 
     board::DeviceSignature signature;
     if (board::tryReadDeviceSignature(signature))
     {
-        printf("hw_signature : '%s'\n", base64::encode(signature, base64_buf));
+        printf("hw_signature : '%s'\n", os::base64::encode(signature, base64_buf));
     }
 }
 
