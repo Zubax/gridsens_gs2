@@ -31,8 +31,10 @@ cd firmware
 Avialable loaders:
 
 ```shell
-./zubax_chibios/tools/blackmagic_flash.sh   # Black Magic Debug Probe
-./zubax_chibios/tools/stlink_flash.sh       # ST-Link v2
+cd ./zubax_chibios/tools
+
+./blackmagic_flash.sh   # Black Magic Debug Probe
+./stlink_flash.sh       # ST-Link v2
 ```
 
 ### Using UAVCAN bootloader
