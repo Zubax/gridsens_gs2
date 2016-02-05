@@ -183,7 +183,7 @@ def test_uavcan():
             nsmon = uavcan.monitors.NodeStatusMonitor(n)
             alloc = uavcan.monitors.DynamicNodeIDServer(n, nsmon)  # @UnusedVariable
 
-            with time_limit(10, 'The node did not show up in time. Probably CAN bus interface is not working.'):
+            with time_limit(10, 'The node did not show up in time. Check CAN interface and crystal oscillator.'):
                 while True:
                     safe_spin(1)
                     target_nodes = list(nsmon.find_all(lambda e: e.info and e.info.name.decode() == PRODUCT_NAME))
