@@ -172,7 +172,7 @@ class ParamManager : public uavcan::IParamManager
     {
         if (native_type == CONFIG_TYPE_BOOL)
         {
-            out_value.to<Value::Tag::boolean_value>() = uavcan::isCloseToZero(native_value);
+            out_value.to<Value::Tag::boolean_value>() = !uavcan::isCloseToZero(native_value);
         }
         else if (native_type == CONFIG_TYPE_INT)
         {
