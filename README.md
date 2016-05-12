@@ -1,6 +1,8 @@
 Zubax GNSS
 ==========
 
+[![Join the chat at https://gitter.im/Zubax/zubax_gnss](https://badges.gitter.im/Zubax/zubax_gnss.svg)](https://gitter.im/Zubax/zubax_gnss?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
 It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter,
 and a 3-axis compass with thermal compensation.
