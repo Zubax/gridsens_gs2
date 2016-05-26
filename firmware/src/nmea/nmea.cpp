@@ -547,7 +547,7 @@ void processGNSSFix()
 
         // Date
         b.addComplexField("%02d%02d%02d",
-                          tm->tm_mday, tm->tm_mon + 1, tm->tm_year - 100);
+                          tm->tm_mday, tm->tm_mon + 1, std::max(tm->tm_year - 100, 0));
 
         // Magnetic variation [degrees], east/west
         b.addEmptyField();
