@@ -26,3 +26,6 @@ __pycache__
 
 # Libs
 dsdlc_generated
+
+# JetBrains
+.idea
