@@ -244,7 +244,8 @@ def test_uavcan():
                     r = request(uavcan.protocol.param.GetSet.Request(index=index))
                     if not r.name:
                         break
-                    logger.info('Param %-30r %r' % (r.name.decode(), getattr(r.value, r.value.union_field)))
+                    logger.info('Param %-30r %r' % (r.name.decode(),
+                                                    getattr(r.value, uavcan.get_active_union_field(r.value))))
 
             def set_param(name, value, union_field=None):
                 union_field = union_field or {
@@ -258,7 +259,7 @@ def test_uavcan():
                 req.name.encode(name)
                 setattr(req.value, union_field, value)
                 r = request(req)
-                enforce(r.value.union_field == union_field,
+                enforce(uavcan.get_active_union_field(r.value) == union_field,
                         'Union field mismatch in param set response for %r', name)
                 enforce(getattr(r.value, union_field) == value,
                         'The node refused to set parameter %r', name)
