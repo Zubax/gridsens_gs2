@@ -35,6 +35,7 @@
 #include <ch.hpp>
 #include <hal.h>
 #include <shell.h>
+#include <chprintf.h>
 
 namespace usb
 {
@@ -139,6 +140,13 @@ void cmd_zubax_id(BaseSequentialStream*, int, char**)
         std::copy(std::begin(uid), std::end(uid), std::begin(uid_128));
     }
     printf("hw_unique_id : '%s'\n", os::base64::encode(uid_128, base64_buf));
+
+    std::memset(&base64_buf[0], 0, sizeof(base64_buf));
+    for (unsigned i = 0; i < 16; i++)
+    {
+        chsnprintf(&base64_buf[i * 2], 3, "%02x", uid_128[i]);
+    }
+    printf("hw_info_url  : http://device.zubax.com/device_info?uid=%s\n", &base64_buf[0]);
 
     board::DeviceSignature signature;
     if (board::tryReadDeviceSignature(signature))
