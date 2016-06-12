@@ -287,11 +287,11 @@ def test_uavcan():
             check_status()
             log_all_params()
 
-            def make_collector(data_type, timeout=0.1):
+            def make_collector(data_type, timeout=0.5):
                 return uavcan.app.message_collector.MessageCollector(n, data_type, timeout=timeout)
 
-            col_fix = make_collector(uavcan.equipment.gnss.Fix, 0.2)
-            col_aux = make_collector(uavcan.equipment.gnss.Auxiliary, 0.2)
+            col_fix = make_collector(uavcan.equipment.gnss.Fix)
+            col_aux = make_collector(uavcan.equipment.gnss.Auxiliary)
             col_mag = make_collector(uavcan.equipment.ahrs.MagneticFieldStrength)
             col_pressure = make_collector(uavcan.equipment.air_data.StaticPressure)
             col_temp = make_collector(uavcan.equipment.air_data.StaticTemperature)
