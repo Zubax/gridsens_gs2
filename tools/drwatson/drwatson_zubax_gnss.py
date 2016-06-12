@@ -22,7 +22,7 @@ sys.path.insert(1, os.path.join(sys.path[0], 'pyuavcan'))
 
 from drwatson import init, run, make_api_context_with_user_provided_credentials, execute_shell_command,\
     info, error, input, CLIWaitCursor, download, abort, glob_one, download_newest, open_serial_port,\
-    enforce, SerialCLI, catch, BackgroundSpinner, fatal, warning, BackgroundDelay, imperative
+    enforce, SerialCLI, BackgroundSpinner, fatal, warning, BackgroundDelay, imperative
 import numpy
 import tempfile
 import logging
@@ -30,7 +30,6 @@ import time
 import yaml
 import binascii
 import uavcan  # @UnusedImport
-import uavcan.monitors
 from base64 import b64decode, b64encode
 from contextlib import closing, contextmanager
 from functools import partial
@@ -45,7 +44,7 @@ DEBUGGER_PORT_GDB_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if00'
 DEBUGGER_PORT_CLI_GLOB = '/dev/serial/by-id/*Black_Magic_Probe*-if0[12]'
 USB_CDC_ACM_GLOB = '/dev/serial/by-id/*Zubax_GNSS*-if00'
 BOOT_TIMEOUT = 9
-# GNSS constants are very pessimistic, because they largely depend on the environment where boards are tested.
+# GNSS constants are very pessimistic, because they largely depend on the environment where devices are tested.
 GNSS_FIX_TIMEOUT = 60 * 10
 GNSS_MIN_SAT_TIMEOUT = 60 * 15
 GNSS_MIN_SAT_NUM = 6
@@ -145,18 +144,18 @@ def wait_for_boot():
             finally:
                 p.flushInput()
 
-    warning("The board did not report to CLI with a correct boot message, but we're going "
+    warning("The device did not report to CLI with a correct boot message, but we're going "
             "to continue anyway. Possible reasons for this warning:\n"
-            '1. The board could not boot properly (however it was flashed successfully).\n'
+            '1. The device could not boot properly (however it was flashed successfully).\n'
             '2. The debug connector is not soldered properly.\n'
             '3. The serial port is open by another application.\n'
             '4. Either USB-UART adapter or VM are malfunctioning. Try to re-connect the '
-            'adapter (disconnect from USB and from the board!) or reboot the VM.')
+            'adapter (disconnect from USB and from the device!) or reboot the VM.')
 
 
 def test_uavcan():
-    node_info = uavcan.protocol.GetNodeInfo.Response()  # @UndefinedVariable
-    node_info.name.encode('com.zubax.drwatson.zubax_gnss')
+    node_info = uavcan.protocol.GetNodeInfo.Response()
+    node_info.name = 'com.zubax.drwatson.zubax_gnss'
 
     iface = init_can_iface()
 
@@ -164,7 +163,7 @@ def test_uavcan():
                                   bitrate=CAN_BITRATE,
                                   node_id=127,
                                   mode=uavcan.protocol.NodeStatus().MODE_OPERATIONAL,
-                                  node_info=node_info)) as n:  # @UndefinedVariable
+                                  node_info=node_info)) as n:
         def safe_spin(timeout):
             try:
                 n.spin(timeout)
@@ -183,8 +182,8 @@ def test_uavcan():
 
         # Dynamic node ID allocation
         try:
-            nsmon = uavcan.monitors.NodeStatusMonitor(n)
-            alloc = uavcan.monitors.DynamicNodeIDServer(n, nsmon)  # @UnusedVariable
+            nsmon = uavcan.app.node_monitor.NodeMonitor(n)
+            alloc = uavcan.app.dynamic_node_id.CentralizedServer(n, nsmon)
 
             with time_limit(10, 'The node did not show up in time. Check CAN interface and crystal oscillator.'):
                 while True:
@@ -207,7 +206,7 @@ def test_uavcan():
                     nonlocal response_event
                     if not e:
                         abort('Request has timed out: %r', what)
-                    response_event = e  # @UnusedVariable
+                    response_event = e
 
                 if fire_and_forget:
                     n.request(what, node_id, lambda _: None)
@@ -224,14 +223,14 @@ def test_uavcan():
                     while True:
                         safe_spin(1)
                         if nsmon.exists(node_id) and nsmon.get(node_id).status.mode == \
-                                uavcan.protocol.NodeStatus().MODE_OPERATIONAL:              # @UndefinedVariable
+                                uavcan.protocol.NodeStatus().MODE_OPERATIONAL:
                             break
 
             def check_status():
                 status = nsmon.get(node_id).status
-                enforce(status.mode == uavcan.protocol.NodeStatus().MODE_OPERATIONAL,   # @UndefinedVariable
+                enforce(status.mode == uavcan.protocol.NodeStatus().MODE_OPERATIONAL,
                         'Unexpected operating mode')
-                enforce(status.health == uavcan.protocol.NodeStatus().HEALTH_OK,        # @UndefinedVariable
+                enforce(status.health == uavcan.protocol.NodeStatus().HEALTH_OK,
                         'Bad node health')
 
             info('Waiting for the node to complete initialization...')
@@ -242,7 +241,7 @@ def test_uavcan():
 
             def log_all_params():
                 for index in range(10000):
-                    r = request(uavcan.protocol.param.GetSet.Request(index=index))  # @UndefinedVariable
+                    r = request(uavcan.protocol.param.GetSet.Request(index=index))
                     if not r.name:
                         break
                     logger.info('Param %-30r %r' % (r.name.decode(), getattr(r.value, r.value.union_field)))
@@ -255,7 +254,7 @@ def test_uavcan():
                     str: 'string_value'
                 }[type(value)]
                 logger.info('Setting parameter %r field %r value %r', name, union_field, value)
-                req = uavcan.protocol.param.GetSet.Request()                            # @UndefinedVariable
+                req = uavcan.protocol.param.GetSet.Request()
                 req.name.encode(name)
                 setattr(req.value, union_field, value)
                 r = request(req)
@@ -271,12 +270,12 @@ def test_uavcan():
             set_param('uavcan.pubp-fix', 66666)
             set_param('uavcan.pubp-aux', 100000)
 
-            enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(                # @UndefinedVariable
-                opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_SAVE)).ok,  # @UndefinedVariable
+            enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(
+                opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_SAVE)).ok,
                 'Could not save configuration')
 
-            request(uavcan.protocol.RestartNode.Request(                                # @UndefinedVariable
-                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER),       # @UndefinedVariable
+            request(uavcan.protocol.RestartNode.Request(
+                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER),
                 fire_and_forget=True)
 
             # Don't tell anybody I wrote this. I'm ashamed of this shit and too tired to redesign it. :(
@@ -288,13 +287,13 @@ def test_uavcan():
             log_all_params()
 
             def make_collector(data_type, timeout=0.1):
-                return uavcan.monitors.MessageCollector(n, data_type, timeout=timeout)
+                return uavcan.app.message_collector.MessageCollector(n, data_type, timeout=timeout)
 
-            col_fix = make_collector(uavcan.equipment.gnss.Fix, 0.2)                    # @UndefinedVariable
-            col_aux = make_collector(uavcan.equipment.gnss.Auxiliary, 0.2)              # @UndefinedVariable
-            col_mag = make_collector(uavcan.equipment.ahrs.MagneticFieldStrength)       # @UndefinedVariable
-            col_pressure = make_collector(uavcan.equipment.air_data.StaticPressure)     # @UndefinedVariable
-            col_temp = make_collector(uavcan.equipment.air_data.StaticTemperature)      # @UndefinedVariable
+            col_fix = make_collector(uavcan.equipment.gnss.Fix, 0.2)
+            col_aux = make_collector(uavcan.equipment.gnss.Auxiliary, 0.2)
+            col_mag = make_collector(uavcan.equipment.ahrs.MagneticFieldStrength)
+            col_pressure = make_collector(uavcan.equipment.air_data.StaticPressure)
+            col_temp = make_collector(uavcan.equipment.air_data.StaticTemperature)
 
             def check_everything():
                 check_status()
@@ -320,7 +319,7 @@ def test_uavcan():
                 except KeyError:
                     abort('Magnetic field measurements are not available. Check the sensor.')
                 else:
-                    magnetic_field_scalar = numpy.linalg.norm(m.magnetic_field_ga)      # @UndefinedVariable
+                    magnetic_field_scalar = numpy.linalg.norm(m.magnetic_field_ga)
                     if not 0.01 < magnetic_field_scalar < 2:
                         abort('Invalid magnetic field strength reading: %d Gauss. Check the sensor.',
                               magnetic_field_scalar)
@@ -366,12 +365,12 @@ def test_uavcan():
 
             # Finalizing the test
             info('Resetting the configuration to factory default...')
-            enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(                # @UndefinedVariable
-                opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_ERASE)).ok,  # @UndefinedVariable
+            enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(
+                opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_ERASE)).ok,
                 'Could not erase configuration')
 
-            request(uavcan.protocol.RestartNode.Request(                                # @UndefinedVariable
-                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER),       # @UndefinedVariable
+            request(uavcan.protocol.RestartNode.Request(
+                magic_number=uavcan.protocol.RestartNode.Request().MAGIC_NUMBER),
                 fire_and_forget=True)
 
             with BackgroundSpinner(safe_spin, 0.1):
@@ -412,29 +411,15 @@ def init_can_iface():
     else:
         logger.debug('Using iface %r as SLCAN', args.iface)
 
-        speed_code = {
-            1000000: 8,
-            500000: 6,
-            250000: 5,
-            125000: 4,
-            100000: 3
-        }[CAN_BITRATE]
-
+        # We don't want the SLCAN daemon to interfere...
         execute_shell_command('killall -INT slcand &> /dev/null', ignore_failure=True)
         time.sleep(1)
 
-        tty = os.path.realpath(args.iface).replace('/dev/', '')
-        logger.debug('TTY %r', tty)
+        # Making sure the interface can be open
+        with open(args.iface, 'bw') as _f:
+            pass
 
-        execute_shell_command('slcan_attach -f -o -s%d /dev/%s', speed_code, tty)
-        execute_shell_command('slcand %s', tty)
-
-        iface_name = 'slcan0'
-        time.sleep(1)
-        execute_shell_command('ifconfig %s up', iface_name)
-        execute_shell_command('ifconfig %s txqueuelen 1000', iface_name)
-
-        return iface_name
+        return args.iface
 
 
 def check_interfaces():
@@ -474,7 +459,7 @@ with CLIWaitCursor():
     firmware_data = get_firmware()
 
 
-def process_one_device():
+def process_one_device(set_device_info):
     out = input('1. Connect DroneCode Probe to the debug connector\n'
                 '2. Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector\n'
                 '3. Connect USB to the device, and make sure that no other Zubax GNSS is connected\n'
@@ -486,34 +471,34 @@ def process_one_device():
         info('Loading the firmware')
         with CLIWaitCursor():
             load_firmware(firmware_data)
-        info('Waiting for the board to boot...')
+        info('Waiting for the device to boot...')
         wait_for_boot()
     else:
         info('Firmware upload skipped')
 
+    info('Identifying the connected device...')
+    with open_serial_port(USB_CDC_ACM_GLOB, wait_for_port=5) as io:
+        logger.info('USB CLI is on %r', io.port)
+        zubax_id = SerialCLI(io, 0.1).read_zubax_id()
+        product_id = zubax_id['product_id']
+        unique_id = b64decode(zubax_id['hw_unique_id'])
+        set_device_info(product_id, unique_id)
+
     info('Testing UAVCAN interface...')
     test_uavcan()
 
-    input("Now we're going to test USB. If this application is running on a virtual "
-          "machine, make sure that the corresponsing USB device is made available for "
-          "the VM, then press ENTER.")
     info('Connecting via USB...')
-    with open_serial_port(USB_CDC_ACM_GLOB) as io:
+    with open_serial_port(USB_CDC_ACM_GLOB, wait_for_port=5) as io:
         logger.info('USB CLI is on %r', io.port)
         cli = SerialCLI(io, 0.1)
-        cli.flush_input(0.5)
+
+        enforce(unique_id == b64decode(cli.read_zubax_id()['hw_unique_id']), 'UID changed!')
 
         try:
             # Using first command to get rid of any garbage lingering in the buffers
             cli.write_line_and_read_output_lines_until_timeout('systime')
         except Exception:
             pass
-
-        zubax_id = cli.write_line_and_read_output_lines_until_timeout('zubax_id')
-        zubax_id = yaml.load('\n'.join(zubax_id))
-        logger.info('Zubax ID: %r', zubax_id)
-
-        unique_id = b64decode(zubax_id['hw_unique_id'])
 
         # Getting the signature
         info('Requesting signature for unique ID %s', binascii.hexlify(unique_id).decode())
@@ -538,4 +523,4 @@ def process_one_device():
 
         info('Signature has been installed and verified')
 
-run(process_one_device)
+run(licensing_api, process_one_device)
