@@ -160,8 +160,11 @@ def test_uavcan():
 
     iface = init_can_iface()
 
-    with closing(uavcan.make_node(iface, bitrate=CAN_BITRATE, node_id=127,
-                                  mode=uavcan.protocol.NodeStatus().MODE_OPERATIONAL)) as n:  # @UndefinedVariable
+    with closing(uavcan.make_node(iface,
+                                  bitrate=CAN_BITRATE,
+                                  node_id=127,
+                                  mode=uavcan.protocol.NodeStatus().MODE_OPERATIONAL,
+                                  node_info=node_info)) as n:  # @UndefinedVariable
         def safe_spin(timeout):
             try:
                 n.spin(timeout)
@@ -439,7 +442,7 @@ def check_interfaces():
 
     def test_serial_port(glob, name):
         try:
-            with open_serial_port(DEBUGGER_PORT_GDB_GLOB):
+            with open_serial_port(glob):
                 info('%s port is OK', name)
                 return True
         except Exception:
