@@ -128,8 +128,13 @@ struct CFG_NAV5
         Sea         = 5,
         Airborne_1g = 6,
         Airborne_2g = 7,
-        Airborne_4g = 8
+        Airborne_4g = 8,
+        Wrist       = 9 // only exsits in proto >= 18
     } dynModel;
+
+#define GNSS_DYN_MODEL_MIN     0
+#define GNSS_DYN_MODEL_MAX     9
+#define GNSS_DYN_MODEL_DEFAULT 8
 
     enum class FixMode : U1
     {

@@ -566,7 +566,8 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
     {
         auto nav5 = io_.allocateMessage<msg::CFG_NAV5>();
         nav5->mask = msg::CFG_NAV5::Mask::dyn;
-        nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_2g;
+        nav5->dynModel = cfg_.nav_filter_model;
+        os::lowsyslog("GNSS Filter Model: %02x\n", int(nav5->dynModel));
         if (!io_.sendAndWaitAck(Message::make(*nav5)))
         {
             os::lowsyslog("ublox: CFG-NAV5 failed\n");
@@ -620,6 +621,14 @@ bool Driver::configure(const Config& cfg, os::watchdog::Timer& wdt)
     cfg_.fix_rate_hz = std::max(cfg_.fix_rate_hz, 0.5F);
     cfg_.aux_rate_hz = std::max(cfg_.aux_rate_hz, 0.1F);
     cfg_.aux_rate_hz = std::min(cfg_.aux_rate_hz, cfg_.fix_rate_hz);
+
+    if (static_cast<uint8_t>(cfg_.nav_filter_model) == 1) {
+        // there is no such thing as filter_model 1, don't allow it
+        cfg_.nav_filter_model = msg::CFG_NAV5::DynModel::Airborne_4g;
+    } else {
+        cfg_.nav_filter_model = std::min(cfg_.nav_filter_model, msg::CFG_NAV5::DynModel::Airborne_4g);
+        cfg_.nav_filter_model = std::max(cfg_.nav_filter_model, msg::CFG_NAV5::DynModel::Portable);
+    }
 
     wdt.reset();
     if (!io_.configure(wdt))
