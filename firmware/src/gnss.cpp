@@ -274,6 +274,8 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     }
 
 public:
+    virtual ~GnssThread() { }
+
     void main() override
     {
         watchdog_.startMSec(1000);

@@ -293,6 +293,9 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
             }
         }
     }
+
+public:
+    virtual ~USBControlThread() { }
 } usb_control_thread;
 
 } // namespace

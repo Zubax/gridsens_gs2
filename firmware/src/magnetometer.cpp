@@ -296,6 +296,8 @@ class MagThread : public chibios_rt::BaseStaticThread<1024>
     }
 
 public:
+    virtual ~MagThread() { }
+
     void main() override
     {
         os::watchdog::Timer wdt;

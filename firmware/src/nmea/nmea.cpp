@@ -664,6 +664,9 @@ class NMEAOutputThread : public chibios_rt::BaseStaticThread<2048>
             os::sleepUntilChTime(sleep_until);
         }
     }
+
+public:
+    virtual ~NMEAOutputThread() { }
 } nmea_output_thread;
 
 }
