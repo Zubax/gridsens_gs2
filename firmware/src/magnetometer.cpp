@@ -35,10 +35,10 @@ namespace
 
 static auto& I2CD = I2CD1;
 
-const float AbsMaxValidGauss = 1.3;                                             ///< For the default gain
+const float AbsMaxValidGauss = 8.1;                                             ///< For the selected gain
 const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   ///< Should be OK
 
-const float GaussScale = 0.92e-03;
+const float GaussScale = 4.35e-03;
 
 os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
@@ -208,7 +208,7 @@ bool tryInit()
      * Configure normal mode
      */
     if (!writeCraCrbMode(0b11111000,  // Reg A: Temp compens., Averaging 8x, Update rate 75Hz, Normal mode
-                         0b00100000,  // Reg B: Default gain
+                         0b11100000,  // Reg B: Minimum gain
                          0b00000000)) // Mode: Continuous measurement
     {
         ::os::lowsyslog("Mag: Failed to begin normal operation\n");
