@@ -35,10 +35,12 @@ namespace
 
 static auto& I2CD = I2CD1;
 
-const float AbsMaxValidGauss = 8.1;                                             ///< For the selected gain
+const float AbsMaxValidGauss = 8.1F;                                            ///< For the selected gain
 const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   ///< Should be OK
 
 const float GaussScale = 4.35e-03;
+
+os::config::Param<float> param_rescale_coef("mag.rescale_coef", 1.0F, 0.1F, 2.0F);
 
 os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
@@ -236,6 +238,14 @@ bool tryRead(float out_gauss[3])
     return true;
 }
 
+void rescale(float (&inout_mag_vector)[3], float coef)
+{
+    for (auto& x : inout_mag_vector)
+    {
+        x *= coef;
+    }
+}
+
 void transformToNEDFrame(float inout_mag_vector[3])
 {
     const float x = -inout_mag_vector[1];
@@ -320,6 +330,7 @@ public:
         wdt.reset();
 
         const float variance = param_variance.get();
+        const float rescale_coef = param_rescale_coef.get();
         const uint64_t period_usec = param_period_usec.get();
 
         systime_t sleep_until = chibios_rt::System::getTime();
@@ -331,6 +342,7 @@ public:
             float vector[3] = {0, 0, 0};
             if (tryRead(vector))
             {
+                rescale(vector, rescale_coef);
                 transformToNEDFrame(vector);
                 publish(vector, variance);
                 setStatus(estimateStatusFromMeasurement(vector));
