@@ -26,19 +26,34 @@
 /*
  * GPIO
  */
-// Misc
-#define GPIO_PORT_PERIPH_RESET  GPIOC
-#define GPIO_PIN_PERIPH_RESET   10
+// Peripheral
+#define GPIO_PORT_PERIPH_RESET          GPIOB
+#define GPIO_PIN_PERIPH_RESET           7
+
+#define GPIO_PORT_BAROMETER_CHIP_SELECT GPIOA
+#define GPIO_PIN_BAROMETER_CHIP_SELECT  15
+
+#define GPIO_PORT_COMPASS_CHIP_SELECT   GPIOD
+#define GPIO_PIN_COMPASS_CHIP_SELECT    2
+
+#define GPIO_PORT_COMPASS_DATA_READY    GPIOB
+#define GPIO_PIN_COMPASS_DATA_READY     6
+
+// HWID
+#define GPIO_PORT_HWID                  GPIOC
+#define GPIO_PIN_HWID_BIT0              1
+#define GPIO_PIN_HWID_BIT1_INVERSE      2
+#define GPIO_PIN_HWID_BIT2              3
 
 // LED
-#define GPIO_PORT_LED_STATUS    GPIOB
-#define GPIO_PIN_LED_STATUS     3
+#define GPIO_PORT_LED_STATUS            GPIOB
+#define GPIO_PIN_LED_STATUS             3
 
-#define GPIO_PORT_LED_CAN1      GPIOB
-#define GPIO_PIN_LED_CAN1       5
+#define GPIO_PORT_LED_CAN1              GPIOB
+#define GPIO_PIN_LED_CAN1               5
 
-#define GPIO_PORT_LED_CAN2      GPIOB
-#define GPIO_PIN_LED_CAN2       4
+#define GPIO_PORT_LED_CAN2              GPIOB
+#define GPIO_PIN_LED_CAN2               4
 
 /*
  * I/O ports initial setup, this configuration is established soon after reset
@@ -64,19 +79,19 @@
  * Please refer to the STM32 Reference Manual for details.
  */
 
-#define VAL_GPIOACRL            0x88888A88                      // 7..0
-#define VAL_GPIOACRH            0x88800888                      // 15..8
-#define VAL_GPIOAODR            0x00000000
+#define VAL_GPIOACRL            0x88888A48                      // 7..0
+#define VAL_GPIOACRH            0x28800888                      // 15..8
+#define VAL_GPIOAODR            ((1 << 13))                     // SWDIO pull up
 
-#define VAL_GPIOBCRL            0xEE222888
+#define VAL_GPIOBCRL            0x28222888
 #define VAL_GPIOBCRH            0x88488A48
-#define VAL_GPIOBODR            ((1 << 7) | (1 << 6))
+#define VAL_GPIOBODR            ((1 << GPIO_PIN_PERIPH_RESET))
 
 #define VAL_GPIOCCRL            0x88888888
-#define VAL_GPIOCCRH            0x88888288
-#define VAL_GPIOCODR            ((1 << GPIO_PIN_PERIPH_RESET))
+#define VAL_GPIOCCRH            0x888A4A88
+#define VAL_GPIOCODR            ((1 << GPIO_PIN_HWID_BIT1_INVERSE))
 
-#define VAL_GPIODCRL            0x88888888
+#define VAL_GPIODCRL            0x88888288
 #define VAL_GPIODCRH            0x88888888
 #define VAL_GPIODODR            0x00000000
 

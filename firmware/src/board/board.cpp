@@ -178,7 +178,21 @@ HardwareVersion detectHardwareVersion()
     auto v = HardwareVersion();
 
     v.major = HW_VERSION;
-    v.minor = 0;                // Some detection will be added in future versions
+
+    if (palReadPad(GPIO_PORT_HWID, GPIO_PIN_HWID_BIT0))
+    {
+        v.minor += 1;
+    }
+
+    if (!palReadPad(GPIO_PORT_HWID, GPIO_PIN_HWID_BIT1_INVERSE))
+    {
+        v.minor += 2;
+    }
+
+    if (palReadPad(GPIO_PORT_HWID, GPIO_PIN_HWID_BIT2))
+    {
+        v.minor += 4;
+    }
 
     return v;
 }
