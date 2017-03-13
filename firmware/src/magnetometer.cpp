@@ -54,6 +54,33 @@ os::config::Param<unsigned> param_prio("uavcan.prio-mag",
 chibios_rt::Mutex last_sample_mutex;
 Sample last_sample;
 
+namespace lis3mdl
+{
+
+constexpr std::uint8_t CTRL_REG1    = 0x20;
+constexpr std::uint8_t CTRL_REG2    = 0x21;
+constexpr std::uint8_t CTRL_REG3    = 0x22;
+constexpr std::uint8_t CTRL_REG4    = 0x23;
+constexpr std::uint8_t CTRL_REG5    = 0x24;
+constexpr std::uint8_t STATUS_REG   = 0x27;
+constexpr std::uint8_t OUT_X_L      = 0x28;
+constexpr std::uint8_t OUT_X_H      = 0x29;
+constexpr std::uint8_t OUT_Y_L      = 0x2A;
+constexpr std::uint8_t OUT_Y_H      = 0x2B;
+constexpr std::uint8_t OUT_Z_L      = 0x2C;
+constexpr std::uint8_t OUT_Z_H      = 0x2D;
+constexpr std::uint8_t TEMP_OUT_L   = 0x2E;
+constexpr std::uint8_t TEMP_OUT_H   = 0x2F;
+
+namespace bit
+{
+
+constexpr std::uint8_t ZYXDA    = 3;
+constexpr std::uint8_t BDU      = 6;
+
+}
+}
+
 void publish(float field[3], float variance)
 {
     if (!node::isStarted())
@@ -78,113 +105,162 @@ void publish(float field[3], float variance)
     (void)mag_pub.broadcast(mag);
 }
 
-template <unsigned TxSize, unsigned RxSize>
-bool io(const std::array<uint8_t, TxSize>& tx, std::array<uint8_t, RxSize>& rx)
+template <unsigned IOSize>
+std::array<uint8_t, IOSize> io(const std::array<uint8_t, IOSize>& tx)
 {
-    const unsigned Address = 0x1E;
-    i2cAcquireBus(&I2CD);
-    const msg_t status = i2cMasterTransmitTimeout(&I2CD, Address, tx.data(), TxSize, rx.data(), RxSize, MS2ST(5));
-#if defined(DEBUG_BUILD) && DEBUG_BUILD
-    if (status != MSG_OK)
-    {
-        os::lowsyslog("Mag i2c st %d err %u\n", int(status), unsigned(i2cGetErrors(&I2CD)));
-    }
-#endif
-    i2cReleaseBus(&I2CD);
-    return status == MSG_OK;
+    spiAcquireBus(&SPID);
+    palClearPad(GPIO_PORT_COMPASS_CHIP_SELECT, GPIO_PIN_COMPASS_CHIP_SELECT);
+
+    std::array<uint8_t, IOSize> rx;
+    spiExchange(&SPID, tx.size(), tx.data(), rx.data());
+
+    palSetPad(GPIO_PORT_COMPASS_CHIP_SELECT, GPIO_PIN_COMPASS_CHIP_SELECT);
+    spiReleaseBus(&SPID);
+
+    return rx;
 }
 
-bool writeCraCrbMode(uint8_t cra, uint8_t crb, uint8_t mode)
+template <unsigned TxSize>
+void write(const std::uint8_t address, const std::array<uint8_t, TxSize>& tx)
 {
-    const uint8_t cfg_registers[] = { cra, crb, mode };
-    // Write
-    {
-        std::array<uint8_t, 4> tx;
-        tx[0] = 0;
-        std::copy(cfg_registers, cfg_registers + 3, tx.begin() + 1);
-        std::array<uint8_t, 0> rx;
-        if (!io(tx, rx))
-        {
-            return false;
-        }
-    }
-    // Readback - make sure it was written correctly
-    {
-        std::array<uint8_t, 1> tx;
-        tx[0] = 0;
-        std::array<uint8_t, 3> rx;
-        if (!io(tx, rx))
-        {
-            return false;
-        }
-        if (!std::equal(rx.begin(), rx.end(), cfg_registers))
-        {
-            return false;
-        }
-    }
-    return true;
+    static_assert(TxSize > 0, "TxSize");
+    assert(address <= 0b00111111);
+
+    std::array<uint8_t, TxSize + 1> write_buf;
+    write_buf[0] = (address << 2) | 0b10;                       // Set MS bit (memory increment)
+    std::copy(tx.begin(), tx.end(), write_buf.begin() + 1);
+
+    (void) io(write_buf);
 }
 
-bool tryReadRawData(int16_t out_xyz[3])
+void write(const std::uint8_t address, const std::uint8_t byte)
 {
-    std::array<uint8_t, 1> tx;
-    tx[0] = 3;
-    std::array<uint8_t, 6> rx;
-    if (!io(tx, rx))
-    {
-        ::os::lowsyslog("Mag read failed\n");
-        return false;
-    }
-    out_xyz[0] = (((int16_t)rx[0]) << 8) | rx[1];  // X
-    out_xyz[2] = (((int16_t)rx[2]) << 8) | rx[3];  // Z
-    out_xyz[1] = (((int16_t)rx[4]) << 8) | rx[5];  // Y
-    return true;
+    const std::array<uint8_t, 1> tx{ byte };
+    write(address, tx);
 }
 
-bool trySelfTest(const bool polarity)
+template <unsigned RxSize>
+std::array<uint8_t, RxSize> read(const std::uint8_t address)
 {
-    static const int16_t LowLimit  = 143;     // For gain 7
-    static const int16_t HighLimit = 339;
+    static_assert(RxSize > 0, "RxSize");
+    assert(address <= 0b00111111);
 
-    /*
-     * Enable self test mode (pos/neg)
-     */
-    if (!writeCraCrbMode(polarity ? 0b11110001 : 0b11110010, // Reg A: Temp comp., 8-avg, 15 Hz default, pos/neg test
-                         0b11100000,                         // Reg B: Gain=7
-                         0b00000000))                        // Mode: Continuous-measurement mode
-    {
-        ::os::lowsyslog("Mag: Failed to begin self test\n");
-        return false;
-    }
+    std::array<uint8_t, RxSize + 1> io_buf;
+    std::fill(io_buf.begin(), io_buf.end(), 0);
+    io_buf[0] = (address << 2) | 0b11;                          // Set MS bit (memory increment) and RW bit (read)
 
-    /*
-     * Ignore the first two samples, keep the last one
-     */
-    int16_t raw_xyz[3] = {};
-    for (int i = 0; i < 3; i++)
+    io_buf = io(io_buf);
+
+    std::array<uint8_t, RxSize> out;
+    std::copy(io_buf.begin() + 1, io_buf.end(), out.begin());
+
+    return out;
+}
+
+std::uint8_t readByte(const std::uint8_t address)
+{
+    return read<1>(address)[0];
+}
+
+void readMagneticFieldStrength(float out_gauss[3])
+{
+    const auto rx = read<6>(lis3mdl::OUT_X_L);
+
+    const std::int16_t raw_xyz[3]
     {
-        ::usleep(80000);
-        if (!tryReadRawData(raw_xyz))
+        std::int16_t(std::uint16_t(rx[0]) | std::uint16_t(std::uint16_t(rx[1]) << 8)),
+        std::int16_t(std::uint16_t(rx[2]) | std::uint16_t(std::uint16_t(rx[3]) << 8)),
+        std::int16_t(std::uint16_t(rx[4]) | std::uint16_t(std::uint16_t(rx[5]) << 8))
+    };
+
+    out_gauss[0] = raw_xyz[0] * GaussScale;
+    out_gauss[1] = raw_xyz[1] * GaussScale;
+    out_gauss[2] = raw_xyz[2] * GaussScale;
+}
+
+/**
+ * Refer to AN4602 for explanation.
+ */
+bool performSelfTest()
+{
+    write(lis3mdl::CTRL_REG1, 0x1C);
+    write(lis3mdl::CTRL_REG2, 0x40);
+    write(lis3mdl::CTRL_REG5, lis3mdl::bit::BDU);       // Block mode update
+    usleep(20000);
+    write(lis3mdl::CTRL_REG3, 0x00);
+    usleep(20000);
+
+    // Discard first sample
+    {
+        usleep(20000);
+        if ((readByte(lis3mdl::STATUS_REG) & (1 << lis3mdl::bit::ZYXDA)) == 0)
         {
+            os::lowsyslog("Mag: ZYXDA not set\n");
             return false;
         }
+        float dummy[3]{};
+        readMagneticFieldStrength(dummy);
     }
 
-    ::os::lowsyslog("Mag self test sample, %s, x/y/z: %d %d %d\n", polarity ? "positive": "negative",
-                int(raw_xyz[0]), int(raw_xyz[1]), int(raw_xyz[2]));
-
-    /*
-     * Validate the obtained results
-     */
-    for (const auto a : raw_xyz)
+    // Averaging 5x
+    float average[3]{};
+    for (int i = 0; i < 5; i++)
     {
-        const auto normalized = polarity ? a : -a;
-        if ((normalized < LowLimit) || (normalized > HighLimit))
+        usleep(20000);
+        if ((readByte(lis3mdl::STATUS_REG) & (1 << lis3mdl::bit::ZYXDA)) == 0)
         {
-            ::os::lowsyslog("Mag self test sample %d is invalid\n", int(a));
+            os::lowsyslog("Mag: ZYXDA not set\n");
             return false;
         }
+
+        float sample[3]{};
+        readMagneticFieldStrength(sample);
+        average[0] += sample[0];
+        average[1] += sample[1];
+        average[2] += sample[2];
     }
+    average[0] /= 5.0F;
+    average[1] /= 5.0F;
+    average[2] /= 5.0F;
+    os::lowsyslog("Mag: AVG %f %f %f G\n", average[0], average[1], average[2]);
+
+    // Enable self test
+    write(lis3mdl::CTRL_REG1, 0x1D);
+    usleep(60000);
+
+    // Discard first sample
+    {
+        usleep(20000);
+        if ((readByte(lis3mdl::STATUS_REG) & (1 << lis3mdl::bit::ZYXDA)) == 0)
+        {
+            os::lowsyslog("Mag: ZYXDA not set\n");
+            return false;
+        }
+        float dummy[3]{};
+        readMagneticFieldStrength(dummy);
+    }
+
+    // Averaging 5x
+    float average_self_test[3]{};
+    for (int i = 0; i < 5; i++)
+    {
+        usleep(20000);
+        if ((readByte(lis3mdl::STATUS_REG) & (1 << lis3mdl::bit::ZYXDA)) == 0)
+        {
+            os::lowsyslog("Mag: ZYXDA not set\n");
+            return false;
+        }
+
+        float sample[3]{};
+        readMagneticFieldStrength(sample);
+        average_self_test[0] += sample[0];
+        average_self_test[1] += sample[1];
+        average_self_test[2] += sample[2];
+    }
+    average_self_test[0] /= 5.0F;
+    average_self_test[1] /= 5.0F;
+    average_self_test[2] /= 5.0F;
+    os::lowsyslog("Mag: AVGST %f %f %f G\n", average_self_test[0], average_self_test[1], average_self_test[2]);
 
     return true;
 }
@@ -192,49 +268,32 @@ bool trySelfTest(const bool polarity)
 bool tryInit()
 {
     /*
-     * Run two self tests - positive and negative
+     * Run self test
      */
-    if (!trySelfTest(true))
+    if (!performSelfTest())
     {
-        ::os::lowsyslog("Mag positive self test failed\n");
+        ::os::lowsyslog("Mag self test failed\n");
         return false;
     }
 
-    if (!trySelfTest(false))
-    {
-        ::os::lowsyslog("Mag negative self test failed\n");
-        return false;
-    }
+    ::os::lowsyslog("Mag self test OK\n");
+
+    chibios_rt::System::halt("DONE");
 
     /*
-     * Configure normal mode
+     * Configure
      */
-    if (!writeCraCrbMode(0b11111000,  // Reg A: Temp compens., Averaging 8x, Update rate 75Hz, Normal mode
-                         0b11100000,  // Reg B: Minimum gain
-                         0b00000000)) // Mode: Continuous measurement
-    {
-        ::os::lowsyslog("Mag: Failed to begin normal operation\n");
-        return false;
-    }
+    // TODO
 
     /*
-     * Discard the first sample after gain change
+     * Discard the first couple of samples after gain change
      */
-    ::usleep(80000);
-    int16_t dummy[3] = {};
-    return tryReadRawData(dummy);
-}
+    float dummy[3]{};
+    usleep(20000);
+    readMagneticFieldStrength(dummy);
+    usleep(20000);
+    readMagneticFieldStrength(dummy);
 
-bool tryRead(float out_gauss[3])
-{
-    int16_t raw_xyz[3] = {};
-    if (!tryReadRawData(raw_xyz))
-    {
-        return false;
-    }
-    out_gauss[0] = raw_xyz[0] * GaussScale;
-    out_gauss[1] = raw_xyz[1] * GaussScale;
-    out_gauss[2] = raw_xyz[2] * GaussScale;
     return true;
 }
 
@@ -345,9 +404,10 @@ public:
         {
             sleep_until += US2ST(period_usec);
 
-            float vector[3] = {0, 0, 0};
-            if (tryRead(vector))
             {
+                float vector[3] = {0, 0, 0};
+                readMagneticFieldStrength(vector);
+
                 rescale(vector, scaling_coef);
                 transformToNEDFrame(vector);
                 publish(vector, variance);
@@ -356,10 +416,6 @@ public:
                 os::MutexLocker mlock(last_sample_mutex);
                 last_sample.seq_id++;
                 std::copy(std::begin(vector), std::end(vector), last_sample.magnetic_field_strength);
-            }
-            else
-            {
-                setStatus(uavcan::protocol::NodeStatus::HEALTH_ERROR);
             }
 
             os::sleepUntilChTime(sleep_until);

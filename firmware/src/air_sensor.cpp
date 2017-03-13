@@ -218,3 +218,9 @@ Sample getLastSample()
 }
 
 #endif
+
+namespace air_sensor
+{
+void init() { }
+Sample getLastSample() { return Sample(); }
+}

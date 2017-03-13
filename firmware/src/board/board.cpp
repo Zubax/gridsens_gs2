@@ -45,12 +45,15 @@ const extern std::uint8_t DeviceSignatureStorage[];
 
 namespace board
 {
-
-static const I2CConfig I2CCfg1 =
+/**
+ * SPI is clocked from PCLK1 which is clocked at 36 MHz.
+ */
+static const SPIConfig SPICfg =
 {
-    OPMODE_I2C,
-    100000,
-    STD_DUTY_CYCLE,
+    nullptr,
+    nullptr,
+    0,
+    SPI_CR1_BR_2
 };
 
 os::watchdog::Timer init(unsigned wdt_timeout_ms)
@@ -61,7 +64,7 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     halInit();
     chSysInit();
     sdStart(&STDOUT_SD, NULL);
-    i2cStart(&I2CD1, &I2CCfg1);
+    spiStart(&SPID3, &SPICfg);
 
     /*
      * Watchdog
@@ -235,7 +238,7 @@ void boardInit(void)
     // Enable SWJ only, JTAG is not needed at all:
     mapr |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 
-    AFIO->MAPR = mapr | AFIO_MAPR_CAN_REMAP_REMAP2;
+    AFIO->MAPR = mapr | AFIO_MAPR_CAN_REMAP_REMAP2 | AFIO_MAPR_SPI3_REMAP;
 
     /*
      * Making sure the CAN controller is disabled!
