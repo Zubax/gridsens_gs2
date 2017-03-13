@@ -34,8 +34,6 @@ void die(int error);
 void setCANLed(unsigned iface_index, bool state);
 void setStatusLed(bool state);
 
-void enterBootloader();
-
 void restart();
 
 typedef std::array<std::uint8_t, 12> UniqueID;
