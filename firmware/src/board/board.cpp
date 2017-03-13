@@ -71,6 +71,21 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     wdt.startMSec(wdt_timeout_ms);
 
     /*
+     * Version check
+     */
+    const auto hw_ver = detectHardwareVersion();
+
+    if (hw_ver.major != 2)
+    {
+        chibios_rt::System::halt("UNSUPPORTED HARDWARE: MAJOR VERSION");
+    }
+
+    if (hw_ver.minor != 2)
+    {
+        chibios_rt::System::halt("UNSUPPORTED HARDWARE: MINOR VERSION");
+    }
+
+    /*
      * Configuration manager
      */
     const int config_init_res = os::config::init();
@@ -82,9 +97,11 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     /*
      * Prompt
      */
-    os::lowsyslog(PRODUCT_NAME_STRING " %d.%d.%08x / %d %s\n",
+    os::lowsyslog(PRODUCT_NAME_STRING " %d.%d %d.%d.%08x / %d %s\n",
+                  hw_ver.major, hw_ver.minor,
                   FW_VERSION_MAJOR, FW_VERSION_MINOR, GIT_HASH, config_init_res,
                   watchdogTriggeredLastReset() ? "WDTRESET" : "OK");
+
     return wdt;
 }
 
