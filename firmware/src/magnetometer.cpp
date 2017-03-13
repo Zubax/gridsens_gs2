@@ -33,12 +33,12 @@ namespace magnetometer
 namespace
 {
 
-static auto& I2CD = I2CD1;
+static auto& SPID = SPID3;
 
-const float AbsMaxValidGauss = 8.1F;                                            ///< For the selected gain
+const float AbsMaxValidGauss = 12.0F;                                           ///< For the selected gain
 const auto MaxZeroVectorDuration = uavcan::MonotonicDuration::fromMSec(5000);   ///< Should be OK
 
-const float GaussScale = 4.35e-03;
+const float GaussScale = 0.00043840420868040335F;
 
 os::config::Param<float> param_scaling_coef("mag.scaling_coef", 1.0F, 0.1F, 2.0F);
 
@@ -248,9 +248,15 @@ void rescale(float (&inout_mag_vector)[3], float coef)
 
 void transformToNEDFrame(float inout_mag_vector[3])
 {
-    const float x = -inout_mag_vector[1];
-    const float y = inout_mag_vector[0];
-    const float z = inout_mag_vector[2];
+    /*
+     * Board frame is in the NED frame which is standard in aerospace:
+     *  X - along the FORWARD arrow
+     *  Y - to the right of the FORWARD arrow when looking from the TOP side
+     *  Z - towards the BOTTOM side
+     */
+    const float x =  inout_mag_vector[1];
+    const float y = -inout_mag_vector[0];
+    const float z =  inout_mag_vector[2];
 
     inout_mag_vector[0] = x;
     inout_mag_vector[1] = y;

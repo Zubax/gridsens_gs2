@@ -81,7 +81,7 @@
 
 #define VAL_GPIOACRL            0x88888A48                      // 7..0
 #define VAL_GPIOACRH            0x28800888                      // 15..8
-#define VAL_GPIOAODR            ((1 << 13))                     // SWDIO pull up
+#define VAL_GPIOAODR            ((1 << 13) | (1 << GPIO_PIN_BAROMETER_CHIP_SELECT))     // SWDIO pull up
 
 #define VAL_GPIOBCRL            0x28222888
 #define VAL_GPIOBCRH            0x88488A48
@@ -93,7 +93,7 @@
 
 #define VAL_GPIODCRL            0x88888288
 #define VAL_GPIODCRH            0x88888888
-#define VAL_GPIODODR            0x00000000
+#define VAL_GPIODODR            ((1 << GPIO_PIN_COMPASS_CHIP_SELECT))
 
 #define VAL_GPIOECRL            0x88888888
 #define VAL_GPIOECRH            0x88888888

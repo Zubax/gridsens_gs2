@@ -94,7 +94,7 @@
  * I2C driver system settings.
  * On IRQ priority levels: http://forum.chibios.org/phpbb/viewtopic.php?f=25&t=3085&p=23830
  */
-#define STM32_I2C_USE_I2C1                  TRUE
+#define STM32_I2C_USE_I2C1                  FALSE
 #define STM32_I2C_USE_I2C2                  FALSE
 #define STM32_I2C_I2C1_IRQ_PRIORITY         2
 #define STM32_I2C_I2C2_IRQ_PRIORITY         2
@@ -159,13 +159,13 @@
  */
 #define STM32_SPI_USE_SPI1                  FALSE
 #define STM32_SPI_USE_SPI2                  FALSE
-#define STM32_SPI_USE_SPI3                  FALSE
-#define STM32_SPI_SPI1_DMA_PRIORITY         1
-#define STM32_SPI_SPI2_DMA_PRIORITY         1
-#define STM32_SPI_SPI3_DMA_PRIORITY         1
-#define STM32_SPI_SPI1_IRQ_PRIORITY         10
-#define STM32_SPI_SPI2_IRQ_PRIORITY         10
-#define STM32_SPI_SPI3_IRQ_PRIORITY         10
+#define STM32_SPI_USE_SPI3                  TRUE
+#define STM32_SPI_SPI1_DMA_PRIORITY         2
+#define STM32_SPI_SPI2_DMA_PRIORITY         2
+#define STM32_SPI_SPI3_DMA_PRIORITY         2
+#define STM32_SPI_SPI1_IRQ_PRIORITY         3
+#define STM32_SPI_SPI2_IRQ_PRIORITY         3
+#define STM32_SPI_SPI3_IRQ_PRIORITY         3
 #define STM32_SPI_DMA_ERROR_HOOK(spip)      osalSysHalt("DMA failure")
 
 /*

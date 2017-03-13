@@ -18,7 +18,6 @@
  */
 
 #include "air_sensor.hpp"
-#include "board/ms5611.h"
 #include "node.hpp"
 
 #include <uavcan/equipment/air_data/StaticPressure.hpp>
@@ -27,6 +26,9 @@
 #include <ch.hpp>
 #include <zubax_chibios/os.hpp>
 #include <unistd.h>
+
+// Temporarily disabled
+#if 0
 
 namespace air_sensor
 {
@@ -214,3 +216,5 @@ Sample getLastSample()
 }
 
 }
+
+#endif
