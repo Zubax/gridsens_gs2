@@ -42,6 +42,8 @@ const float GaussScale = 0.00043840420868040335F;
 
 os::config::Param<float> param_scaling_coef("mag.scaling_coef", 1.0F, 0.1F, 2.0F);
 
+os::config::Param<bool> param_power_on_self_test("mag.pwron_slftst", true);
+
 os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
 os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 20000, 20000, 1000000);
@@ -354,13 +356,20 @@ bool tryInit()
     /*
      * Run self test
      */
-    if (!performSelfTest())
+    if (param_power_on_self_test)
     {
-        ::os::lowsyslog("Mag self test failed\n");
-        return false;
-    }
+        if (!performSelfTest())
+        {
+            ::os::lowsyslog("Mag self test failed\n");
+            return false;
+        }
 
-    ::os::lowsyslog("Mag self test OK\n");
+        ::os::lowsyslog("Mag self test OK\n");
+    }
+    else
+    {
+        ::os::lowsyslog("Mag self test skipped - disabled by configuration\n");
+    }
 
     /*
      * Configure
