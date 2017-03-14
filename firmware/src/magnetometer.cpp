@@ -163,6 +163,22 @@ std::uint8_t readByte(const std::uint8_t address)
     return read<1>(address)[0];
 }
 
+bool writeWithCheck(const std::uint8_t address, const std::uint8_t byte)
+{
+    write(address, byte);
+    const std::uint8_t readback = readByte(address);
+    if (readback == byte)
+    {
+        return true;
+    }
+    else
+    {
+        ::os::lowsyslog("Mag: Register write failure: address 0x%02x, wrote 0x%02x, got 0x%02x\n",
+                        address, byte, readback);
+        return false;
+    }
+}
+
 void readMagneticFieldStrength(float out_gauss[3])
 {
     const auto rx = read<6>(lis3mdl::OUT_X_L);
@@ -184,16 +200,6 @@ void readMagneticFieldStrength(float out_gauss[3])
  */
 bool performSelfTest()
 {
-    // Connectivity check
-    {
-        const std::uint8_t who_am_i = readByte(lis3mdl::WHO_AM_I);
-        if (who_am_i != 0b00111101)
-        {
-            os::lowsyslog("Mag: WHO_AM_I mismatch: %02x\n", who_am_i);
-            return false;
-        }
-    }
-
     // Initial setup
     write(lis3mdl::CTRL_REG1, 0x1C);
     write(lis3mdl::CTRL_REG2, 0x40);
@@ -316,10 +322,15 @@ bool performSelfTest()
     }
 
     // Disable self test
-    write(lis3mdl::CTRL_REG1, 0x1C);
-    if (readByte(lis3mdl::CTRL_REG1) != 0x1C)
+    if (!writeWithCheck(lis3mdl::CTRL_REG1, 0x1C))
     {
         os::lowsyslog("Mag: Could not disable self test\n");
+        return false;
+    }
+
+    if (!writeWithCheck(lis3mdl::CTRL_REG3, 0x03))
+    {
+        os::lowsyslog("Mag: Could not power down\n");
         return false;
     }
 
@@ -328,6 +339,18 @@ bool performSelfTest()
 
 bool tryInit()
 {
+    /*
+     * Connectivity check
+     */
+    {
+        const std::uint8_t who_am_i = readByte(lis3mdl::WHO_AM_I);
+        if (who_am_i != 0b00111101)
+        {
+            os::lowsyslog("Mag: WHO_AM_I mismatch: %02x\n", who_am_i);
+            return false;
+        }
+    }
+
     /*
      * Run self test
      */
@@ -339,16 +362,41 @@ bool tryInit()
 
     ::os::lowsyslog("Mag self test OK\n");
 
-    usleep(100000);
-    chibios_rt::System::halt("DONE");
-
     /*
      * Configure
      */
-    // TODO
+    if (!writeWithCheck(lis3mdl::CTRL_REG3, 0b00000011))        // Disable sensor during configuration
+    {
+        return false;
+    }
+
+    if (!writeWithCheck(lis3mdl::CTRL_REG1, 0b11111110))        // Ultra high performance, 155 Hz update rate
+    {
+        return false;
+    }
+
+    if (!writeWithCheck(lis3mdl::CTRL_REG2, 0b01000000))        // 12 Gauss range
+    {
+        return false;
+    }
+
+    if (!writeWithCheck(lis3mdl::CTRL_REG4, 0b00001100))        // Z axis configuration should match X and Y
+    {
+        return false;
+    }
+
+    if (!writeWithCheck(lis3mdl::CTRL_REG5, 0b01000000))        // Block data update
+    {
+        return false;
+    }
+
+    if (!writeWithCheck(lis3mdl::CTRL_REG3, 0b00000000))        // Enter continuous conversion mode
+    {
+        return false;
+    }
 
     /*
-     * Discard the first couple of samples after gain change
+     * Discard the first couple of samples after initialization
      */
     float dummy[3]{};
     usleep(20000);
