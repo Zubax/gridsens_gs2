@@ -53,7 +53,7 @@ static const SPIConfig SPICfg =
     nullptr,
     nullptr,
     0,
-    SPI_CR1_BR_2
+    SPI_CR1_BR_1 | SPI_CR1_BR_0
 };
 
 os::watchdog::Timer init(unsigned wdt_timeout_ms)

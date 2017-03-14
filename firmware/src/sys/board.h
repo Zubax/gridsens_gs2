@@ -88,8 +88,8 @@
 #define VAL_GPIOBODR            ((1 << GPIO_PIN_PERIPH_RESET))
 
 #define VAL_GPIOCCRL            0x88888888
-#define VAL_GPIOCCRH            0x888A4A88
-#define VAL_GPIOCODR            ((1 << GPIO_PIN_HWID_BIT1_INVERSE))
+#define VAL_GPIOCCRH            0x888A8A88
+#define VAL_GPIOCODR            ((1 << GPIO_PIN_HWID_BIT1_INVERSE) | (1 << 11))
 
 #define VAL_GPIODCRL            0x88888288
 #define VAL_GPIODCRH            0x88888888

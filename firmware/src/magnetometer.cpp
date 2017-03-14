@@ -57,6 +57,7 @@ Sample last_sample;
 namespace lis3mdl
 {
 
+constexpr std::uint8_t WHO_AM_I     = 0x0F;
 constexpr std::uint8_t CTRL_REG1    = 0x20;
 constexpr std::uint8_t CTRL_REG2    = 0x21;
 constexpr std::uint8_t CTRL_REG3    = 0x22;
@@ -127,7 +128,7 @@ void write(const std::uint8_t address, const std::array<uint8_t, TxSize>& tx)
     assert(address <= 0b00111111);
 
     std::array<uint8_t, TxSize + 1> write_buf;
-    write_buf[0] = (address << 2) | 0b10;                       // Set MS bit (memory increment)
+    write_buf[0] = address | 0b01000000;                        // Set MS bit (memory increment)
     std::copy(tx.begin(), tx.end(), write_buf.begin() + 1);
 
     (void) io(write_buf);
@@ -147,7 +148,7 @@ std::array<uint8_t, RxSize> read(const std::uint8_t address)
 
     std::array<uint8_t, RxSize + 1> io_buf;
     std::fill(io_buf.begin(), io_buf.end(), 0);
-    io_buf[0] = (address << 2) | 0b11;                          // Set MS bit (memory increment) and RW bit (read)
+    io_buf[0] = address | 0b11000000;                           // Set MS bit (memory increment) and RW bit (read)
 
     io_buf = io(io_buf);
 
@@ -183,6 +184,17 @@ void readMagneticFieldStrength(float out_gauss[3])
  */
 bool performSelfTest()
 {
+    // Connectivity check
+    {
+        const std::uint8_t who_am_i = readByte(lis3mdl::WHO_AM_I);
+        if (who_am_i != 0b00111101)
+        {
+            os::lowsyslog("Mag: WHO_AM_I mismatch: %02x\n", who_am_i);
+            return false;
+        }
+    }
+
+    // Initial setup
     write(lis3mdl::CTRL_REG1, 0x1C);
     write(lis3mdl::CTRL_REG2, 0x40);
     write(lis3mdl::CTRL_REG5, lis3mdl::bit::BDU);       // Block mode update
@@ -190,12 +202,34 @@ bool performSelfTest()
     write(lis3mdl::CTRL_REG3, 0x00);
     usleep(20000);
 
+    // Check register configuration
+    {
+        if (readByte(lis3mdl::CTRL_REG1) != 0x1C)
+        {
+            os::lowsyslog("Mag: CTRL_REG1 mismatch\n");
+            return false;
+        }
+
+        if (readByte(lis3mdl::CTRL_REG2) != 0x40)
+        {
+            os::lowsyslog("Mag: CTRL_REG2 mismatch\n");
+            return false;
+        }
+
+        if (readByte(lis3mdl::CTRL_REG3) != 0x00)
+        {
+            os::lowsyslog("Mag: CTRL_REG3 mismatch\n");
+            return false;
+        }
+    }
+
     // Discard first sample
     {
         usleep(20000);
-        if ((readByte(lis3mdl::STATUS_REG) & (1 << lis3mdl::bit::ZYXDA)) == 0)
+        const std::uint8_t status_reg = readByte(lis3mdl::STATUS_REG);
+        if ((status_reg & (1 << lis3mdl::bit::ZYXDA)) == 0)
         {
-            os::lowsyslog("Mag: ZYXDA not set\n");
+            os::lowsyslog("Mag: ZYXDA not set (STATUS_REG %02x)\n", status_reg);
             return false;
         }
         float dummy[3]{};
@@ -262,6 +296,33 @@ bool performSelfTest()
     average_self_test[2] /= 5.0F;
     os::lowsyslog("Mag: AVGST %f %f %f G\n", average_self_test[0], average_self_test[1], average_self_test[2]);
 
+    // Validation
+    {
+        const float dx = std::abs(average[0] - average_self_test[0]);
+        const float dy = std::abs(average[1] - average_self_test[1]);
+        const float dz = std::abs(average[2] - average_self_test[2]);
+        // See the datasheet for thresholds
+        const bool ok =
+            (0.90F <= dx) && (dx <= 3.1F) &&
+            (0.90F <= dy) && (dy <= 3.1F) &&
+            (0.05F <= dz) && (dz <= 1.1F);
+
+        os::lowsyslog("Mag: ST dxyz: %f %f %f G\n", dx, dy, dz);
+
+        if (!ok)
+        {
+            return false;
+        }
+    }
+
+    // Disable self test
+    write(lis3mdl::CTRL_REG1, 0x1C);
+    if (readByte(lis3mdl::CTRL_REG1) != 0x1C)
+    {
+        os::lowsyslog("Mag: Could not disable self test\n");
+        return false;
+    }
+
     return true;
 }
 
@@ -278,6 +339,7 @@ bool tryInit()
 
     ::os::lowsyslog("Mag self test OK\n");
 
+    usleep(100000);
     chibios_rt::System::halt("DONE");
 
     /*
