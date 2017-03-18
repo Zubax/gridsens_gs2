@@ -46,6 +46,7 @@ SECTIONS
 
     startup : ALIGN(16) SUBALIGN(16)
     {
+        FILL(0xDEADC0DE);
         KEEP(*(.vectors))
         . = ALIGN(8);
         KEEP(*(.app_descriptor));
@@ -54,6 +55,7 @@ SECTIONS
 
     constructors : ALIGN(4) SUBALIGN(4)
     {
+        FILL(0xDEADC0DE);
         PROVIDE(__init_array_start = .);
         KEEP(*(SORT(.init_array.*)))
         KEEP(*(.init_array))
@@ -62,6 +64,7 @@ SECTIONS
 
     destructors : ALIGN(4) SUBALIGN(4)
     {
+        FILL(0xDEADC0DE);
         PROVIDE(__fini_array_start = .);
         KEEP(*(.fini_array))
         KEEP(*(SORT(.fini_array.*)))
@@ -77,18 +80,20 @@ SECTIONS
          * Filling is important: if it is not specified, gaps between aligned sections will be filled with zero when
          * exporting binaries, and will be skipped (i.e. set to 0xFF) when flashing .elf directly during debugging.
          * The discrepancy causes the firmware CRC to mismatch, preventing the bootloader from running it.
-         * Assigning a well-defined fill byte eliminates the discrepancy (binary files will also contain 0xFF),
-         * allowing to flash the firmware directly with an SWD debugger during development.
+         * Assigning a well-defined fill byte eliminates the discrepancy (binary files will also contain 0xFF or
+         * whatever), allowing to flash the firmware directly with an SWD debugger during development.
          * See http://www.math.utah.edu/docs/info/ld_3.html
+         * Also http://blog.hrbacek.info/2013/12/28/filling-unused-memory-area-using-gnu-linker-script
          */
-        FILL(0xFF);
-        . += 1;            /* This increment prevents moving location counter backwards if no alignment is needed */
-        . = ALIGN(16) - 1;
-        BYTE(0xFF)         /* Without this, the linker will ignore aligmnent */
+        FILL(0xDEADC0DE);
+        /* Now, we need some dummy data here, otherwise the alignment above will be ignored. */
+        BYTE(0xFF);
+        . = ALIGN(64);  /* Text sometimes gets aligned at >32, not sure why */
     } > flash
 
     .text : ALIGN(16) SUBALIGN(16)
     {
+        FILL(0xDEADC0DE);
         *(.text)
         *(.text.*)
         *(.rodata)
@@ -122,6 +127,8 @@ SECTIONS
 
     .textalign : ONLY_IF_RO
     {
+        FILL(0xDEADC0DE);
+        BYTE(0xFF);
         . = ALIGN(8);
     } > flash
 
