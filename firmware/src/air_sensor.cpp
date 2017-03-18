@@ -39,7 +39,7 @@ const float OperatingTemperatureRange[] = {             ///< Operating temperatu
     +80 + ms5611::DegreesCelsiusToKelvinOffset
 };
 
-const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
+const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 40);
 
 os::config::Param<unsigned> param_period_usec("uavcan.pubp-pres",
                                               0, 0, 1000000);

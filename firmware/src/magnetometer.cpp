@@ -46,7 +46,7 @@ os::config::Param<bool> param_power_on_self_test("mag.pwron_slftst", true);
 
 os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
-os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 20000, 6666, 1000000);
+os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 10000, 6666, 1000000);
 
 os::config::Param<unsigned> param_prio("uavcan.prio-mag",
                                        16,
