@@ -34,6 +34,8 @@ namespace air_sensor
 namespace
 {
 
+constexpr unsigned TemperaturePeriodRatio = 5;
+
 const float OperatingTemperatureRange[] = {             ///< Operating temperature, defined by the specification
     -40 + ms5611::DegreesCelsiusToKelvinOffset,
     +80 + ms5611::DegreesCelsiusToKelvinOffset
@@ -104,7 +106,14 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         }
 
         (void)pressure_pub.broadcast(pressure);
-        (void)temperature_pub.broadcast(temperature);
+
+        static unsigned temperature_publishing_frequency_divider = 0;
+        temperature_publishing_frequency_divider++;
+        if (temperature_publishing_frequency_divider >= TemperaturePeriodRatio)
+        {
+            temperature_publishing_frequency_divider = 0;
+            (void)temperature_pub.broadcast(temperature);
+        }
     }
 
     void tryRun() const
