@@ -79,6 +79,8 @@ int main()
     /*
      * Main loop.
      */
+    auto config_modifications = os::config::getModificationCounter();
+
     while (!node::hasPendingRestartRequest())
     {
         const auto on_off = getStatusLedOnOffMSecDurations();
@@ -88,6 +90,15 @@ int main()
         board::setStatusLed(false);
         ::usleep(on_off.second * 1000);
         wdt.reset();
+
+        const auto new_config_modifications = os::config::getModificationCounter();
+        if (new_config_modifications != config_modifications)
+        {
+            config_modifications = new_config_modifications;
+            os::lowsyslog("Saving configuration... ");
+            const int res = ::configSave();                         // TODO use C++ API
+            os::lowsyslog("Config saved, status %d\n", res);
+        }
     }
 
     board::setStatusLed(true);
