@@ -19,6 +19,7 @@
 
 #include "air_sensor.hpp"
 #include "node.hpp"
+#include "board/ms5611.hpp"
 
 #include <uavcan/equipment/air_data/StaticPressure.hpp>
 #include <uavcan/equipment/air_data/StaticTemperature.hpp>
@@ -27,8 +28,6 @@
 #include <zubax_chibios/os.hpp>
 #include <unistd.h>
 
-// Temporarily disabled
-#if 0
 
 namespace air_sensor
 {
@@ -37,9 +36,20 @@ namespace
 
 const float DegreesCelsiusToKelvinOffset = 273.15F;
 
-const float ValidPressureRangePa[] = { 1000, 120000 };            ///< Sensor range
-const float ValidTemperatureRangeDegC[] = { -40, 85 };            ///< Sensor range
-const float OperatingTemperatureRangeDegC[] = { -30, 60 };        ///< Operating temperature, by specification
+const float ValidPressureRangePa[] = {                  ///< Sensor range
+    1000,
+    120000
+};
+
+const float ValidTemperatureRange[] = {                 ///< Sensor range
+    -40 + DegreesCelsiusToKelvinOffset,
+    +85 + DegreesCelsiusToKelvinOffset
+};
+
+const float OperatingTemperatureRange[] = {             ///< Operating temperature, defined by the specification
+    -30 + DegreesCelsiusToKelvinOffset,
+    +80 + DegreesCelsiusToKelvinOffset
+};
 
 const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
 
@@ -57,26 +67,27 @@ os::config::Param<float> param_temperature_variance("temp.variance", 4.0, 1.0, 1
 chibios_rt::Mutex last_sample_mutex;
 Sample last_sample;
 
+
 class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 {
     float pressure_variance = 0;
     float temperature_variance = 0;
 
     mutable os::watchdog::Timer watchdog_;
-    mutable ::Ms5611 sens = ::Ms5611();
+    mutable ms5611::MS5611 driver_;
 
     static bool isInRange(float value, const float range_min_max[2])
     {
         return (value >= range_min_max[0]) && (value <= range_min_max[1]);
     }
 
-    void publish(float pressure_pa, float temperature_degc) const
+    void publish(float pressure_pa, float temperature_k) const
     {
         {
             os::MutexLocker mlock(last_sample_mutex);
             last_sample.seq_id++;
             last_sample.pressure_pa = pressure_pa;
-            last_sample.temperature_k = temperature_degc + DegreesCelsiusToKelvinOffset;
+            last_sample.temperature_k = temperature_k;
         }
 
         if (!node::isStarted())
@@ -89,7 +100,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         pressure.static_pressure_variance = pressure_variance;
 
         static uavcan::equipment::air_data::StaticTemperature temperature;
-        temperature.static_temperature = temperature_degc + DegreesCelsiusToKelvinOffset;
+        temperature.static_temperature = temperature_k;
         temperature.static_temperature_variance = temperature_variance;
 
         node::Lock locker;
@@ -120,24 +131,21 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
             watchdog_.reset();
             sleep_until += US2ST(period_usec);
 
-            int32_t raw_pressure = 0;
-            int32_t raw_temperature = 0;
-            if (!ms5611ReadPT(&sens, &raw_pressure, &raw_temperature))
+            const auto sample = driver_.read();
+            if (!sample.first)
             {
+                os::lowsyslog("Air sensor read failed\n");
                 break;
             }
 
-            const float pressure_pa = static_cast<float>(raw_pressure);
-            const float temperature_degc = raw_temperature / 100.F;
+            publish(sample.second.pressure, sample.second.temperature);
 
-            publish(pressure_pa, temperature_degc);
-
-            if (!isInRange(pressure_pa, ValidPressureRangePa) ||
-                !isInRange(temperature_degc, ValidTemperatureRangeDegC))
+            if (!isInRange(sample.second.pressure, ValidPressureRangePa) ||
+                !isInRange(sample.second.temperature, ValidTemperatureRange))
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
             }
-            else if (!isInRange(temperature_degc, OperatingTemperatureRangeDegC))
+            else if (!isInRange(sample.second.temperature, OperatingTemperatureRange))
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_WARNING);
             }
@@ -151,6 +159,10 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
     }
 
 public:
+    AirSensorThread() :
+        driver_(&SPID3, GPIO_PORT_BAROMETER_CHIP_SELECT, GPIO_PIN_BAROMETER_CHIP_SELECT)
+    { }
+
     virtual ~AirSensorThread() { }
 
     void main() override
@@ -167,17 +179,15 @@ public:
             ::usleep(500000);
             watchdog_.reset();
 
-            if (!ms5611Reset(&sens))
+            if (!driver_.init())
             {
-                os::lowsyslog("Air sensor reset failed, will retry...\n");
+                os::lowsyslog("Air sensor init failed, will retry...\n");
                 continue;
             }
 
-            if (!ms5611GetProm(&sens))
-            {
-                os::lowsyslog("Air sensor PROM read failed, will retry...\n");
-                continue;
-            }
+            /// XXX DEBUG
+            ::usleep(100000);
+            chibios_rt::System::halt("DONE");
 
             os::lowsyslog("Air sensor init OK\n");
 
@@ -215,12 +225,4 @@ Sample getLastSample()
     return last_sample;
 }
 
-}
-
-#endif
-
-namespace air_sensor
-{
-void init() { }
-Sample getLastSample() { return Sample(); }
 }
