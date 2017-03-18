@@ -228,9 +228,6 @@ public:
         // whereas pressure latency is crucial
         const auto temperature_result = convertDx(Command::ConvD2_OSR4096);
 
-        // Converting pressure in the last order in order to minimize latency
-        const auto pressure_result = convertDx(Command::ConvD1_OSR4096);
-
         // Temperature offset (in ADC units)
         const int64_t dt = int64_t(temperature_result) - (int64_t(prom_.fields.c5_reference_temp) << 8);
 
@@ -265,6 +262,9 @@ public:
             offset -= off2;
             sens -= sens2;
         }
+
+        // Converting pressure in the last order in order to minimize latency
+        const auto pressure_result = convertDx(Command::ConvD1_OSR4096);
 
         // Computing the pressure
         const int64_t press = (((pressure_result * sens) >> 21) - offset) >> 15;
