@@ -44,13 +44,30 @@ os::config::Param<float> param_scaling_coef("mag.scaling_coef", 1.0F, 0.1F, 2.0F
 
 os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
-os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 20000, 20000, 1000000);
+os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 20000, 10000, 1000000);
 
 os::config::Param<unsigned> param_prio("uavcan.prio-mag",
                                        16,
                                        uavcan::TransferPriority::NumericallyMin,
                                        uavcan::TransferPriority::NumericallyMax);
 
+class MedianFilter
+{
+    float a_ = 0.0F;
+    float b_ = 0.0F;
+
+public:
+    float update(float x)
+    {
+        const float median = std::max(std::min(a_, b_),
+                                      std::min(std::max(a_, b_), x));
+        a_ = b_;
+        b_ = x;
+        return median;
+    }
+};
+
+MedianFilter median_filters_xyz[3];
 chibios_rt::Mutex last_sample_mutex;
 Sample last_sample;
 
@@ -257,6 +274,14 @@ void transformToNEDFrame(float inout_mag_vector[3])
     inout_mag_vector[2] = z;
 }
 
+void applyMedianFilter(float (&inout_mag_vector)[3])
+{
+    for (int i = 0; i < 3; i++)
+    {
+        inout_mag_vector[i] = median_filters_xyz[i].update(inout_mag_vector[i]);
+    }
+}
+
 class MagThread : public chibios_rt::BaseStaticThread<1024>
 {
     uavcan::MonotonicTime last_nonzero_vector_ts_;
@@ -343,6 +368,7 @@ public:
             if (tryRead(vector))
             {
                 rescale(vector, scaling_coef);
+                applyMedianFilter(vector);
                 transformToNEDFrame(vector);
                 publish(vector, variance);
                 setStatus(estimateStatusFromMeasurement(vector));
