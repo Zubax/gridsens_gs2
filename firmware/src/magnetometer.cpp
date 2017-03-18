@@ -226,7 +226,7 @@ bool tryInit()
     /*
      * Configure normal mode
      */
-    if (!writeCraCrbMode(0b11111000,  // Reg A: Temp compens., Averaging 8x, Update rate 75Hz, Normal mode
+    if (!writeCraCrbMode(0b11111100,  // Reg A: Temp compens., Averaging 8x, Update rate 220Hz, Normal mode
                          0b11100000,  // Reg B: Minimum gain
                          0b00000000)) // Mode: Continuous measurement
     {
