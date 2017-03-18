@@ -34,21 +34,9 @@ namespace air_sensor
 namespace
 {
 
-const float DegreesCelsiusToKelvinOffset = 273.15F;
-
-const float ValidPressureRangePa[] = {                  ///< Sensor range
-    1000,
-    120000
-};
-
-const float ValidTemperatureRange[] = {                 ///< Sensor range
-    -40 + DegreesCelsiusToKelvinOffset,
-    +85 + DegreesCelsiusToKelvinOffset
-};
-
 const float OperatingTemperatureRange[] = {             ///< Operating temperature, defined by the specification
-    -30 + DegreesCelsiusToKelvinOffset,
-    +80 + DegreesCelsiusToKelvinOffset
+    -40 + ms5611::DegreesCelsiusToKelvinOffset,
+    +80 + ms5611::DegreesCelsiusToKelvinOffset
 };
 
 const unsigned MinPublicationPeriodUSec = unsigned(1e6 / 30);
@@ -140,12 +128,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
 
             publish(sample.second.pressure, sample.second.temperature);
 
-            if (!isInRange(sample.second.pressure, ValidPressureRangePa) ||
-                !isInRange(sample.second.temperature, ValidTemperatureRange))
-            {
-                node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
-            }
-            else if (!isInRange(sample.second.temperature, OperatingTemperatureRange))
+            if (!isInRange(sample.second.temperature, OperatingTemperatureRange))
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_WARNING);
             }
@@ -184,10 +167,6 @@ public:
                 os::lowsyslog("Air sensor init failed, will retry...\n");
                 continue;
             }
-
-            /// XXX DEBUG
-            ::usleep(100000);
-            chibios_rt::System::halt("DONE");
 
             os::lowsyslog("Air sensor init OK\n");
 

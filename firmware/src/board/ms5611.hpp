@@ -33,6 +33,9 @@
  */
 namespace ms5611
 {
+
+constexpr float DegreesCelsiusToKelvinOffset = 273.15F;
+
 /**
  * One measurement.
  */
@@ -65,7 +68,7 @@ class MS5611
         static constexpr std::uint8_t ConvD2_OSR2048  = 0x56;   ///< Convert D2 (oversampling rate = 2048)
         static constexpr std::uint8_t ConvD2_OSR4096  = 0x58;   ///< Convert D2 (oversampling rate = 4096)
 
-        static constexpr std::uint8_t ADCread         = 0x00;   ///< ADC READ
+        static constexpr std::uint8_t ADCRead         = 0x00;   ///< ADC READ
         static constexpr std::uint8_t PromBase        = 0xA0;   ///< PROM BASE ADRRESS 0b1010xxx0
     };
 
@@ -143,6 +146,23 @@ class MS5611
         return (0x000FU & crc_read) == (n_rem ^ 0x00U);
     }
 
+    std::uint32_t convertDx(const std::uint8_t cmd)
+    {
+        // Request conversion
+        (void) io(std::array<std::uint8_t, 1>{ cmd });
+
+        ::usleep(10000);     // Wait until ADC conversion is ready
+
+        // Read converted data
+        const auto rx = io(std::array<std::uint8_t, 4>{
+            Command::ADCRead,
+            0,
+            0,
+            0
+        });
+
+        return (std::uint32_t(rx[1]) << 16) | (std::uint32_t(rx[2]) << 8) | rx[3];
+    }
 
 public:
     MS5611(::SPIDriver* spi,
@@ -192,7 +212,78 @@ public:
      */
     std::pair<bool, Sample> read()
     {
-        return {false, Sample()};
+        static constexpr float ValidPressureRange[] = {
+            100,
+            200000
+        };
+
+        static constexpr float ValidTemperatureRange[] = {
+            -50  + DegreesCelsiusToKelvinOffset,
+            +100 + DegreesCelsiusToKelvinOffset
+        };
+
+        using std::int64_t;
+
+        // Temperature must be converted first because it never changes quickly, so latency is not important;
+        // whereas pressure latency is crucial
+        const auto temperature_result = convertDx(Command::ConvD2_OSR4096);
+
+        // Converting pressure in the last order in order to minimize latency
+        const auto pressure_result = convertDx(Command::ConvD1_OSR4096);
+
+        // Temperature offset (in ADC units)
+        const int64_t dt = int64_t(temperature_result) - (int64_t(prom_.fields.c5_reference_temp) << 8);
+
+        // Absolute temperature in centidegrees
+        int64_t temp = 2000 + ((dt * prom_.fields.c6_temp_coeff_temp) >> 23);
+
+        // Base sensor scale/offset values
+        int64_t sens = (int64_t(prom_.fields.c1_pressure_sens) << 15) +
+                       ((prom_.fields.c3_temp_coeff_pres_sens * dt) >> 8);
+
+        int64_t offset = (int64_t(prom_.fields.c2_pressure_offset) << 16) +
+                         ((prom_.fields.c4_temp_coeff_pres_offset * dt) >> 7);
+
+        // Temperature compensation
+        if (temp < 2000)
+        {
+            const int64_t t2 = (dt * dt) >> 31;
+            int64_t f = temp - 2000;
+            int64_t off2  = 5 * f >> 1;
+            int64_t sens2 = 5 * f >> 2;
+
+            f = f * f;
+
+            if (temp < -1500)
+            {
+                const int64_t f2 = (temp + 1500) * (temp + 1500);
+                off2 += 7 * f2;
+                sens2 += 11 * f2 >> 1;
+            }
+
+            temp -= t2;
+            offset -= off2;
+            sens -= sens2;
+        }
+
+        // Computing the pressure
+        const int64_t press = (((pressure_result * sens) >> 21) - offset) >> 15;
+
+        // Output
+        Sample output;
+        output.pressure = float(press);
+        output.temperature = float(temp) / 100.0F + DegreesCelsiusToKelvinOffset;
+
+        const bool valid =
+            (output.pressure    >= ValidPressureRange[0])    && (output.pressure    <= ValidPressureRange[1]) &&
+            (output.temperature >= ValidTemperatureRange[0]) && (output.temperature <= ValidTemperatureRange[1]);
+
+        if (!valid)
+        {
+            os::lowsyslog("MS5611: Invalid read: %f Pa, %f K\n", output.pressure, output.temperature);
+        }
+
+        return {valid, output};
     }
 };
 
