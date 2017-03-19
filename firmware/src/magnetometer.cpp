@@ -44,7 +44,7 @@ os::config::Param<float> param_scaling_coef("mag.scaling_coef", 1.0F, 0.1F, 2.0F
 
 os::config::Param<float> param_variance("mag.variance", 0.005, 1e-6, 1.0);
 
-os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 13333, 10000, 1000000);
+os::config::Param<unsigned> param_period_usec("uavcan.pubp-mag", 10000, 10000, 100000);
 
 os::config::Param<unsigned> param_prio("uavcan.prio-mag",
                                        16,
