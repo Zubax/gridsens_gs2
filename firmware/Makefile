@@ -21,7 +21,7 @@ PROJECT = com.zubax.gnss
 
 HW_VERSION = 2
 FW_VERSION_MAJOR = 3
-FW_VERSION_MINOR = 1
+FW_VERSION_MINOR = 2
 
 #
 # Application
