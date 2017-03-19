@@ -22,6 +22,7 @@
 
 #include <uavcan/equipment/gnss/RTCMStream.hpp>
 #include <uavcan/equipment/gnss/Fix.hpp>
+#include <uavcan/equipment/gnss/Fix2.hpp>
 #include <uavcan/equipment/gnss/Auxiliary.hpp>
 
 #include <ch.hpp>
@@ -54,6 +55,7 @@ os::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-aux",
 os::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.warn_dimens", 0, 0, 3);
 os::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
 
+os::config::Param<bool> param_gnss_use_old_fix_message("gnss.old_fix_msg", true);
 
 chibios_rt::Mutex last_sample_mutex;
 Auxiliary last_sample_aux;
@@ -65,8 +67,91 @@ std::uint16_t computeNumLeapSecondsFromGpsLeapSeconds(std::uint16_t gps_leaps)
     return gps_leaps + 9;
 }
 
+void publishFix2(const Fix& data, const ublox::GpsLeapSeconds& leaps)
+{
+    static uavcan::equipment::gnss::Fix2 msg;
+    msg = uavcan::equipment::gnss::Fix2();
 
-void publishFix(const Fix& data, const ublox::GpsLeapSeconds& leaps)
+    // Timestamp - Network clock
+    msg.timestamp = uavcan::UtcTime::fromUSec(data.ts.real_usec);
+
+    // Timestamp - GNSS clock
+    msg.gnss_timestamp = data.utc_valid ? uavcan::UtcTime::fromUSec(data.utc_usec) : uavcan::UtcTime();
+
+    msg.gnss_time_standard = uavcan::equipment::gnss::Fix2::GNSS_TIME_STANDARD_UTC;
+
+    if (leaps.num_leap_seconds > 0)     // Zero means unknown
+    {
+        msg.num_leap_seconds = computeNumLeapSecondsFromGpsLeapSeconds(leaps.num_leap_seconds);
+    }
+
+    // Position LLA
+    msg.latitude_deg_1e8  = static_cast<std::int64_t>(data.lat * 1e8);
+    msg.longitude_deg_1e8 = static_cast<std::int64_t>(data.lon * 1e8);
+
+    msg.height_ellipsoid_mm = static_cast<std::int32_t>(data.height_wgs84 * 1e3F);
+    msg.height_msl_mm       = static_cast<std::int32_t>(data.height_amsl * 1e3F);
+
+    // Position ECEF
+    // TODO: ECEF position setup
+
+    // Velocity
+    std::copy(std::begin(data.ned_velocity), std::end(data.ned_velocity), std::begin(msg.ned_velocity));
+
+    // Mode
+    if (data.mode == Fix::Mode::Time)
+    {
+        msg.status = uavcan::equipment::gnss::Fix2::STATUS_TIME_ONLY;
+    }
+    else if (data.mode == Fix::Mode::Fix2D)
+    {
+        msg.status = uavcan::equipment::gnss::Fix2::STATUS_2D_FIX;
+    }
+    else if (data.mode == Fix::Mode::Fix3D)
+    {
+        msg.status = uavcan::equipment::gnss::Fix2::STATUS_3D_FIX;
+    }
+    else
+    {
+        msg.status = uavcan::equipment::gnss::Fix2::STATUS_NO_FIX;
+    }
+
+    msg.mode = ((data.flags & Fix::Flags::DifferentialSolution) != 0) ?
+        uavcan::equipment::gnss::Fix2::MODE_DGPS :
+        uavcan::equipment::gnss::Fix2::MODE_SINGLE;
+
+    // Uncertainty
+    if (msg.status > uavcan::equipment::gnss::Fix2::STATUS_TIME_ONLY)
+    {
+        // Assuming that the matrices are diagonal.
+        // Full construction and compression of a 6x6 matrix is too computationally expensive for this MCU at 15 Hz.
+        // Position
+        msg.covariance.push_back(data.position_covariance[0]);
+        msg.covariance.push_back(data.position_covariance[4]);
+        msg.covariance.push_back(data.position_covariance[8]);
+        // Velocity
+        msg.covariance.push_back(data.velocity_covariance[0]);
+        msg.covariance.push_back(data.velocity_covariance[4]);
+        msg.covariance.push_back(data.velocity_covariance[8]);
+    }
+
+    // Misc
+    msg.sats_used = data.sats_used;
+    msg.pdop = data.pdop;
+
+    // Publishing
+    node::Lock locker;
+    static uavcan::Publisher<uavcan::equipment::gnss::Fix2> pub(node::getNode());
+
+    EXECUTE_ONCE_NON_THREAD_SAFE
+    {
+        pub.setPriority(param_gnss_fix_prio.get());
+    }
+
+    (void)pub.broadcast(msg);
+}
+
+void publishOldFix(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 {
     static uavcan::equipment::gnss::Fix msg;
     msg = uavcan::equipment::gnss::Fix();
@@ -208,6 +293,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
     unsigned warn_min_fix_dimensions_ = 0;
     unsigned warn_min_sats_used_ = 0;
+    bool use_old_fix_message_ = true;
 
     mutable os::watchdog::Timer watchdog_;
     mutable Platform platform_;
@@ -253,7 +339,11 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
     void handleFix(const Fix& fix) const
     {
         // Publish the new GNSS solution onto the bus
-        publishFix(fix, driver_.getGpsLeapSeconds());
+        publishFix2(fix, driver_.getGpsLeapSeconds());
+        if (use_old_fix_message_)
+        {
+            publishOldFix(fix, driver_.getGpsLeapSeconds());
+        }
 
         // Update component status
         const bool warn = (static_cast<unsigned>(fix.mode) < warn_min_fix_dimensions_) ||
@@ -283,6 +373,7 @@ public:
 
         warn_min_fix_dimensions_ = param_gnss_warn_min_fix_dimensions.get();
         warn_min_sats_used_ = param_gnss_warn_min_sats_used.get();
+        use_old_fix_message_ = param_gnss_use_old_fix_message.get();
 
         driver_.on_fix = std::bind(&GnssThread::handleFix, this, std::placeholders::_1);
         driver_.on_aux = [this](const Auxiliary& aux)
