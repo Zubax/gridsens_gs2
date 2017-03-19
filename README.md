@@ -17,22 +17,41 @@ and u-Blox M8 protocol.
 
 The following table documents existing modifications of Zubax GNSS hardware and compatible firmware versions.
 
-Hardware                        | Compatible firmware versions
---------------------------------|------------------------------
-Zubax GNSS v1 (year 2014)       | 1.0, 2.0
-Zubax GNSS v2 (year 2015)       | 3.x
+Hardware                        | Compatible firmware versions  | Branch
+--------------------------------|-------------------------------|----------------------------
+Zubax GNSS v1 (year 2014)       | 1.x, 2.x                      | `release_1.0`, `release_2.0`
+Zubax GNSS v2.1 (year 2015)     | 3.x                           | `release_3.0`
+Zubax GNSS v2.2 (year 2017)     | 4.x                           | `master`
 
-Each firmware version has a dedicated branch named `release_X.X`, where `X.X` stands for the version number.
 Please check out the corresponding branch to see instructions specific for your firmware version.
 Master branch always contains the newest version of firmware and it may be unstable.
 
-## Getting the bootloader
+## Release notes
 
-The bootloader image is conveniently included in this repository as `bootloader.bin`.
-It can be built using the target `zubaxgnss-v1_bootloader` of <https://github.com/Zubax/PX4Firmware>
-(branch `nuttx_next`).
+Newest entries at the top.
 
-In future the bootloader will be extracted into a separate project.
+### Zubax GNSS v2.2, firmware v4.0
+
+* New GNSS RF front-end enables even better noise rejection and sensitivity.
+* New compass: LIS3MDL instead of HMC5983.
+* New bootloader with USB support instead of the old PX4 UAVCAN bootloader.
+UAVCAN bootloading support will be re-implemented in a later release.
+* Faster sensor update rates.
+* Static temperature publishing rate is fixed at 1/5th of the static pressure publishing rate.
+
+### Zubax GNSS v2.1, firmware v3.2
+
+* Increased the default and the maximum compass publishing rate to 100 Hz.
+* Magnetometer output is processed through a three sample long median filter in order to work-around a bug in the
+HMC5983 sensor which causes it to periodically provide single erroneous measurements.
+
+### Zubax GNSS v2.1, firmware v3.1
+
+* Added an optional magnetic field rescaling feature in order to work around improper scale handling in some autopilots.
+
+## Bootloader
+
+*This section is incomplete.*
 
 The bootloader can be flashed either independently, or as a combined image together with the application (see below).
 
@@ -75,7 +94,7 @@ cd ./zubax_chibios/tools
 
 ### Using UAVCAN bootloader
 
-Feed the signed binary (it will be named as `*.uavcan.bin`) to the UAVCAN firmware update server.
+Feed the signed binary (it will be named as `*.application.bin`) to the UAVCAN firmware update server.
 For example, see these instructions for PX4: <http://dev.px4.io/uavcan-node-firmware.html>.
 
 Source of the UAVCAN bootloader for this board can be found at the
