@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015  Zubax Robotics  <info@zubax.com>
+ * Copyright (C) 2014-2017  Zubax Robotics  <info@zubax.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,6 +100,14 @@ struct Fix
     Mode mode;
     unsigned flags;
     unsigned sats_used;
+
+    struct ECEF
+    {
+        double position[3];             ///< XYZ, meters
+        float velocity[3];              ///< XYZ, m/s
+        float position_variance[3];     ///< XYZ, m^2
+        float velocity_variance[3];     ///< XYZ, (m/s)^2
+    } ecef;
 };
 
 struct Auxiliary
@@ -291,6 +299,7 @@ class Driver
     GpsLeapSeconds leaps_ = GpsLeapSeconds();
 
     void handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt);
+    void handleSOL(const Timestamps& ts, const msg::NAV_SOL& sol);
     void handleDOP(const Timestamps& ts, const msg::NAV_DOP& dop);
     void handleSAT(const Timestamps& ts, const msg::NAV_SAT& sat);
     void handleTIMEGPS(const Timestamps& ts, const msg::NAV_TIMEGPS& timegps);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015  Zubax Robotics  <info@zubax.com>
+ * Copyright (C) 2014-2017  Zubax Robotics  <info@zubax.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -375,6 +375,40 @@ struct NAV_SAT
     } svs[1];
 };
 static_assert(sizeof(NAV_SAT) == 20, "Struct size error");
+
+
+struct NAV_SOL
+{
+    static constexpr unsigned Class = 0x01;
+    static constexpr unsigned ID    = 0x06;
+
+    U4 iTOW;
+    I4 fTOW;
+    I2 week;
+    U1 gpsFix;
+    X1 flags;
+    I4 ecefX;
+    I4 ecefY;
+    I4 ecefZ;
+    U4 pAcc;
+    I4 ecefVX;
+    I4 ecefVY;
+    I4 ecefVZ;
+    U4 sAcc;
+    U2 pDOP;
+    U1 reserved1;
+    U1 numSV;
+    U1 reserved2[4];
+
+    struct FlagsMask
+    {
+        static constexpr X1 GPSfixOK    = 1;
+        static constexpr X1 DiffSoln    = 2;
+        static constexpr X1 WKNSET      = 4;
+        static constexpr X1 TOWSET      = 8;
+    };
+};
+static_assert(sizeof(NAV_SOL) == 52, "Struct size error");
 
 
 struct NAV_TIMEGPS

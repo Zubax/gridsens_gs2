@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015  Zubax Robotics  <info@zubax.com>
+ * Copyright (C) 2014-2017  Zubax Robotics  <info@zubax.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -341,7 +341,6 @@ bool IOManager::sendAndWaitAck(const Message& msg, unsigned ack_timeout_ms)
  */
 void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
 {
-    fix_ = Fix();
     fix_.ts = ts;
 
     // Position
@@ -366,8 +365,8 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
     fix_.position_covariance[8] = variance_1e3(pvt.vAcc);
 
     fix_.velocity_covariance[0] = variance_1e3(pvt.sAcc);
-    fix_.velocity_covariance[4] = variance_1e3(pvt.sAcc);
-    fix_.velocity_covariance[8] = variance_1e3(pvt.sAcc);
+    fix_.velocity_covariance[4] = fix_.velocity_covariance[0];
+    fix_.velocity_covariance[8] = fix_.velocity_covariance[0];
 
     fix_.pdop = pvt.pDOP * 0.01F;
 
@@ -426,7 +425,24 @@ void Driver::handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt)
     if (on_fix)
     {
         on_fix(fix_);
+        fix_ = Fix();   // Reset the message
     }
+}
+
+void Driver::handleSOL(const Timestamps&, const msg::NAV_SOL& sol)
+{
+    fix_.ecef.position[0] = double(sol.ecefX) * 0.01;
+    fix_.ecef.position[1] = double(sol.ecefY) * 0.01;
+    fix_.ecef.position[2] = double(sol.ecefZ) * 0.01;
+
+    fix_.ecef.velocity[0] = float(sol.ecefVX) * 0.01F;
+    fix_.ecef.velocity[1] = float(sol.ecefVY) * 0.01F;
+    fix_.ecef.velocity[2] = float(sol.ecefVZ) * 0.01F;
+
+    static const auto variance_1e2 = [](const std::uint32_t x) { return (x / 1e2F) * (x / 1e2F); };
+
+    std::fill_n(fix_.ecef.position_variance, 3, variance_1e2(sol.pAcc));
+    std::fill_n(fix_.ecef.velocity_variance, 3, variance_1e2(sol.sAcc));
 }
 
 void Driver::handleDOP(const Timestamps& ts, const msg::NAV_DOP& dop)
@@ -492,6 +508,10 @@ void Driver::handleReceivedMessage(const RxMessage& raw_msg)
     if (auto msg = raw_msg.tryCastTo<msg::NAV_PVT>())
     {
         handlePVT(raw_msg, *msg);
+    }
+    else if (auto msg = raw_msg.tryCastTo<msg::NAV_SOL>())
+    {
+        handleSOL(raw_msg, *msg);
     }
     else if (auto msg = raw_msg.tryCastTo<msg::NAV_DOP>())
     {
@@ -580,6 +600,10 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
 bool Driver::configureMessages()
 {
     if (!configureMessageRate(msg::NAV_PVT::Class, msg::NAV_PVT::ID, 1))  // Position-Velocity-Time solution
+    {
+        return false;
+    }
+    if (!configureMessageRate(msg::NAV_SOL::Class, msg::NAV_SOL::ID, 1))  // ECEF frame solution
     {
         return false;
     }

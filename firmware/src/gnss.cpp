@@ -69,8 +69,7 @@ std::uint16_t computeNumLeapSecondsFromGpsLeapSeconds(std::uint16_t gps_leaps)
 
 void publishFix2(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 {
-    static uavcan::equipment::gnss::Fix2 msg;
-    msg = uavcan::equipment::gnss::Fix2();
+    uavcan::equipment::gnss::Fix2 msg;
 
     // Timestamp - Network clock
     msg.timestamp = uavcan::UtcTime::fromUSec(data.ts.real_usec);
@@ -91,9 +90,6 @@ void publishFix2(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 
     msg.height_ellipsoid_mm = static_cast<std::int32_t>(data.height_wgs84 * 1e3F);
     msg.height_msl_mm       = static_cast<std::int32_t>(data.height_amsl * 1e3F);
-
-    // Position ECEF
-    // TODO: ECEF position setup
 
     // Velocity
     std::copy(std::begin(data.ned_velocity), std::end(data.ned_velocity), std::begin(msg.ned_velocity));
@@ -139,6 +135,25 @@ void publishFix2(const Fix& data, const ublox::GpsLeapSeconds& leaps)
     msg.sats_used = data.sats_used;
     msg.pdop = data.pdop;
 
+    // ECEF position velocity
+    uavcan::equipment::gnss::ECEFPositionVelocity ecef;
+
+    for (int i = 0; i < 3; i++)
+    {
+        ecef.position_xyz_mm[i] = static_cast<std::int64_t>(data.ecef.position[i] * 1e3);
+        ecef.velocity_xyz[i] = data.ecef.velocity[i];
+    }
+
+    // ECEF covariance (always diagonal)
+    ecef.covariance.push_back(data.ecef.position_variance[0]);
+    ecef.covariance.push_back(data.ecef.position_variance[1]);
+    ecef.covariance.push_back(data.ecef.position_variance[2]);
+    ecef.covariance.push_back(data.ecef.velocity_variance[0]);
+    ecef.covariance.push_back(data.ecef.velocity_variance[1]);
+    ecef.covariance.push_back(data.ecef.velocity_variance[2]);
+
+    msg.ecef_position_velocity.push_back(ecef);
+
     // Publishing
     node::Lock locker;
     static uavcan::Publisher<uavcan::equipment::gnss::Fix2> pub(node::getNode());
@@ -153,8 +168,7 @@ void publishFix2(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 
 void publishOldFix(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 {
-    static uavcan::equipment::gnss::Fix msg;
-    msg = uavcan::equipment::gnss::Fix();
+    uavcan::equipment::gnss::Fix msg;
 
     // Timestamp - Network clock
     msg.timestamp = uavcan::UtcTime::fromUSec(data.ts.real_usec);
@@ -214,7 +228,9 @@ void publishOldFix(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 
     EXECUTE_ONCE_NON_THREAD_SAFE
     {
-        pub.setPriority(param_gnss_fix_prio.get());
+        // One lower than the requested priority; this is needed in order to give the new Fix message higher priority
+        pub.setPriority(std::min<std::uint8_t>(uavcan::TransferPriority::NumericallyMax,
+                                               param_gnss_fix_prio.get() + 1));
     }
 
     (void)pub.broadcast(msg);
@@ -222,8 +238,7 @@ void publishOldFix(const Fix& data, const ublox::GpsLeapSeconds& leaps)
 
 void publishAuxiliary(const Fix& fix, const Auxiliary& aux)
 {
-    static uavcan::equipment::gnss::Auxiliary msg;
-    msg = uavcan::equipment::gnss::Auxiliary();
+    uavcan::equipment::gnss::Auxiliary msg;
 
     // DOP
     msg.gdop = aux.gdop;
