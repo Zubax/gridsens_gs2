@@ -28,6 +28,7 @@ import tempfile
 import logging
 import time
 import binascii
+import serial
 import uavcan  # @UnusedImport
 from base64 import b64decode, b64encode
 from contextlib import closing, contextmanager
@@ -138,6 +139,8 @@ def wait_for_boot():
                     logger.info('Debug UART output: %s', line)
                     if time.monotonic() > deadline:
                         break
+            except serial.serialutil.SerialException:
+                raise
             except IOError:
                 logging.info('Boot error', exc_info=True)
             finally:
