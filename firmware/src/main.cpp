@@ -95,6 +95,8 @@ int main()
         // Saving config if it was flagged on the previous iteration and no new modifications happened since then
         if (save_config_on_next_iteration)
         {
+            board::setStatusLed(true);                                  // Extra indication
+
             save_config_on_next_iteration = false;
 
             if (os::config::getModificationCounter() == config_modifications)
