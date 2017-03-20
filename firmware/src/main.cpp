@@ -80,6 +80,7 @@ int main()
      * Main loop.
      */
     auto config_modifications = os::config::getModificationCounter();
+    bool save_config_on_next_iteration = false;
 
     while (!node::hasPendingRestartRequest())
     {
@@ -91,13 +92,32 @@ int main()
         ::usleep(on_off.second * 1000);
         wdt.reset();
 
-        const auto new_config_modifications = os::config::getModificationCounter();
-        if (new_config_modifications != config_modifications)
+        // Saving config if it was flagged on the previous iteration and no new modifications happened since then
+        if (save_config_on_next_iteration)
         {
-            config_modifications = new_config_modifications;
-            os::lowsyslog("Saving configuration... ");
-            const int res = ::configSave();                         // TODO use C++ API
-            os::lowsyslog("Config saved, status %d\n", res);
+            save_config_on_next_iteration = false;
+
+            if (os::config::getModificationCounter() == config_modifications)
+            {
+                os::lowsyslog("Saving configuration... ");
+                const int res = ::configSave();                         // TODO use C++ API
+                os::lowsyslog("Config saved, status %d\n", res);
+            }
+            else
+            {
+                os::lowsyslog("Config save postponed\n");               // There were new modifications, deferring
+            }
+        }
+        else
+        {
+            // If config was changed, scheduling it to save on the next iteration
+            const auto new_config_modifications = os::config::getModificationCounter();
+            if (new_config_modifications != config_modifications)
+            {
+                config_modifications = new_config_modifications;
+                save_config_on_next_iteration = true;
+                os::lowsyslog("Config save scheduled\n");
+            }
         }
     }
 
