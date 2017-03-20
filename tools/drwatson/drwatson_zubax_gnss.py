@@ -27,7 +27,6 @@ import numpy
 import tempfile
 import logging
 import time
-import yaml
 import binascii
 import uavcan  # @UnusedImport
 from base64 import b64decode, b64encode
@@ -290,7 +289,7 @@ def test_uavcan():
             def make_collector(data_type, timeout=0.5):
                 return uavcan.app.message_collector.MessageCollector(n, data_type, timeout=timeout)
 
-            col_fix = make_collector(uavcan.equipment.gnss.Fix)
+            col_fix = make_collector(uavcan.equipment.gnss.Fix2)
             col_aux = make_collector(uavcan.equipment.gnss.Auxiliary)
             col_mag = make_collector(uavcan.equipment.ahrs.MagneticFieldStrength)
             col_pressure = make_collector(uavcan.equipment.air_data.StaticPressure)
@@ -349,8 +348,8 @@ def test_uavcan():
                     safe_spin(0.5)
                     check_everything()
                     num = col_fix[node_id].message.sats_used
-                    pos_cov = list(col_fix[node_id].message.position_covariance)
-                    sys.stdout.write('\r%d sats, pos covariance: %r      \r' % (num, pos_cov))
+                    cov = list(col_fix[node_id].message.covariance)
+                    sys.stdout.write('\r%d sats, covariance: %r      \r' % (num, cov))
                     sys.stdout.flush()
                     if num >= GNSS_MIN_SAT_NUM:
                         break
