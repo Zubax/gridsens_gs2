@@ -10,3 +10,6 @@
 [submodule "tools/drwatson/pyuavcan"]
 	path = tools/drwatson/pyuavcan
 	url = https://github.com/UAVCAN/pyuavcan
+[submodule "bootloader/zubax_chibios"]
+	path = bootloader/zubax_chibios
+	url = https://github.com/Zubax/zubax_chibios
