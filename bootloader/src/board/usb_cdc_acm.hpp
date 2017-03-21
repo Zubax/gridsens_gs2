@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017  Zubax Robotics  <info@zubax.com>
+ * Copyright (C) 2017  Zubax Robotics  <info@zubax.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,47 +17,29 @@
  * Author: Pavel Kirienko <pavel.kirienko@zubax.com>
  */
 
-#include <ch.hpp>
+#pragma once
+
 #include <hal.h>
-#include <unistd.h>
-#include <cassert>
-#include <utility>
-#include <zubax_chibios/os.hpp>
-#include "board/board.hpp"
-#include "board/usb_cdc_acm.hpp"
+#include <array>
+#include <cstdint>
 
 
-namespace
+namespace board
+{
+namespace usb_cdc_acm
 {
 
+void init();
 
+SerialUSBDriver* getSerialUSBDriver();
+
+enum class State
+{
+    Disconnected,
+    Connected
+};
+
+State getState();
 
 }
-
-
-int main()
-{
-    auto wdt = board::init(1100);
-
-    board::usb_cdc_acm::init();
-
-
-    while (!os::isRebootRequested())
-    {
-        wdt.reset();
-
-        ::usleep(30000);
-        board::setStatusLed(false);
-        board::setCANLed(0, true);
-
-        ::usleep(30000);
-        board::setCANLed(0, false);
-        board::setCANLed(1, true);
-
-        ::usleep(30000);
-        board::setCANLed(1, false);
-        board::setStatusLed(true);
-    }
-
-    return 0;
 }
