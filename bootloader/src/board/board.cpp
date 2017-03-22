@@ -48,7 +48,7 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
      */
     halInit();
     chSysInit();
-    sdStart(&STDOUT_SD, NULL);
+    sdStart(&STDOUT_SD, nullptr);
 
     /*
      * Watchdog

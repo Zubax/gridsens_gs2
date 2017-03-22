@@ -69,11 +69,11 @@
 
 #define VAL_GPIOACRL            0x88888888                      // 7..0
 #define VAL_GPIOACRH            0x88800888                      // 15..8
-#define VAL_GPIOAODR            0x88888888                      // SWDIO and chip select pull up
+#define VAL_GPIOAODR            0xFFFFFFFF                      // SWDIO and chip select pull up
 
 #define VAL_GPIOBCRL            0x88222888
 #define VAL_GPIOBCRH            0x88488A48
-#define VAL_GPIOBODR            0x88888888
+#define VAL_GPIOBODR            0xFFFFFFFF
 
 #define VAL_GPIOCCRL            0x88888888
 #define VAL_GPIOCCRH            0x88888888
@@ -81,7 +81,7 @@
 
 #define VAL_GPIODCRL            0x88888888
 #define VAL_GPIODCRH            0x88888888
-#define VAL_GPIODODR            0x88888888
+#define VAL_GPIODODR            0xFFFFFFFF
 
 #define VAL_GPIOECRL            0x88888888
 #define VAL_GPIOECRH            0x88888888
