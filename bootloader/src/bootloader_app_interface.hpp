@@ -37,12 +37,12 @@ struct AppShared
     /*
      * UAVCAN part
      */
-    std::uint32_t can_bus_speed = 0;                            ///< Reserved for future use
-    std::uint8_t uavcan_node_id = 0;                            ///< Reserved for future use
-    std::uint8_t uavcan_fw_server_node_id = 0;                  ///< Reserved for future use
+    std::uint32_t can_bus_speed = 0;
+    std::uint8_t uavcan_node_id = 0;
+    std::uint8_t uavcan_fw_server_node_id = 0;
 
     static constexpr std::uint8_t UAVCANFileNameMaxLength = 201;
-    char uavcan_file_name[UAVCANFileNameMaxLength] = {};        ///< Reserved for future use
+    char uavcan_file_name[UAVCANFileNameMaxLength] = {};
 
     /*
      * General part
