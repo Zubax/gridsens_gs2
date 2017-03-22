@@ -316,14 +316,6 @@ static void usb_event(USBDriver* usbp, usbevent_t event)
 
     switch (event)
     {
-    case USB_EVENT_RESET:
-    {
-        return;
-    }
-    case USB_EVENT_ADDRESS:
-    {
-        return;
-    }
     case USB_EVENT_CONFIGURED:
     {
         os::CriticalSectionLocker csl;
@@ -340,19 +332,23 @@ static void usb_event(USBDriver* usbp, usbevent_t event)
         sduConfigureHookI(&SDU1);
         return;
     }
+    case USB_EVENT_RESET:
+    case USB_EVENT_ADDRESS:
     case USB_EVENT_SUSPEND:
-    {
-        return;
-    }
     case USB_EVENT_WAKEUP:
-    {
-        return;
-    }
     case USB_EVENT_STALLED:
+    case USB_EVENT_UNCONFIGURED:
     {
         return;
     }
     }
+}
+
+static void sofHandler(USBDriver*)
+{
+    chSysLockFromISR();
+    sduSOFHookI(&SDU1);
+    chSysUnlockFromISR();
 }
 
 /**
@@ -406,7 +402,7 @@ static const USBConfig usbcfg =
     usb_event,
     get_descriptor,
     sduRequestsHookWrapper,
-    NULL
+    sofHandler
 };
 
 /*

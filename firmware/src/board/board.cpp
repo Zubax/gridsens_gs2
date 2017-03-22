@@ -23,6 +23,7 @@
 #include <hal.h>
 #include <unistd.h>
 #include <zubax_chibios/platform/stm32/flash_writer.hpp>
+#include <zubax_chibios/platform/stm32/config_storage.hpp>
 
 #if CORTEX_VTOR_INIT == 0
 # error CORTEX_VTOR_INIT
@@ -55,6 +56,10 @@ static const SPIConfig SPICfg =
     0,
     SPI_CR1_BR_1 | SPI_CR1_BR_0
 };
+
+constexpr void* ConfigStorageAddress = reinterpret_cast<void*>(0x08000000 + (256 * 1024) - 1024);
+constexpr unsigned ConfigStorageSize = 1024;
+
 
 os::watchdog::Timer init(unsigned wdt_timeout_ms)
 {
@@ -91,7 +96,8 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     /*
      * Configuration manager
      */
-    const int config_init_res = os::config::init();
+    static os::stm32::ConfigStorageBackend config_storage_backend(ConfigStorageAddress, ConfigStorageSize);
+    const int config_init_res = os::config::init(&config_storage_backend);
     if (config_init_res < 0)
     {
         die(config_init_res);

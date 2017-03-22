@@ -61,23 +61,14 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     gnss::stop();
     ::sleep(1);
 
-    static const auto copy_once = [](input_queue_t* src, output_queue_t* dst)
-    {
-        uint8_t buffer[128];
-        const unsigned sz = chIQReadTimeout(src, buffer, sizeof(buffer), TIME_IMMEDIATE);
-        if (sz > 0)
-        {
-            chOQWriteTimeout(dst, buffer, sz, TIME_INFINITE);
-        }
-    };
-
     SerialDriver* const gnss_port = &gnss::getSerialPort();
-    SerialUSBDriver* const cli_port  = usb_cdc_acm::getSerialUSBDriver();
+    SerialUSBDriver* const cli_port = usb_cdc_acm::getSerialUSBDriver();
 
     while (usb_cdc_acm::getState() == usb_cdc_acm::State::Connected)
     {
-        copy_once(&gnss_port->iqueue, &cli_port->oqueue);
-        copy_once(&cli_port->iqueue, &gnss_port->oqueue);
+        (void) gnss_port;
+        (void) cli_port;
+        chibios_rt::System::halt("GNSS BRIDGE NOT IMPLEMENTED");
     }
 }
 

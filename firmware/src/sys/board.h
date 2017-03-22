@@ -22,6 +22,7 @@
 #define STM32_HSECLK            16000000
 
 #define STM32F10X_CL
+#define STM32F105xC
 
 /*
  * GPIO

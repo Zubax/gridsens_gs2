@@ -21,9 +21,6 @@
   * Based on a ChibiOS demo app.
   */
 
-__main_stack_size__     = 0x0800;
-__process_stack_size__  = 0x0800;
-
 MEMORY
 {
     flash : org = 0x08008000, len = 222k    /* 32K for bootloader, 2K for configs */

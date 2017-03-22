@@ -27,7 +27,9 @@
 
 #include <ch.hpp>
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/util/helpers.hpp>
 #include <unistd.h>
+
 
 namespace gnss
 {
