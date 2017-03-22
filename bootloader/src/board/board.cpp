@@ -130,24 +130,40 @@ void restart()
 
 void bootApplication()
 {
+    // Loading and validating the application entry point
+    const unsigned stacktop   = *reinterpret_cast<unsigned*>(FLASH_BASE + APPLICATION_OFFSET);
+    const unsigned entrypoint = *reinterpret_cast<unsigned*>(FLASH_BASE + APPLICATION_OFFSET + 4);
+
+    if ((stacktop <= SRAM_BASE) ||
+        (stacktop > (SRAM_BASE + 1024 * 1024)))
+    {
+        chibios_rt::System::halt("STACKTOP");
+    }
+
+    if ((entrypoint < (FLASH_BASE + APPLICATION_OFFSET)) ||
+        (entrypoint >= (FLASH_BASE + getFlashSize())))
+    {
+        chibios_rt::System::halt("ENTRYPOINT");
+    }
+
     // We cordially extend our thanks to David Sidrane and Ben Dyer, whose ideas have somewhat inspired this thing.
-    chSysLock();
+    asm volatile("cpsid i");
 
     // Deinit all peripherals that may have been used
+    // It is crucial to disable ALL peripherals, else a spurious interrupt will crash the application
     RCC->APB1RSTR |= RCC_APB1RSTR_CAN1RST | RCC_APB1RSTR_CAN2RST | RCC_APB1RSTR_USART3RST;
+    RCC->AHBRSTR |= RCC_AHBRSTR_OTGFSRST;
 
     // Kill the sys tick
     SysTick->CTRL = 0;
 
     // Update the vector table location
-    __asm volatile("dsb");
-    __asm volatile("isb");
-    SCB->VTOR = APPLICATION_OFFSET;
-    __asm volatile("dsb");
+    asm volatile("dsb");
+    asm volatile("isb");
+    SCB->VTOR = FLASH_BASE + APPLICATION_OFFSET;
+    asm volatile("dsb");
 
     // Let's roll!
-    const unsigned stacktop = *reinterpret_cast<unsigned*>(APPLICATION_OFFSET);
-    const unsigned entrypoint = *reinterpret_cast<unsigned*>(APPLICATION_OFFSET + 4);
     asm volatile("msr msp, %[stacktop]          \n"
                  "bx       %[entrypoint]        \n"
                  :: [stacktop] "r"(stacktop), [entrypoint] "r"(entrypoint):);

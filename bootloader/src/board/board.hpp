@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015  Zubax Robotics  <info@zubax.com>
+ * Copyright (C) 2017  Zubax Robotics  <info@zubax.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,5 +53,10 @@ struct HardwareVersion
 };
 
 HardwareVersion detectHardwareVersion();
+
+inline unsigned getFlashSize()
+{
+    return 1024 * *reinterpret_cast<std::uint16_t*>(0x1FFFF7E0);
+}
 
 }

@@ -26,7 +26,9 @@
 #include <zubax_chibios/os.hpp>
 #include <zubax_chibios/platform/stm32/flash_writer.hpp>
 #include <zubax_chibios/bootloader/bootloader.hpp>
+#include "bootloader_app_interface.hpp"
 #include "board/board.hpp"
+#include "board/app_storage_backend.hpp"
 #include "board/usb_cdc_acm.hpp"
 #include "cli.hpp"
 
@@ -40,74 +42,6 @@ namespace
  * In other words, the application will have to reset the watchdog in this time after boot.
  */
 constexpr unsigned WatchdogTimeoutMSec = 5000;
-
-/**
- * This class contains logic and hardcoded values that are SPECIFIC FOR THIS PARTICULAR MCU AND APPLICATION.
- */
-class AppStorageBackend : public bootloader::IAppStorageBackend
-{
-    static constexpr unsigned ApplicationAddress = FLASH_BASE + APPLICATION_OFFSET;
-
-    static unsigned getFlashSize()
-    {
-        return 1024 * *reinterpret_cast<std::uint16_t*>(0x1FFFF7E0);
-    }
-
-    static bool correctOffsetAndSize(std::size_t& offset, std::size_t& size)
-    {
-        const auto flash_end = FLASH_BASE + getFlashSize();
-        offset += ApplicationAddress;
-        if (offset >= flash_end)
-        {
-            return false;
-        }
-        if ((offset + size) >= flash_end)
-        {
-            size = flash_end - offset;
-        }
-        return true;
-    }
-
-public:
-    static constexpr std::int16_t ErrEraseFailed = 9001;
-    static constexpr std::int16_t ErrWriteFailed = 9002;
-
-    AppStorageBackend()
-    {
-        DEBUG_LOG("Flash size: %u Bytes\n", getFlashSize());
-    }
-
-    int beginUpgrade()   override { return 0; }
-    int endUpgrade(bool) override { return 0; }
-
-    int write(std::size_t offset, const void* data, std::size_t size) override
-    {
-        if (!correctOffsetAndSize(offset, size))
-        {
-            return 0;
-        }
-
-        os::stm32::FlashWriter writer;
-
-        const bool ok = writer.erase(reinterpret_cast<void*>(offset), size);
-        if (!ok)
-        {
-            return -ErrEraseFailed;
-        }
-
-        return writer.write(reinterpret_cast<const void*>(offset), data, size) ? size : -ErrWriteFailed;
-    }
-
-    int read(std::size_t offset, void* data, std::size_t size) override
-    {
-        if (!correctOffsetAndSize(offset, size))
-        {
-            return 0;
-        }
-        std::memmove(data, reinterpret_cast<const void*>(offset), size);
-        return size;
-    }
-};
 
 
 static inline std::pair<unsigned, unsigned> bootloaderStateToLEDOnOffDurationMSec(bootloader::State state)
@@ -156,11 +90,29 @@ int main()
     /*
      * Bootloader logic initialization
      */
-    app::AppStorageBackend backend;
+    board::AppStorageBackend backend;
 
     bootloader::Bootloader bl(backend);
 
     cli::init(bl);
+
+    /*
+     * Parsing the app shared struct
+     */
+    const std::pair<bootloader_app_interface::AppShared, bool> app_shared = bootloader_app_interface::readAndErase();
+    if (app_shared.second)
+    {
+        os::lowsyslog("AppShared: CAN %u bps   NID %u/%u   Wait %c\n",
+                      unsigned(app_shared.first.can_bus_speed),
+                      app_shared.first.uavcan_node_id,
+                      app_shared.first.uavcan_fw_server_node_id,
+                      app_shared.first.stay_in_bootloader ? 'Y' : 'N');
+
+        if (app_shared.first.stay_in_bootloader)
+        {
+            bl.cancelBoot();
+        }
+    }
 
     /*
      * Main loop
@@ -170,13 +122,15 @@ int main()
         wdt.reset();
 
         const auto bl_state = bl.getState();
+        if (bl_state == bootloader::State::ReadyToBoot)
+        {
+            break;
+        }
 
         board::setStatusLed(true);      // Always on
         const auto duration = app::bootloaderStateToLEDOnOffDurationMSec(bl_state);
         if (duration.first == 0 && duration.second == 0)
         {
-            board::setCANLed(0, false);
-            board::setCANLed(1, false);
             chThdSleepMilliseconds(100);
         }
         else
@@ -189,6 +143,22 @@ int main()
             chThdSleepMilliseconds(duration.second);
         }
     }
+
+    if (os::isRebootRequested())
+    {
+        os::lowsyslog("REBOOT\n");
+        chThdSleepMilliseconds(500);       // Providing some time for other components to react
+        board::restart();
+    }
+
+    /*
+     * Starting the application
+     */
+    os::lowsyslog("BOOT\n");
+    os::requestReboot();         // Notifying other components that we're going down
+    chThdSleepMilliseconds(500); // Providing some time for other components to react
+    wdt.reset();                 // The final reset, the application will have time to boot and init until next timeout
+    board::bootApplication();
 
     return 0;
 }
