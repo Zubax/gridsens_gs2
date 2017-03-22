@@ -77,21 +77,7 @@ public:
         DEBUG_LOG("Flash size: %u Bytes\n", getFlashSize());
     }
 
-    int beginUpgrade() override
-    {
-        const unsigned erase_address = ApplicationAddress;
-        const unsigned erase_size = getFlashSize() - APPLICATION_OFFSET;
-
-        DEBUG_LOG("Flash erase: address 0x%x, %u Bytes\n", erase_address, erase_size);
-
-        os::stm32::FlashWriter writer;
-        const bool ok = writer.erase(reinterpret_cast<void*>(erase_address), erase_size);
-
-        DEBUG_LOG("Flash erase result: %s\n", ok ? "OK" : "FAILURE");
-
-        return ok ? 0 : -ErrEraseFailed;
-    }
-
+    int beginUpgrade()   override { return 0; }
     int endUpgrade(bool) override { return 0; }
 
     int write(std::size_t offset, const void* data, std::size_t size) override
@@ -102,6 +88,13 @@ public:
         }
 
         os::stm32::FlashWriter writer;
+
+        const bool ok = writer.erase(reinterpret_cast<void*>(offset), size);
+        if (!ok)
+        {
+            return -ErrEraseFailed;
+        }
+
         return writer.write(reinterpret_cast<const void*>(offset), data, size) ? size : -ErrWriteFailed;
     }
 
