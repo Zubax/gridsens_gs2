@@ -38,14 +38,6 @@ namespace
 static bootloader::Bootloader* g_bootloader = nullptr;
 
 
-static void printBootloaderState(os::shell::BaseChannelWrapper& ios)
-{
-    ASSERT_ALWAYS(g_bootloader != nullptr);
-    const auto st = g_bootloader->getState();
-    ios.print("%s (%d)\n", bootloader::stateToString(st), int(st));
-}
-
-
 class RebootCommand : public os::shell::ICommandHandler
 {
     const char* getName() const override { return "reboot"; }
@@ -63,28 +55,28 @@ class ZubaxIDCommand : public os::shell::ICommandHandler
 
     void execute(os::shell::BaseChannelWrapper& ios, int, char**) override
     {
-        ios.print("product_id   : '%s'\n", PRODUCT_ID_STRING);
-        ios.print("product_name : '%s'\n", PRODUCT_NAME_STRING);
-        ios.print("mode         : bootloader\n");
+        ios.print("product_id: '%s'\n", PRODUCT_ID_STRING);
+        ios.print("product_name: '%s'\n", PRODUCT_NAME_STRING);
+        ios.print("mode: bootloader\n");
 
-        ios.print("bl_version   : '%u.%u'\n", BL_VERSION_MAJOR, BL_VERSION_MINOR);
+        ios.print("bl_version: '%u.%u'\n", BL_VERSION_MAJOR, BL_VERSION_MINOR);
         ios.print("bl_vcs_commit: %u\n", GIT_HASH);
         ios.print("bl_build_date: %s\n", __DATE__);
 
         {
             auto hw_version = board::detectHardwareVersion();
-            ios.print("hw_version   : '%u.%u'\n", hw_version.major, hw_version.minor);
+            ios.print("hw_version: '%u.%u'\n", hw_version.major, hw_version.minor);
         }
 
         {
             char base64_buf[os::base64::predictEncodedDataLength(std::tuple_size<board::DeviceSignature>::value) + 1];
 
-            ios.print("hw_unique_id : '%s'\n", os::base64::encode(board::readUniqueID(), base64_buf));
+            ios.print("hw_unique_id: '%s'\n", os::base64::encode(board::readUniqueID(), base64_buf));
 
             board::DeviceSignature signature;
             if (board::tryReadDeviceSignature(signature))
             {
-                ios.print("hw_signature : '%s'\n", os::base64::encode(signature, base64_buf));
+                ios.print("hw_signature: '%s'\n", os::base64::encode(signature, base64_buf));
             }
         }
 
@@ -93,18 +85,11 @@ class ZubaxIDCommand : public os::shell::ICommandHandler
         if (appinfo.second)
         {
             const auto& inf = appinfo.first;
-            ios.print("fw_version   : '%u.%u'\n", inf.major_version, inf.minor_version);
+            ios.print("fw_version: '%u.%u'\n", inf.major_version, inf.minor_version);
             ios.print("fw_vcs_commit: %u\n", unsigned(inf.vcs_commit));
         }
     }
 } static cmd_zubax_id;
-
-
-class StateCommand : public os::shell::ICommandHandler
-{
-    const char* getName() const override { return "state"; }
-    void execute(os::shell::BaseChannelWrapper& ios, int, char**) override { printBootloaderState(ios); }
-} static cmd_state;
 
 
 class WaitCommand : public os::shell::ICommandHandler
@@ -188,7 +173,6 @@ public:
     {
         shell_.addCommandHandler(&cmd_reboot);
         shell_.addCommandHandler(&cmd_zubax_id);
-        shell_.addCommandHandler(&cmd_state);
         shell_.addCommandHandler(&cmd_wait);
         shell_.addCommandHandler(&cmd_download);
     }
