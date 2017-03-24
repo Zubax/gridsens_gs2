@@ -50,6 +50,9 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     chSysInit();
     sdStart(&STDOUT_SD, nullptr);
 
+    setCANLed(0, false);        // Default state
+    setCANLed(1, false);
+
     /*
      * Watchdog
      */
