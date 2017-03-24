@@ -135,10 +135,8 @@ int main()
         }
         else
         {
-            board::setCANLed(0, true);
-            board::setCANLed(1, true);
+            board::setCANLed(1, true);                  // Using CAN2 LED for state indication purposes
             chThdSleepMilliseconds(duration.first);
-            board::setCANLed(0, false);
             board::setCANLed(1, false);
             chThdSleepMilliseconds(duration.second);
         }
