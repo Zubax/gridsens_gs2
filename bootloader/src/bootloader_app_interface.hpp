@@ -57,13 +57,13 @@ static_assert(sizeof(AppShared) <= 240, "AppShared may be larger than the amount
 static inline auto makeMarshaller()
 {
     // Note that the first 256 bytes of SRAM are used for bootloader-app communication! See the linker script.
-    return bootloader::app_shared::makeAppSharedMarshaller<AppShared>(reinterpret_cast<void*>(SRAM_BASE));
+    return os::bootloader::app_shared::makeAppSharedMarshaller<AppShared>(reinterpret_cast<void*>(SRAM_BASE));
 }
 
 
 static inline auto readAndErase()
 {
-    return makeMarshaller().read(bootloader::app_shared::AutoErase::EraseAfterRead);
+    return makeMarshaller().read(os::bootloader::app_shared::AutoErase::EraseAfterRead);
 }
 
 static inline void write(const AppShared& apsh)

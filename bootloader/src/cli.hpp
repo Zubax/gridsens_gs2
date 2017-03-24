@@ -25,6 +25,6 @@
 namespace cli
 {
 
-void init(bootloader::Bootloader& bl);
+void init(os::bootloader::Bootloader& bl);
 
 }

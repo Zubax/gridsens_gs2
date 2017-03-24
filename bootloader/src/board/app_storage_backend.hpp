@@ -29,7 +29,7 @@ namespace board
 /**
  * This class contains logic and hardcoded values that are SPECIFIC FOR THIS PARTICULAR MCU AND APPLICATION.
  */
-class AppStorageBackend : public bootloader::IAppStorageBackend
+class AppStorageBackend : public os::bootloader::IAppStorageBackend
 {
     static constexpr unsigned ApplicationAddress = FLASH_BASE + APPLICATION_OFFSET;
 

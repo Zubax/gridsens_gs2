@@ -44,24 +44,24 @@ namespace
 constexpr unsigned WatchdogTimeoutMSec = 5000;
 
 
-static inline std::pair<unsigned, unsigned> bootloaderStateToLEDOnOffDurationMSec(bootloader::State state)
+static inline std::pair<unsigned, unsigned> bootloaderStateToLEDOnOffDurationMSec(os::bootloader::State state)
 {
     switch (state)
     {
-    case bootloader::State::NoAppToBoot:
+    case os::bootloader::State::NoAppToBoot:
     {
         return {50, 50};
     }
-    case bootloader::State::BootCancelled:
+    case os::bootloader::State::BootCancelled:
     {
         return {50, 950};
     }
-    case bootloader::State::AppUpgradeInProgress:
+    case os::bootloader::State::AppUpgradeInProgress:
     {
         return {500, 500};
     }
-    case bootloader::State::BootDelay:
-    case bootloader::State::ReadyToBoot:
+    case os::bootloader::State::BootDelay:
+    case os::bootloader::State::ReadyToBoot:
     {
         return {0, 0};
     }
@@ -92,7 +92,7 @@ int main()
      */
     board::AppStorageBackend backend;
 
-    bootloader::Bootloader bl(backend);
+    os::bootloader::Bootloader bl(backend);
 
     cli::init(bl);
 
@@ -122,7 +122,7 @@ int main()
         wdt.reset();
 
         const auto bl_state = bl.getState();
-        if (bl_state == bootloader::State::ReadyToBoot)
+        if (bl_state == os::bootloader::State::ReadyToBoot)
         {
             break;
         }

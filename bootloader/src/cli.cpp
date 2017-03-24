@@ -35,7 +35,7 @@ namespace cli
 namespace
 {
 
-static bootloader::Bootloader* g_bootloader = nullptr;
+static os::bootloader::Bootloader* g_bootloader = nullptr;
 
 
 class RebootCommand : public os::shell::ICommandHandler
@@ -112,7 +112,7 @@ class DownloadCommand : public os::shell::ICommandHandler
     {
         ASSERT_ALWAYS(g_bootloader != nullptr);
 
-        bootloader::ymodem_loader::YModemReceiver loader(ios.getChannel());     // TODO pushing stack really hard
+        os::bootloader::ymodem_loader::YModemReceiver loader(ios.getChannel());     // TODO pushing stack really hard
 
         int res = g_bootloader->upgradeApp(loader);
         if (res < 0)
@@ -163,7 +163,7 @@ class CLIThread : public chibios_rt::BaseStaticThread<2048>
         }
         else
         {
-            return os::heapless::concatenate(bootloader::stateToString(g_bootloader->getState()), "> ");
+            return os::heapless::concatenate(os::bootloader::stateToString(g_bootloader->getState()), "> ");
         }
     }
 
@@ -182,7 +182,7 @@ public:
 
 } // namespace
 
-void init(bootloader::Bootloader& bl)
+void init(os::bootloader::Bootloader& bl)
 {
     g_bootloader = &bl;
     cli_thread.start(LOWPRIO + 1);
