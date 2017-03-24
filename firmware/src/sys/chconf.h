@@ -30,8 +30,4 @@
 #define PORT_IDLE_THREAD_STACK_SIZE     64
 #define PORT_INT_REQUIRED_STACK         512
 
-#if defined(DEBUG_BUILD) && DEBUG_BUILD
-# define CH_CFG_USE_REGISTRY            TRUE
-#endif
-
 #include <zubax_chibios/sys/chconf_tail.h>

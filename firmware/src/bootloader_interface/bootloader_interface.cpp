@@ -38,6 +38,8 @@ static const volatile struct __attribute__((packed))
     std::uint8_t reserved[6]    = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 } _app_descriptor __attribute__((section(".app_descriptor")));
 
+static chibios_rt::Mutex g_mutex;
+
 
 FirmwareVersion getFirmwareVersion()
 {
@@ -57,11 +59,13 @@ static inline auto makeMarshaller()
 
 std::pair<AppShared, bool> readAndInvalidateSharedStruct()
 {
+    os::MutexLocker locker(g_mutex);
     return makeMarshaller().read(os::bootloader::app_shared::AutoErase::EraseAfterRead);
 }
 
 void writeSharedStruct(const AppShared& shared)
 {
+    os::MutexLocker locker(g_mutex);
     makeMarshaller().write(shared);
 }
 

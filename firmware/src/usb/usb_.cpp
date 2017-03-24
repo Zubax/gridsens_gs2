@@ -40,7 +40,6 @@
 
 namespace usb
 {
-
 namespace
 {
 
@@ -55,8 +54,17 @@ void cmd_cfg(BaseSequentialStream*, int argc, char* argv[])
 void cmd_reboot(BaseSequentialStream*, int, char**)
 {
     ::puts("RESTART");
-    ::usleep(10000);
-    ::NVIC_SystemReset();
+    os::requestReboot();
+}
+
+void cmd_bootloader(BaseSequentialStream*, int, char**)
+{
+    ::puts("STARTING BOOTLOADER");
+    os::requestReboot();
+
+    bootloader_interface::AppShared shared;
+    shared.stay_in_bootloader = true;
+    bootloader_interface::writeSharedStruct(shared);
 }
 
 void cmd_gnssbridge(BaseSequentialStream*, int, char**)
@@ -206,12 +214,11 @@ const ::ShellCommand HandlerTable[] =
 {
     {"cfg",        &cmd_cfg},
     {"reboot",     &cmd_reboot},
+    {"bootloader", &cmd_bootloader},
     {"gnssbridge", &cmd_gnssbridge},
     {"signature",  &cmd_signature},
     {"zubax_id",   &cmd_zubax_id},
-#if defined(DEBUG_BUILD) && DEBUG_BUILD
     {"threads",    &cmd_threads},
-#endif
     {nullptr, nullptr}
 };
 
