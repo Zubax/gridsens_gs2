@@ -144,7 +144,7 @@ int main()
 
     if (os::isRebootRequested())
     {
-        os::lowsyslog("REBOOT\n");
+        os::lowsyslog("\nREBOOTING\n");
         chThdSleepMilliseconds(500);       // Providing some time for other components to react
         board::restart();
     }
@@ -152,7 +152,7 @@ int main()
     /*
      * Starting the application
      */
-    os::lowsyslog("BOOT\n");
+    os::lowsyslog("\nBOOTING\n");
     os::requestReboot();         // Notifying other components that we're going down
     chThdSleepMilliseconds(500); // Providing some time for other components to react
     wdt.reset();                 // The final reset, the application will have time to boot and init until next timeout
