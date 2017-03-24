@@ -18,20 +18,17 @@
  */
 
 #include "node.hpp"
-
 #include "board/board.hpp"
 #include "component_status_manager.hpp"
-#include "bootloader_interface.hpp"
 #include <ch.hpp>
 #include <unistd.h>
-
 #include <uavcan/protocol/global_time_sync_master.hpp>
 #include <uavcan/protocol/global_time_sync_slave.hpp>
 #include <uavcan/protocol/param_server.hpp>
 #include <uavcan/protocol/dynamic_node_id_client.hpp>
 #include <uavcan/protocol/file/BeginFirmwareUpdate.hpp>
-
 #include <zubax_chibios/os.hpp>
+
 
 namespace node
 {
@@ -41,16 +38,15 @@ namespace
 const unsigned MinTimeSyncPubPeriodUSec = 500000;
 const unsigned IfaceLedUpdatePeriodMSec = 25;
 
-os::config::Param<unsigned> param_can_bitrate("uavcan.bit_rate", 0, 0, 1000000);
 os::config::Param<unsigned> param_node_id("uavcan.node_id", 0, 0, 125);
 
 os::config::Param<unsigned> param_time_sync_period_usec("uavcan.pubp-time",
-                                                                   0, 0, 1000000);
+                                                        0, 0, 1000000);
 
 os::config::Param<unsigned> param_time_sync_prio("uavcan.prio-time",
-                                                            1,
-                                                            uavcan::TransferPriority::NumericallyMin,
-                                                            uavcan::TransferPriority::NumericallyMax);
+                                                 1,
+                                                 uavcan::TransferPriority::NumericallyMin,
+                                                 uavcan::TransferPriority::NumericallyMax);
 
 os::config::Param<unsigned> param_node_status_pub_interval_usec(
     "uavcan.pubp-stat",
@@ -59,19 +55,23 @@ os::config::Param<unsigned> param_node_status_pub_interval_usec(
     uavcan::protocol::NodeStatus::MAX_BROADCASTING_PERIOD_MS * 1000);
 
 os::config::Param<unsigned> param_node_status_prio("uavcan.prio-stat",
-                                                              20,
-                                                              uavcan::TransferPriority::NumericallyMin,
-                                                              uavcan::TransferPriority::NumericallyMax);
+                                                   20,
+                                                   uavcan::TransferPriority::NumericallyMin,
+                                                   uavcan::TransferPriority::NumericallyMax);
 
 uavcan_stm32::CanInitHelper<> can;
-std::uint32_t active_can_bus_bit_rate;
+
+uavcan::protocol::SoftwareVersion g_firmware_version;
+std::uint32_t g_can_bit_rate;
+uavcan::NodeID g_node_id;
+
+FirmwareUpdateRequestCallback g_on_firmware_update_requested;
 
 uavcan_stm32::Mutex node_mutex;
 
 ComponentStatusManager<unsigned(ComponentID::NumComponents_)> comp_mgr;
 
 bool started = false;
-bool pending_restart_request = false;
 bool local_utc_updated = false;
 bool time_sync_master_enabled = false;
 
@@ -82,7 +82,7 @@ void configureNode()
     node.setName(PRODUCT_ID_STRING);
 
     // Software version
-    node.setSoftwareVersion(bootloader_interface::makeUavcanSoftwareVersionStruct());
+    node.setSoftwareVersion(g_firmware_version);
 
     // Hardware version
     uavcan::protocol::HardwareVersion hwver;
@@ -279,7 +279,7 @@ class RestartRequestHandler : public uavcan::IRestartRequestHandler
     bool handleRestartRequest(uavcan::NodeID request_source) override
     {
         os::lowsyslog("Restart request from %i\n", int(request_source.get()));
-        pending_restart_request = true;
+        os::requestReboot();
         return true;
     }
 } restart_request_handler;
@@ -302,21 +302,20 @@ void handleBeginFirmwareUpdateRequest(
     const uavcan::ReceivedDataStructure<uavcan::protocol::file::BeginFirmwareUpdate::Request>& request,
     uavcan::protocol::file::BeginFirmwareUpdate::Response& response)
 {
-    static bool in_progress = false;
+    assert(g_can_bit_rate > 0);
+    assert(g_node_id.isUnicast());
 
-    ::os::lowsyslog("BeginFirmwareUpdate request from %d\n", int(request.getSrcNodeID().get()));
+    os::lowsyslog("BeginFirmwareUpdate request from %d\n", int(request.getSrcNodeID().get()));
 
-    if (in_progress)
+    if (g_on_firmware_update_requested)
     {
-        response.error = response.ERROR_IN_PROGRESS;
+        response.error = g_on_firmware_update_requested(request);
     }
     else
     {
-        assert(active_can_bus_bit_rate > 0);
-        bootloader_interface::passParametersToBootloader(active_can_bus_bit_rate, getNode().getNodeID());
-
-        pending_restart_request = true;
-        in_progress = true;
+        os::lowsyslog("UAVCAN FIRMWARE UPDATE HANDLER NOT SET\n");
+        response.error = response.ERROR_UNKNOWN;
+        response.optional_error_message = "Not supported by application";
     }
 }
 
@@ -334,21 +333,15 @@ class : public chibios_rt::BaseStaticThread<3000>
         {
             ::sleep(1);
 
-            std::uint32_t bitrate = param_can_bitrate.get();
-            if (bitrate == 0)
-            {
-                bitrate = bootloader_interface::getInheritedCanBusBitRate();
-            }
-
-            const bool autodetect = bitrate == 0;
-
+            const bool autodetect = g_can_bit_rate == 0;
+            std::uint32_t bit_rate = g_can_bit_rate;
             res = can.init([]() { ::usleep(can.getRecommendedListeningDelay().toUSec()); },
-                           bitrate);
+                           bit_rate);
 
             if (res >= 0)
             {
-                ::os::lowsyslog("CAN inited at %u bps\n", unsigned(bitrate));
-                active_can_bus_bit_rate = bitrate;
+                g_can_bit_rate = bit_rate;
+                ::os::lowsyslog("CAN inited at %u bps\n", unsigned(g_can_bit_rate));
             }
             else if (autodetect && (res == -uavcan_stm32::ErrBitRateNotDetected))
             {
@@ -357,7 +350,7 @@ class : public chibios_rt::BaseStaticThread<3000>
             else
             {
                 ::os::lowsyslog("Could not init CAN; status: %d, autodetect: %d, bitrate: %u\n",
-                            res, int(autodetect), unsigned(bitrate));
+                            res, int(autodetect), unsigned(bit_rate));
             }
         }
         while (res < 0);
@@ -386,12 +379,12 @@ class : public chibios_rt::BaseStaticThread<3000>
         }
 
         // Configuring the local node ID
-        if (param_node_id.get() > 0 || bootloader_interface::getInheritedNodeID().isUnicast())
+        if (param_node_id.get() > 0 || g_node_id.isUnicast())
         {
             Lock locker;
             getNode().setNodeID((param_node_id.get() > 0) ?
                                 static_cast<std::uint8_t>(param_node_id.get()) :
-                                bootloader_interface::getInheritedNodeID());
+                                g_node_id);
             os::lowsyslog("Using static node ID %d\n", int(getNode().getNodeID().get()));
         }
         else
@@ -421,6 +414,8 @@ class : public chibios_rt::BaseStaticThread<3000>
 
             getNode().setNodeID(dnid_client.getAllocatedNodeID());
         }
+
+        g_node_id = getNode().getNodeID();
 
         Lock locker;
 
@@ -501,7 +496,7 @@ public:
         setName("uavcan");
         initCanBus();
 
-        assert(active_can_bus_bit_rate > 0);
+        assert(g_can_bit_rate > 0);
 
         while (true)
         {
@@ -517,7 +512,7 @@ public:
         os::watchdog::Timer wdt;
         wdt.startMSec(100);
 
-        while (!hasPendingRestartRequest())
+        while (!os::isRebootRequested())
         {
             ::usleep(1000);
             wdt.reset();
@@ -548,15 +543,15 @@ bool isStarted()
     return started;
 }
 
-bool hasPendingRestartRequest()
-{
-    return pending_restart_request;
-}
-
 Node& getNode()
 {
     static Node node(can.driver, uavcan_stm32::SystemClock::instance());
     return node;
+}
+
+std::uint32_t getCANBitRate()
+{
+    return g_can_bit_rate;
 }
 
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment)
@@ -588,8 +583,25 @@ void markComponentInitialized(ComponentID comp)
     comp_mgr.markInitialized(comp);
 }
 
-void init()
+void init(std::uint32_t bit_rate_hint,
+          std::uint8_t node_id_hint,
+          std::pair<std::uint8_t, std::uint8_t> firmware_version_major_minor,
+          std::uint64_t firmware_image_crc64we,
+          std::uint32_t firmware_vcs_commit,
+          const FirmwareUpdateRequestCallback& on_firmware_update_requested)
 {
+    g_can_bit_rate = bit_rate_hint;
+    g_node_id = node_id_hint;
+
+    g_firmware_version.major = firmware_version_major_minor.first;
+    g_firmware_version.minor = firmware_version_major_minor.second;
+    g_firmware_version.image_crc = firmware_image_crc64we;
+    g_firmware_version.vcs_commit = firmware_vcs_commit;
+    g_firmware_version.optional_field_flags =
+        g_firmware_version.OPTIONAL_FIELD_FLAG_IMAGE_CRC | g_firmware_version.OPTIONAL_FIELD_FLAG_VCS_COMMIT;
+
+    g_on_firmware_update_requested = on_firmware_update_requested;
+
     (void)node_thread.start(NORMALPRIO);
 }
 

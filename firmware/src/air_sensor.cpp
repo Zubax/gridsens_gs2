@@ -124,7 +124,7 @@ class AirSensorThread : public chibios_rt::BaseStaticThread<1024>
         assert(param_period_usec.get() > 0);
         const unsigned period_usec = std::max(MinPublicationPeriodUSec, param_period_usec.get());
 
-        while (!node::hasPendingRestartRequest())
+        while (!os::isRebootRequested())
         {
             watchdog_.reset();
             sleep_until += US2ST(period_usec);
@@ -166,7 +166,7 @@ public:
         pressure_variance = param_pressure_variance.get();
         temperature_variance = param_temperature_variance.get();
 
-        while (!node::hasPendingRestartRequest())
+        while (!os::isRebootRequested())
         {
             watchdog_.reset();
             ::usleep(500000);
@@ -182,7 +182,7 @@ public:
 
             node::markComponentInitialized(node::ComponentID::AirSensor);
             tryRun();
-            if (!node::hasPendingRestartRequest())
+            if (!os::isRebootRequested())
             {
                 node::setComponentHealth(node::ComponentID::AirSensor, uavcan::protocol::NodeStatus::HEALTH_ERROR);
                 os::lowsyslog("Air sensor is about to restart...\n");

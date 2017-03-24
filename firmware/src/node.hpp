@@ -20,6 +20,8 @@
 #pragma once
 
 #include <uavcan_stm32/uavcan_stm32.hpp>
+#include <uavcan/protocol/file/BeginFirmwareUpdate.hpp>
+
 
 namespace node
 {
@@ -37,13 +39,17 @@ struct Lock : uavcan_stm32::MutexLocker
     Lock();
 };
 
+using FirmwareUpdateRequestCallback =
+    std::function<uavcan::StorageType<uavcan::protocol::file::BeginFirmwareUpdate::Response::FieldTypes::error>::Type
+                  (const uavcan::ReceivedDataStructure<uavcan::protocol::file::BeginFirmwareUpdate::Request>&)>;
+
 typedef uavcan::Node<uavcan::MemPoolBlockSize * 128> Node;
 
 bool isStarted();
 
-bool hasPendingRestartRequest();
-
 Node& getNode();
+
+std::uint32_t getCANBitRate();
 
 void adjustUtcTimeFromLocalSource(const uavcan::UtcDuration& adjustment);
 
@@ -53,6 +59,11 @@ std::uint8_t getWorstComponentHealth();
 
 void markComponentInitialized(ComponentID comp);
 
-void init();
+void init(std::uint32_t bit_rate_hint,
+          std::uint8_t node_id_hint,
+          std::pair<std::uint8_t, std::uint8_t> firmware_version_major_minor,
+          std::uint64_t firmware_image_crc64we,
+          std::uint32_t firmware_vcs_commit,
+          const FirmwareUpdateRequestCallback& on_firmware_update_requested);
 
 }

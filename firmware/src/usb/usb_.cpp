@@ -26,7 +26,7 @@
 #include <usb/usb.hpp>
 #include <nmea/nmea.hpp>
 #include <gnss.hpp>
-#include <bootloader_interface.hpp>
+#include <bootloader_interface/bootloader_interface.hpp>
 #include <board/board.hpp>
 #include <unistd.h>
 #include <cstdio>
@@ -36,6 +36,7 @@
 #include <hal.h>
 #include <shell.h>
 #include <chprintf.h>
+
 
 namespace usb
 {
@@ -128,7 +129,7 @@ void cmd_signature(BaseSequentialStream*, int argc, char** argv)
 
 void cmd_zubax_id(BaseSequentialStream*, int, char**)
 {
-    const auto sw_version = bootloader_interface::makeUavcanSoftwareVersionStruct();
+    const auto sw_version = bootloader_interface::getFirmwareVersion();
 
     printf("product_id   : '%s'\n", PRODUCT_ID_STRING);
     printf("product_name : '%s'\n", PRODUCT_NAME_STRING);

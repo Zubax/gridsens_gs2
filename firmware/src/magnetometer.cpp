@@ -505,7 +505,7 @@ public:
 
         node::markComponentInitialized(node::ComponentID::Magnetometer);
 
-        while (!tryInit() && !node::hasPendingRestartRequest())
+        while (!tryInit() && !os::isRebootRequested())
         {
             setStatus(uavcan::protocol::NodeStatus::HEALTH_ERROR);
             os::lowsyslog("Mag init failed, will retry...\n");
@@ -521,7 +521,7 @@ public:
 
         systime_t sleep_until = chibios_rt::System::getTime();
 
-        while (!node::hasPendingRestartRequest())
+        while (!os::isRebootRequested())
         {
             sleep_until += US2ST(period_usec);
 

@@ -318,7 +318,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
 
     bool shouldKeepGoing() const
     {
-        return keep_going_ && !node::hasPendingRestartRequest();
+        return keep_going_ && !os::isRebootRequested();
     }
 
     void pauseOneSec() const
