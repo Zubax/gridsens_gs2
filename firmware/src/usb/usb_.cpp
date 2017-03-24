@@ -43,6 +43,9 @@ namespace usb
 namespace
 {
 
+bool g_gnss_bridge_mode = false;
+
+
 void cmd_cfg(BaseSequentialStream*, int argc, char* argv[])
 {
     os::config::executeCLICommand(argc, argv);
@@ -57,6 +60,8 @@ void cmd_reboot(BaseSequentialStream*, int, char**)
 
 void cmd_gnssbridge(BaseSequentialStream*, int, char**)
 {
+    g_gnss_bridge_mode = true;
+
     ::puts("\nRESTART TO RESUME NORMAL OPERATION\n");
     gnss::stop();
     ::sleep(1);
@@ -64,11 +69,25 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
     SerialDriver* const gnss_port = &gnss::getSerialPort();
     SerialUSBDriver* const cli_port = usb_cdc_acm::getSerialUSBDriver();
 
+    std::uint8_t buffer[128];
+
     while (usb_cdc_acm::getState() == usb_cdc_acm::State::Connected)
     {
-        (void) gnss_port;
-        (void) cli_port;
-        chibios_rt::System::halt("GNSS BRIDGE NOT IMPLEMENTED");
+        // GNSS --> CLI
+        unsigned sz = chIQReadTimeout(&gnss_port->iqueue, buffer, sizeof(buffer), TIME_IMMEDIATE);
+        if (sz > 0)
+        {
+            // Block for a brief period of time only because the CLI port may become unwriteable
+            obqWriteTimeout(&cli_port->obqueue, buffer, sz, MS2ST(10));
+        }
+
+        // CLI --> GNSS
+        sz = ibqReadTimeout(&cli_port->ibqueue, buffer, sizeof(buffer), TIME_IMMEDIATE);
+        if (sz > 0)
+        {
+            // Block forever because the GNSS port is always available
+            chOQWriteTimeout(&gnss_port->oqueue, buffer, sz, TIME_INFINITE);
+        }
     }
 }
 
@@ -253,7 +272,7 @@ class USBControlThread : public chibios_rt::BaseStaticThread<1024>
                     os::setStdIOStream(usb_output);
                 }
 
-                const bool nmea_baudrate = isBaudrateValidForNMEA(baudrate);
+                const bool nmea_baudrate = isBaudrateValidForNMEA(baudrate) && !g_gnss_bridge_mode;
 
                 if (nmea_baudrate && !nmea::hasOutput(usb_output))
                 {
