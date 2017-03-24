@@ -33,6 +33,7 @@ Newest entries at the top.
 ### Zubax GNSS v2.2, firmware v4.0
 
 * New GNSS RF front-end enables even better noise rejection and sensitivity.
+* Improved power supply noise filtering.
 * New compass: LIS3MDL instead of HMC5983.
 * New bootloader with USB support instead of the old PX4 UAVCAN bootloader.
 UAVCAN bootloading support will be re-implemented in a later release.
@@ -51,7 +52,11 @@ HMC5983 sensor which causes it to periodically provide single erroneous measurem
 
 ## Bootloader
 
-*This section is incomplete.*
+The bootloader allows the end user to upgrade the firmware via
+USB (XMODEM/YMODEM), UART (XMODEM/YMODEM), or CAN (UAVCAN).
+The sources of the bootloader are located in the dedicated directory.
+No special steps are needed in order to build it - the makefile will build it automatically as needed.
+Please refer to the official documentation in order to learn more about the bootloader and how to use it.
 
 The bootloader can be flashed either independently, or as a combined image together with the application (see below).
 
@@ -60,7 +65,7 @@ The bootloader can be flashed either independently, or as a combined image toget
 If you're not running Linux or OSX natively, you can download
 [Bistromathic - a Linux virtual machine pre-configured for embedded development](https://files.zubax.com/vm/bistromathic.ova).
 
-* Install ARM GCC toolchain version 4.9 or newer
+* Install ARM GCC toolchain version 5.4 or newer
 * Init the sources:
 ```shell
 git submodule update --init --recursive
@@ -73,7 +78,7 @@ make binaries RELEASE=1 # RELEASE is optional; omit to build the debug version
 
 The steps above will produce the following outputs in the build output directory:
 
-* `com.zubax.*.uavcan.bin` - application binary suitable for UAVCAN bootloading, with correct image CRC.
+* `com.zubax.*.application.bin` - application binary suitable for bootloading, with correct image CRC.
 * `com.zubax.*.compound.bin` - above image combined with the bootloader; can be flashed on an empty MCU.
 * `compound.elf` - ELF file with embedded bootloader and correct image CRC; can be used for symbol
 debugging. Since this ELF includes the bootloader and has correct image CRC, it can be flashed and executed directly
@@ -92,13 +97,9 @@ cd ./zubax_chibios/tools
 ./stlink_flash.sh       # ST-Link v2
 ```
 
-### Using UAVCAN bootloader
+### Using the bootloader
 
-Feed the signed binary (it will be named as `*.application.bin`) to the UAVCAN firmware update server.
-For example, see these instructions for PX4: <http://dev.px4.io/uavcan-node-firmware.html>.
-
-Source of the UAVCAN bootloader for this board can be found at the
-[PX4 source repository](https://github.com/PX4/Firmware).
+Please refer to the official documentation.
 
 ## License
 
