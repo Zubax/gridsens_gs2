@@ -174,8 +174,6 @@ void cmd_zubax_id(BaseSequentialStream*, int, char**)
     }
 }
 
-#if defined(DEBUG_BUILD) && DEBUG_BUILD
-
 void cmd_threads(BaseSequentialStream*, int, char**)
 {
     static const char* ThreadStateNames[] = { CH_STATE_NAMES };
@@ -207,8 +205,6 @@ void cmd_threads(BaseSequentialStream*, int, char**)
     }
     while (tp != nullptr);
 }
-
-#endif // defined(DEBUG_BUILD) && DEBUG_BUILD
 
 const ::ShellCommand HandlerTable[] =
 {
