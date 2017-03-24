@@ -269,30 +269,52 @@ void processMagnetometer()
     }
     seq_id = s.seq_id;
 
-    const auto x = s.magnetic_field_strength[0];
-    const auto y = s.magnetic_field_strength[1];
-
-    float heading_deg = std::atan2(x, y) * float(180.0 / M_PI);
-    heading_deg -= 90.f;
-    if (heading_deg < 0.f)
     {
-        heading_deg += 360.f;
+        const auto x = s.magnetic_field_strength[0];
+        const auto y = s.magnetic_field_strength[1];
+
+        float heading_deg = std::atan2(x, y) * float(180.0 / M_PI);
+        heading_deg -= 90.f;
+        if (heading_deg < 0.f)
+        {
+            heading_deg += 360.f;
+        }
+        if (heading_deg > 360.f)
+        {
+            heading_deg -= 360.f;
+        }
+
+        // http://edu-observatory.org/gps/NMEA_0183.txt
+        // http://www.catb.org/gpsd/NMEA.html
+        SentenceBuilder b("HCHDG");
+        b.addField("%.1f", heading_deg);
+        b.addEmptyField();
+        b.addEmptyField();
+        b.addEmptyField();
+        b.addEmptyField();
+
+        outputSentence(b);
     }
-    if (heading_deg > 360.f)
+
+    /*
+     * Zubax Robotics vendor specific message for magnetic field strength measurement.
+     * Format:
+     *          $PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,,*12
+     */
     {
-        heading_deg -= 360.f;
+        SentenceBuilder b("PZUBAX");
+        b.addField("MAG-FLD-XYZ");
+        for (int i = 0; i < 3; i++)
+        {
+            b.addComplexField("%.3f", s.magnetic_field_strength[i]);
+        }
+
+        b.addField('G');                // Units of measurement - Gauss (SI unit is T, Tesla)
+        b.addEmptyField();              // Reserved
+        b.addEmptyField();              // Reserved
+
+        outputSentence(b);
     }
-
-    // http://edu-observatory.org/gps/NMEA_0183.txt
-    // http://www.catb.org/gpsd/NMEA.html
-    SentenceBuilder b("HCHDG");
-    b.addField("%.1f", heading_deg);
-    b.addEmptyField();
-    b.addEmptyField();
-    b.addEmptyField();
-    b.addEmptyField();
-
-    outputSentence(b);
 }
 
 
@@ -332,7 +354,7 @@ void processAirSensor()
 }
 
 
-// This structures are shared
+// These structures are shared
 static gnss::Auxiliary auxiliary;
 static gnss::Fix fix;
 
