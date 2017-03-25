@@ -13,3 +13,6 @@
 [submodule "bootloader/zubax_chibios"]
 	path = bootloader/zubax_chibios
 	url = https://github.com/Zubax/zubax_chibios
+[submodule "bootloader/libcanard"]
+	path = bootloader/libcanard
+	url = https://github.com/UAVCAN/libcanard

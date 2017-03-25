@@ -44,6 +44,13 @@ UDEFS = -DAPPLICATION_OFFSET=$(APPLICATION_OFFSET)       \
         -DPRODUCT_NAME_STRING=\"Zubax\ GNSS\"
 
 #
+# Libcanard
+#
+
+UINCDIR += libcanard
+CSRC += libcanard/canard.c
+
+#
 # Git commit hash
 #
 
