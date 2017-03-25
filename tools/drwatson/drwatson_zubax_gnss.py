@@ -134,7 +134,9 @@ def wait_for_boot():
         with open_serial_port(DEBUGGER_PORT_CLI_GLOB, timeout=BOOT_TIMEOUT) as p:
             try:
                 for line in p:
-                    if b'Zubax GNSS' in line:
+                    if b'zubax gnss' in line.lower() and b'bootloader' not in line.lower():
+                        logging.info('Boot detected, waiting 2 seconds...')
+                        time.sleep(3)
                         return
                     logger.info('Debug UART output: %s', line)
                     if time.monotonic() > deadline:
