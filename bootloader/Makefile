@@ -48,7 +48,8 @@ UDEFS = -DAPPLICATION_OFFSET=$(APPLICATION_OFFSET)       \
 #
 
 UINCDIR += libcanard
-CSRC += libcanard/canard.c
+CSRC += libcanard/canard.c                               \
+        libcanard/drivers/stm32/canard_stm32.c
 
 #
 # Git commit hash

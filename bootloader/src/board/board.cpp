@@ -50,9 +50,6 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     chSysInit();
     sdStart(&STDOUT_SD, nullptr);
 
-    setCANLed(0, false);        // Default state
-    setCANLed(1, false);
-
     /*
      * Watchdog
      */
@@ -73,6 +70,20 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     if (hw_ver.minor != 2)
     {
         chibios_rt::System::halt("BAD HW");
+    }
+
+    /*
+     * Hardware
+     */
+    setCANLed(0, false);        // Default state
+    setCANLed(1, false);
+
+    {
+        os::CriticalSectionLocker locker;
+
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
+        RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
+        RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN1RST;
     }
 
     /*
