@@ -26,6 +26,7 @@
 #include <zubax_chibios/os.hpp>
 #include <zubax_chibios/platform/stm32/flash_writer.hpp>
 #include <zubax_chibios/bootloader/bootloader.hpp>
+#include <canard_stm32.h>
 #include "bootloader_app_interface.hpp"
 #include "board/board.hpp"
 #include "board/app_storage_backend.hpp"
@@ -85,6 +86,42 @@ int main()
     board::usb_cdc_acm::init();
     wdt.reset();
 
+    {
+        int res = 0;
+
+        CanardSTM32CANTimings timings;
+        res = canardSTM32ComputeCANTimings(STM32_PCLK1, 1000000, &timings);
+        if (res < 0)
+        {
+            chibios_rt::System::halt("CAN timings");
+        }
+
+        DEBUG_LOG("CAN %u %u/%u\n", timings.bit_rate_prescaler, timings.bit_segment_1, timings.bit_segment_2);
+
+        res = ::canardSTM32Init(&timings, ::CanardSTM32IfaceModeAutomaticTxAbortOnError);
+        if (res < 0)
+        {
+            chibios_rt::System::halt("CAN init");
+        }
+
+        ::CanardSTM32AcceptanceFilterConfiguration filters[3];
+
+        filters[0].id   = 0x0001557F | CANARD_CAN_FRAME_EFF;
+        filters[0].mask = 0x00FFFFFF;
+
+        filters[1].id   = 0x003FF27E | CANARD_CAN_FRAME_EFF;
+        filters[1].mask = 0x00FFFFFF;
+
+        filters[2].id   = 0x123;
+        filters[2].mask = 0x7FF | CANARD_CAN_FRAME_EFF;
+
+        res = ::canardSTM32ConfigureAcceptanceFilters(filters, 3);
+        if (res < 0)
+        {
+            chibios_rt::System::halt("CAN filts");
+        }
+    }
+
     chibios_rt::BaseThread::setPriority(LOWPRIO);
 
     /*
@@ -140,6 +177,47 @@ int main()
             board::setCANLed(1, false);
             chThdSleepMilliseconds(duration.second);
         }
+
+        // XXX Libcanard test
+        while (true)
+        {
+            CanardCANFrame frame;
+            int res = ::canardSTM32Receive(&frame);
+            if (res < 0)
+            {
+                chibios_rt::System::halt("CAN RX");
+            }
+            if (res == 0)
+            {
+                break;
+            }
+            const auto stats = ::canardSTM32GetStats();
+            os::lowsyslog("RX %x %u [ovf %u err %u]\n",
+                          unsigned(frame.id),
+                          frame.data_len,
+                          unsigned(stats.rx_overflow_count),
+                          unsigned(stats.error_count));
+
+            res = ::canardSTM32Transmit(&frame);
+            if (res < 0)
+            {
+                chibios_rt::System::halt("CAN TX");
+            }
+            if (res == 0)
+            {
+                os::lowsyslog("CAN TX SKIPPED\n");
+            }
+        }
+
+        CanardCANFrame frame;
+        frame.data_len = 1;
+        frame.id = 0x123 | CANARD_CAN_FRAME_EFF;
+        int res = ::canardSTM32Transmit(&frame);
+        const auto stats = ::canardSTM32GetStats();
+        os::lowsyslog("CAN TX %d [ovf %u err %u]\n",
+                      res,
+                      unsigned(stats.rx_overflow_count),
+                      unsigned(stats.error_count));
     }
 
     if (os::isRebootRequested())

@@ -47,7 +47,9 @@ UDEFS = -DAPPLICATION_OFFSET=$(APPLICATION_OFFSET)       \
 # Libcanard
 #
 
-UINCDIR += libcanard
+UINCDIR += libcanard                                     \
+           libcanard/drivers/stm32
+
 CSRC += libcanard/canard.c                               \
         libcanard/drivers/stm32/canard_stm32.c
 

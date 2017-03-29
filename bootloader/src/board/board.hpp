@@ -28,9 +28,6 @@ namespace board
 
 os::watchdog::Timer init(unsigned wdt_timeout_ms);
 
-__attribute__((noreturn))
-void die(int error);
-
 void setCANLed(unsigned iface_index, bool state);
 void setStatusLed(bool state);
 

@@ -81,9 +81,10 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
     {
         os::CriticalSectionLocker locker;
 
-        RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;           // CAN1
         RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
         RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN1RST;
+        // CAN2 is not used
     }
 
     /*
@@ -95,18 +96,6 @@ os::watchdog::Timer init(unsigned wdt_timeout_ms)
                   watchdogTriggeredLastReset() ? "WDTRESET" : "OK");
 
     return wdt;
-}
-
-void die(int error)
-{
-    os::lowsyslog("ERR %i\n", error);
-    while (1)
-    {
-        setStatusLed(false);
-        ::usleep(25000);
-        setStatusLed(true);
-        ::usleep(25000);
-    }
 }
 
 void setCANLed(unsigned iface_index, bool state)
@@ -280,7 +269,7 @@ void boardInit(void)
      */
     RCC->APB1ENR |= RCC_APB1ENR_CAN1EN;
     palSetPadMode(GPIOB, 9, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
-    // Enabling CAN2 too
+    // Enabling CAN2 too, in order to avoid bus disruptions
     RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;
     palSetPadMode(GPIOB, 13, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
 }
