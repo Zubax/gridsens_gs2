@@ -26,11 +26,11 @@
 #include <zubax_chibios/os.hpp>
 #include <zubax_chibios/platform/stm32/flash_writer.hpp>
 #include <zubax_chibios/bootloader/bootloader.hpp>
-#include <canard_stm32.h>
 #include "bootloader_app_interface.hpp"
 #include "board/board.hpp"
 #include "board/app_storage_backend.hpp"
 #include "board/usb_cdc_acm.hpp"
+#include "uavcan.hpp"
 #include "cli.hpp"
 
 
@@ -86,42 +86,6 @@ int main()
     board::usb_cdc_acm::init();
     wdt.reset();
 
-    {
-        int res = 0;
-
-        CanardSTM32CANTimings timings;
-        res = canardSTM32ComputeCANTimings(STM32_PCLK1, 1000000, &timings);
-        if (res < 0)
-        {
-            chibios_rt::System::halt("CAN timings");
-        }
-
-        DEBUG_LOG("CAN %u %u/%u\n", timings.bit_rate_prescaler, timings.bit_segment_1, timings.bit_segment_2);
-
-        res = ::canardSTM32Init(&timings, ::CanardSTM32IfaceModeAutomaticTxAbortOnError);
-        if (res < 0)
-        {
-            chibios_rt::System::halt("CAN init");
-        }
-
-        ::CanardSTM32AcceptanceFilterConfiguration filters[3];
-
-        filters[0].id   = 0x0001557F | CANARD_CAN_FRAME_EFF;
-        filters[0].mask = 0x00FFFFFF;
-
-        filters[1].id   = 0x003FF27E | CANARD_CAN_FRAME_EFF;
-        filters[1].mask = 0x00FFFFFF;
-
-        filters[2].id   = 0x123;
-        filters[2].mask = 0x7FF | CANARD_CAN_FRAME_EFF;
-
-        res = ::canardSTM32ConfigureAcceptanceFilters(filters, 3);
-        if (res < 0)
-        {
-            chibios_rt::System::halt("CAN filts");
-        }
-    }
-
     chibios_rt::BaseThread::setPriority(LOWPRIO);
 
     /*
@@ -134,20 +98,37 @@ int main()
     cli::init(bl);
 
     /*
-     * Parsing the app shared struct
+     * Parsing the app shared struct and initializing the UAVCAN component accordingly
      */
-    const std::pair<bootloader_app_interface::AppShared, bool> app_shared = bootloader_app_interface::readAndErase();
-    if (app_shared.second)
     {
-        os::lowsyslog("AppShared: CAN %u bps   NID %u/%u   Wait %c\n",
-                      unsigned(app_shared.first.can_bus_speed),
-                      app_shared.first.uavcan_node_id,
-                      app_shared.first.uavcan_fw_server_node_id,
-                      app_shared.first.stay_in_bootloader ? 'Y' : 'N');
+        std::pair<bootloader_app_interface::AppShared, bool> app_shared = bootloader_app_interface::readAndErase();
 
-        if (app_shared.first.stay_in_bootloader)
+        if (app_shared.second)
         {
-            bl.cancelBoot();
+            if (app_shared.first.stay_in_bootloader)
+            {
+                bl.cancelBoot();
+            }
+
+            // Ensuring the string is properly terminated:
+            app_shared.first.uavcan_file_name[app_shared.first.UAVCANFileNameMaxLength - 1] = '\0';
+
+            os::lowsyslog("AppShared: Wait %c; UAVCAN: %u bps %u/%u \"%s\"\n",
+                          app_shared.first.stay_in_bootloader ? 'Y' : 'N',
+                          unsigned(app_shared.first.can_bus_speed),
+                          app_shared.first.uavcan_node_id,
+                          app_shared.first.uavcan_fw_server_node_id,
+                          &app_shared.first.uavcan_file_name[0]);
+
+            uavcan::init(bl,
+                         app_shared.first.can_bus_speed,
+                         app_shared.first.uavcan_node_id,
+                         app_shared.first.uavcan_fw_server_node_id,
+                         &app_shared.first.uavcan_file_name[0]);
+        }
+        else
+        {
+            uavcan::init(bl);
         }
     }
 
@@ -177,47 +158,6 @@ int main()
             board::setCANLed(1, false);
             chThdSleepMilliseconds(duration.second);
         }
-
-        // XXX Libcanard test
-        while (true)
-        {
-            CanardCANFrame frame;
-            int res = ::canardSTM32Receive(&frame);
-            if (res < 0)
-            {
-                chibios_rt::System::halt("CAN RX");
-            }
-            if (res == 0)
-            {
-                break;
-            }
-            const auto stats = ::canardSTM32GetStats();
-            os::lowsyslog("RX %x %u [ovf %u err %u]\n",
-                          unsigned(frame.id),
-                          frame.data_len,
-                          unsigned(stats.rx_overflow_count),
-                          unsigned(stats.error_count));
-
-            res = ::canardSTM32Transmit(&frame);
-            if (res < 0)
-            {
-                chibios_rt::System::halt("CAN TX");
-            }
-            if (res == 0)
-            {
-                os::lowsyslog("CAN TX SKIPPED\n");
-            }
-        }
-
-        CanardCANFrame frame;
-        frame.data_len = 1;
-        frame.id = 0x123 | CANARD_CAN_FRAME_EFF;
-        int res = ::canardSTM32Transmit(&frame);
-        const auto stats = ::canardSTM32GetStats();
-        os::lowsyslog("CAN TX %d [ovf %u err %u]\n",
-                      res,
-                      unsigned(stats.rx_overflow_count),
-                      unsigned(stats.error_count));
     }
 
     if (os::isRebootRequested())
@@ -233,6 +173,20 @@ int main()
     os::lowsyslog("\nBOOTING\n");
     os::requestReboot();         // Notifying other components that we're going down
     chThdSleepMilliseconds(500); // Providing some time for other components to react
+
+    // Writing down the CAN bus parameters for the application, if known
+    {
+        const uavcan::Parameters p = uavcan::getParameters();
+
+        bootloader_app_interface::AppShared as;
+        as.can_bus_speed  = p.can_bus_bit_rate;
+        as.uavcan_node_id = p.local_node_id;
+        assert((as.can_bus_speed  <= 1000000) &&
+               (as.uavcan_node_id <= 127));
+
+        bootloader_app_interface::write(as);
+    }
+
     wdt.reset();                 // The final reset, the application will have time to boot and init until next timeout
     board::bootApplication();
 

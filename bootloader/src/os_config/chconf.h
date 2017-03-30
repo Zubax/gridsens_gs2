@@ -21,7 +21,8 @@
 
 // There is no 32-bit timers on STM32F105
 #define CH_CFG_ST_RESOLUTION            16
-#define CH_CFG_ST_FREQUENCY             2000
+// High frequency is required because of the limitations of the CAN driver, refer to the CAN driver wrapper for info
+#define CH_CFG_ST_FREQUENCY             6000
 
 #define PORT_IDLE_THREAD_STACK_SIZE     64
 #define PORT_INT_REQUIRED_STACK         512
