@@ -93,7 +93,7 @@ int main()
      */
     board::AppStorageBackend backend;
 
-    os::bootloader::Bootloader bl(backend);
+    os::bootloader::Bootloader bl(backend, board::getFlashSize());
 
     cli::init(bl);
 
