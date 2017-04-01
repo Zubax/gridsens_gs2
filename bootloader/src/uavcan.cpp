@@ -67,7 +67,7 @@ void init(os::bootloader::Bootloader& bl,
                      const char*,
                      const os::bootloader::uavcan_loader::HardwareInfo&>(bl, g_iface, PRODUCT_ID_STRING, hw);
 
-    (void) g_node->start(NORMALPRIO + 10,
+    (void) g_node->start(HIGHPRIO,
                          can_bit_rate,
                          local_node_id,
                          file_server_node_id,
