@@ -38,17 +38,34 @@ void init(os::bootloader::Bootloader& bl,
           const std::uint8_t file_server_node_id,
           const char* const remote_image_file_path)
 {
-    const auto uid_short = board::readUniqueID();
-
-    os::bootloader::uavcan_loader::NodeUniqueID uid_full{};
-    std::fill(uid_full.begin(), uid_full.end(), 0);
-    std::copy(uid_short.begin(),
-              uid_short.end(),
-              uid_full.begin());
+    os::bootloader::uavcan_loader::HardwareInfo hw;
+    // Hardware unique ID
+    {
+        const auto uid = board::readUniqueID();
+        std::copy(uid.begin(),
+                  uid.end(),
+                  hw.unique_id.begin());
+    }
+    // Hardware version
+    {
+        const auto hw_ver = board::detectHardwareVersion();
+        hw.major = hw_ver.major;
+        hw.minor = hw_ver.minor;
+    }
+    // Device signature, if present
+    {
+        board::DeviceSignature sign{};
+        if (board::tryReadDeviceSignature(sign))
+        {
+            std::copy(sign.begin(), sign.end(), hw.certificate_of_authenticity.begin());
+            hw.certificate_of_authenticity_length = sign.size();
+        }
+    }
 
     g_node.construct<os::bootloader::Bootloader&,
                      os::bootloader::uavcan_loader::ICANIface&,
-                     const os::bootloader::uavcan_loader::NodeUniqueID&>(bl, g_iface, uid_full);
+                     const char*,
+                     const os::bootloader::uavcan_loader::HardwareInfo&>(bl, g_iface, PRODUCT_ID_STRING, hw);
 
     (void) g_node->start(NORMALPRIO + 10,
                          can_bit_rate,
