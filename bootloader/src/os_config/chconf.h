@@ -41,10 +41,24 @@
 #define CH_CFG_USE_QUEUES               FALSE
 #define CH_CFG_USE_MEMCORE              FALSE
 #define CH_DBG_STATISTICS               FALSE
-#define CH_DBG_SYSTEM_STATE_CHECK       FALSE
-#define CH_DBG_ENABLE_CHECKS            TRUE            // Disable later if running out of ROM
-#define CH_DBG_ENABLE_ASSERTS           TRUE            // Disable later if running out of ROM
-#define CH_DBG_ENABLE_STACK_CHECK       FALSE
 #define CH_DBG_FILL_THREADS             FALSE
+
+#if defined(DEBUG_BUILD) && DEBUG_BUILD
+
+# define CH_DBG_SYSTEM_STATE_CHECK      TRUE
+# define CH_DBG_ENABLE_CHECKS           TRUE
+# define CH_DBG_ENABLE_ASSERTS          TRUE
+# define CH_DBG_ENABLE_STACK_CHECK      TRUE
+
+#elif defined(RELEASE_BUILD) && RELEASE_BUILD
+
+# define CH_DBG_SYSTEM_STATE_CHECK      FALSE
+# define CH_DBG_ENABLE_CHECKS           FALSE
+# define CH_DBG_ENABLE_ASSERTS          FALSE
+# define CH_DBG_ENABLE_STACK_CHECK      FALSE
+
+#else
+# error "Either DEBUG_BUILD or RELEASE_BUILD must be true"
+#endif
 
 #include <zubax_chibios/sys/chconf_tail.h>
