@@ -40,13 +40,10 @@ SECTIONS
     . = 0;
     _text = .;
 
-    startup : ALIGN(16) SUBALIGN(16)
+    startup : ALIGN(8) SUBALIGN(8)
     {
         FILL(0xDEADC0DE);
         KEEP(*(.vectors))
-        . = ALIGN(8);
-        KEEP(*(.app_descriptor));
-        . = ALIGN(8);
     } > flash
 
     constructors : ALIGN(4) SUBALIGN(4)
@@ -67,7 +64,7 @@ SECTIONS
         PROVIDE(__fini_array_end = .);
     } > flash
 
-    .text : ALIGN(16) SUBALIGN(16)
+    .text : ALIGN(4) SUBALIGN(4)
     {
         FILL(0xDEADC0DE);
         *(.text)
@@ -104,7 +101,7 @@ SECTIONS
     .textalign : ONLY_IF_RO
     {
         FILL(0xDEADC0DE);
-        . = ALIGN(8);
+        . = ALIGN(4);
     } > flash
 
     . = ALIGN(4);
