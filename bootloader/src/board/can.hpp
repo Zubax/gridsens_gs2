@@ -21,6 +21,7 @@
 
 #include <canard_stm32.h>
 #include <zubax_chibios/bootloader/loaders/uavcan.hpp>
+#include <board/board.hpp>
 #include <hal.h>
 
 
@@ -49,8 +50,20 @@ class CANIfaceAdapter : public os::bootloader::uavcan_loader::ICANIface
     static_assert((1000000 / CH_CFG_ST_FREQUENCY) < 180,
                   "Minimal delay must be lower in order for the libcanard STM32 driver to work properly");
 
-    static inline void wait()
+    static constexpr unsigned LEDUpdateIntervalMilliseconds = 25;
+
+    bool had_activity_ = false;
+    ::systime_t last_led_update_timestamp_st_ = 0;
+
+    inline void wait()
     {
+        if (chVTTimeElapsedSinceX(last_led_update_timestamp_st_) >= MS2ST(LEDUpdateIntervalMilliseconds))
+        {
+            last_led_update_timestamp_st_ += MS2ST(LEDUpdateIntervalMilliseconds);
+            board::setCANLed(0, had_activity_);
+            had_activity_ = false;
+        }
+
         chThdSleep(1);      // Sleeping for a minimal possible time interval
     }
 
@@ -64,6 +77,9 @@ public:
                   int(mode),
                   unsigned(acceptance_filter.id),
                   unsigned(acceptance_filter.mask));
+
+        had_activity_ = false;
+        last_led_update_timestamp_st_ = chVTGetSystemTimeX();
 
         // Computing CAN timings
         CanardSTM32CANTimings timings{};
@@ -122,6 +138,7 @@ public:
             int res = canardSTM32Transmit(&frame);      // Try to transmit
             if (res != 0)
             {
+                had_activity_ |= res > 0;
                 return res;                             // Either success or error, return
             }
             wait();                                     // No space in the buffer, skip the time quantum and try again
@@ -140,6 +157,7 @@ public:
             int res = canardSTM32Receive(&f);
             if (res != 0)
             {
+                had_activity_ |= res > 0;
                 return {res, f};                        // Either success or error, return
             }
             wait();                                     // Buffer is empty, skip the time quantum and try again
