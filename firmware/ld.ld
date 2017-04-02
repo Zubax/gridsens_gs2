@@ -45,7 +45,7 @@ SECTIONS
     {
         FILL(0xDEADC0DE);
         KEEP(*(.vectors))
-        . = ALIGN(8);
+        . = ALIGN(8);               /* Note that the app descriptor must be aligned at 8 bytes boundary! */
         KEEP(*(.app_descriptor));
         . = ALIGN(8);
     } > flash

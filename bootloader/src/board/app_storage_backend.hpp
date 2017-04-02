@@ -37,11 +37,11 @@ class AppStorageBackend : public os::bootloader::IAppStorageBackend
     {
         const auto flash_end = FLASH_BASE + board::getFlashSize();
         offset += ApplicationAddress;
-        if (offset >= flash_end)
+        if UNLIKELY(offset >= flash_end)
         {
             return false;
         }
-        if ((offset + size) >= flash_end)
+        if UNLIKELY((offset + size) >= flash_end)
         {
             size = flash_end - offset;
         }
@@ -80,12 +80,15 @@ public:
 
     int read(std::size_t offset, void* data, std::size_t size) override
     {
-        if (!correctOffsetAndSize(offset, size))
+        if LIKELY(correctOffsetAndSize(offset, size))
+        {
+            std::memcpy(data, reinterpret_cast<const void*>(offset), size);
+            return size;
+        }
+        else
         {
             return 0;
         }
-        std::memmove(data, reinterpret_cast<const void*>(offset), size);
-        return size;
     }
 };
 
