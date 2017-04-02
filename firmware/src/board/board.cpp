@@ -57,7 +57,8 @@ static const SPIConfig SPICfg =
     SPI_CR1_BR_1 | SPI_CR1_BR_0
 };
 
-constexpr void* ConfigStorageAddress = reinterpret_cast<void*>(0x08000000 + (256 * 1024) - 1024);
+// This can't be constexpr because of reinterpret_cast<>
+static void* const ConfigStorageAddress = reinterpret_cast<void*>(0x08000000 + (256 * 1024) - 1024);
 constexpr unsigned ConfigStorageSize = 1024;
 
 
