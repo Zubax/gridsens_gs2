@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <cstdio>
 #include <zubax_chibios/os.hpp>
+#include <zubax_chibios/watchdog/watchdog.hpp>
 #include <zubax_chibios/util/base64.hpp>
 #include <zubax_chibios/util/shell.hpp>
 #include <zubax_chibios/bootloader/loaders/ymodem.hpp>
@@ -35,6 +36,9 @@ namespace cli
 namespace
 {
 
+static constexpr unsigned WatchdogTimeoutMSec = 3000;
+
+static os::watchdog::Timer g_watchdog;
 static os::bootloader::Bootloader* g_bootloader = nullptr;
 
 
@@ -112,9 +116,12 @@ class DownloadCommand : public os::shell::ICommandHandler
     {
         ASSERT_ALWAYS(g_bootloader != nullptr);
 
-        os::bootloader::ymodem_loader::YModemReceiver loader(ios.getChannel());     // TODO pushing stack really hard
+        os::bootloader::ymodem_loader::YModemReceiver loader(ios.getChannel(), &g_watchdog);
 
+        g_watchdog.reset();
         int res = g_bootloader->upgradeApp(loader);
+        g_watchdog.reset();
+
         if (res < 0)
         {
             ios.print("ERROR %d\n", res);
@@ -146,8 +153,12 @@ class CLIThread : public chibios_rt::BaseStaticThread<2048>
                 shell_.reset();
             }
 
+            g_watchdog.reset();
+
             os::shell::BaseChannelWrapper wrapper(os::getStdIOStream());
             shell_.runFor(wrapper, 100);
+
+            g_watchdog.reset();
         }
 
         DEBUG_LOG("Disconnecting USB\n");
@@ -184,6 +195,7 @@ public:
 
 void init(os::bootloader::Bootloader& bl)
 {
+    g_watchdog.startMSec(WatchdogTimeoutMSec);
     g_bootloader = &bl;
     cli_thread.start(LOWPRIO + 1);
 }
