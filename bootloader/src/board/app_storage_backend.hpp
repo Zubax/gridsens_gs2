@@ -78,7 +78,7 @@ public:
         return writer.write(reinterpret_cast<const void*>(offset), data, size) ? size : -ErrWriteFailed;
     }
 
-    int read(std::size_t offset, void* data, std::size_t size) override
+    int read(std::size_t offset, void* data, std::size_t size) const override
     {
         if LIKELY(correctOffsetAndSize(offset, size))
         {

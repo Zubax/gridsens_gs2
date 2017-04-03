@@ -95,7 +95,8 @@ int main()
 
     const ::systime_t bootloader_init_started_at = chVTGetSystemTimeX();
 
-    os::bootloader::Bootloader bl(backend, board::getFlashSize());
+    // This class is large, do not allocate it on the stack
+    static os::bootloader::Bootloader bl(backend, board::getFlashSize());
 
     os::lowsyslog("Bootloader: Inited in %u ms\n", unsigned(ST2MS(chVTTimeElapsedSinceX(bootloader_init_started_at))));
 

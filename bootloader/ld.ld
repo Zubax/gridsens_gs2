@@ -40,13 +40,13 @@ SECTIONS
     . = 0;
     _text = .;
 
-    startup : ALIGN(8) SUBALIGN(8)
+    startup : ALIGN(8)
     {
         FILL(0xDEADC0DE);
         KEEP(*(.vectors))
     } > flash
 
-    constructors : ALIGN(4) SUBALIGN(4)
+    constructors : ALIGN(4)
     {
         FILL(0xDEADC0DE);
         PROVIDE(__init_array_start = .);
@@ -55,7 +55,7 @@ SECTIONS
         PROVIDE(__init_array_end = .);
     } > flash
 
-    destructors : ALIGN(4) SUBALIGN(4)
+    destructors : ALIGN(4)
     {
         FILL(0xDEADC0DE);
         PROVIDE(__fini_array_start = .);
@@ -64,7 +64,7 @@ SECTIONS
         PROVIDE(__fini_array_end = .);
     } > flash
 
-    .text : ALIGN(4) SUBALIGN(4)
+    .text : ALIGN(4)
     {
         FILL(0xDEADC0DE);
         *(.text)
