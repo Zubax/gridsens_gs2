@@ -50,9 +50,16 @@ auto onFirmwareUpdateRequestedFromUAVCAN(
      */
     static bool already_in_progress = false;
 
+    const std::uint8_t source_node_id =
+        ((request.source_node_id > 0) &&
+         (request.source_node_id <= uavcan::NodeID::Max) &&
+         uavcan::NodeID(request.source_node_id).isUnicast()) ?
+            request.source_node_id :
+            request.getSrcNodeID().get();
+
     os::lowsyslog("UAVCAN firmware update request from %d, source %d, path '%s'\n",
                   request.getSrcNodeID().get(),
-                  request.source_node_id,
+                  source_node_id,
                   request.image_file_remote_path.path.c_str());
 
     if (already_in_progress)
@@ -69,7 +76,7 @@ auto onFirmwareUpdateRequestedFromUAVCAN(
     bootloader_interface::AppShared shared;
     shared.can_bus_speed = node::getCANBitRate();
     shared.uavcan_node_id = node::getNode().getNodeID().get();
-    shared.uavcan_fw_server_node_id = request.source_node_id;
+    shared.uavcan_fw_server_node_id = source_node_id;
     shared.stay_in_bootloader = true;
 
     std::strncpy(static_cast<char*>(&shared.uavcan_file_name[0]),       // This is really messy

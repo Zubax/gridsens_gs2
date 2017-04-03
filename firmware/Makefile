@@ -125,8 +125,8 @@ binaries: build/$(PROJECT).bin build/$(PROJECT).elf $(BOOTLOADER_IMAGE)
 	cd build && rm -f $(PROJECT).bin $(PROJECT).elf *.hex *.tmp.bin
 
 $(BOOTLOADER_IMAGE):
-	# Building the bootloader
-	+cd $(BOOTLOADER_DIR) && make RELEASE=$(RELEASE)
+	# Building the bootloader; enforcing RELEASE because it won't fit otherwise
+	+cd $(BOOTLOADER_DIR) && make RELEASE=1
 
 .PHONY: upload
 upload: build/compound.elf
