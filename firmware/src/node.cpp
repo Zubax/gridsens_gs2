@@ -86,7 +86,12 @@ void configureNode()
 
     // Hardware version
     uavcan::protocol::HardwareVersion hwver;
-    hwver.major = HW_VERSION;
+
+    {
+        const auto v = board::detectHardwareVersion();
+        hwver.major = v.major;
+        hwver.minor = v.minor;
+    }
 
     board::UniqueID uid;
     board::readUniqueID(uid);
