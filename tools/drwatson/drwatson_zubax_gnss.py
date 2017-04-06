@@ -390,21 +390,24 @@ def test_uavcan():
             raise
 
     # Blocking questions are moved out of the node scope because blocking breaks CAN communications
-    if not input('Is the PPS LED blinking once per second?', yes_no=True, default_answer=True):
-        abort('PPS LED is not working')
+    # Note that we must instantiate the driver in order to ensure proper traffic LED behavior
+    with closing(uavcan.make_driver(iface, bitrate=CAN_BITRATE)):
+        if not input('Is the PPS LED blinking once per second?', yes_no=True, default_answer=True):
+            abort('PPS LED is not working')
 
-    if not input('Is the CAN1 LED blinking or glowing solid?', yes_no=True, default_answer=True):
-        abort('CAN1 LED is not working (however the interface is fine)')
+        if not input('Is the CAN1 LED blinking or glowing solid?', yes_no=True, default_answer=True):
+            abort('CAN1 LED is not working (however the interface is fine)')
 
-    if not input('Is the STATUS LED blinking once per second?', yes_no=True, default_answer=True):
-        abort('STATUS LED is not working')
+        if not input('Is the STATUS LED blinking once per second?', yes_no=True, default_answer=True):
+            abort('STATUS LED is not working')
 
-    # Testing CAN2
-    input('1. Disconnect CAN1 and connect to CAN2\n'
-          '2. Terminate CAN2\n'
-          '3. Press ENTER')
-    if not input('Is the CAN2 LED blinking or glowing solid?', yes_no=True, default_answer=True):
-        abort('Either CAN2 or its LED are not working')
+        # Testing CAN2
+        input('1. Disconnect CAN1 and connect to CAN2\n'
+              '2. Terminate CAN2\n'
+              '3. Press ENTER')
+
+        if not input('Is the CAN2 LED blinking or glowing solid?', yes_no=True, default_answer=True):
+            abort('Either CAN2 or its LED are not working')
 
 
 def init_can_iface():
