@@ -203,7 +203,7 @@ def test_uavcan():
             for nd in target_nodes:
                 logger.info('Discovered node %r', nd)
 
-            def request(what, fire_and_forget=False):
+            def request(what, fire_and_forget=False, timeout=2):
                 response_event = None
 
                 def cb(e):
@@ -213,10 +213,10 @@ def test_uavcan():
                     response_event = e
 
                 if fire_and_forget:
-                    n.request(what, node_id, lambda _: None)
+                    n.request(what, node_id, lambda _: None, timeout=timeout)
                     safe_spin(0.1)
                 else:
-                    n.request(what, node_id, cb)
+                    n.request(what, node_id, cb, timeout=timeout)
                     while response_event is None:
                         safe_spin(0.1)
                     return response_event.response
