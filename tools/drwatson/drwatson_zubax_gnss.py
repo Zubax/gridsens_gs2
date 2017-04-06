@@ -135,8 +135,8 @@ def wait_for_boot():
             try:
                 for line in p:
                     if b'zubax gnss' in line.lower() and b'bootloader' not in line.lower():
-                        logging.info('Boot detected, waiting 2 seconds...')
-                        time.sleep(3)
+                        logging.info('Boot detected, waiting a few seconds...')
+                        time.sleep(4)
                         return
                     logger.info('Debug UART output: %s', line)
                     if time.monotonic() > deadline:
@@ -223,7 +223,7 @@ def test_uavcan():
 
             # Starting the node and checking its self-reported diag outputs
             def wait_for_init():
-                with time_limit(10, 'The node did not complete initialization in time'):
+                with time_limit(12, 'The node did not complete initialization in time'):
                     while True:
                         safe_spin(1)
                         if nsmon.exists(node_id) and nsmon.get(node_id).status.mode == \
