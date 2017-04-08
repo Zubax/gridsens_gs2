@@ -35,8 +35,9 @@ Newest entries at the top.
 * New GNSS RF front-end enables even better noise rejection and sensitivity.
 * Improved power supply noise filtering.
 * New compass: LIS3MDL instead of HMC5983.
-* New bootloader with USB support instead of the old PX4 UAVCAN bootloader.
-UAVCAN bootloading support will be re-implemented in a later release.
+* Using Zubax Embedded Bootloader instead of the old PX4 UAVCAN bootloader.
+The new bootloader supports USB, UART, and CAN interfaces for firmware update purposes.
+Supported protocols are UAVCAN over CAN, and YMODEM/XMODEM/XMODEM-1K over USB and UART.
 * Faster sensor update rates.
 * Static temperature publishing rate is fixed at 1/5th of the static pressure publishing rate.
 
@@ -52,8 +53,8 @@ HMC5983 sensor which causes it to periodically provide single erroneous measurem
 
 ## Bootloader
 
-The bootloader allows the end user to upgrade the firmware via
-USB (XMODEM/YMODEM), UART (XMODEM/YMODEM), or CAN (UAVCAN).
+The Zubax Embedded Bootloader allows the end user to upgrade the firmware via
+USB (YMODEM/XMODEM/XMODEM-1K), UART (YMODEM/XMODEM/XMODEM-1K), or CAN (UAVCAN).
 The sources of the bootloader are located in the dedicated directory.
 No special steps are needed in order to build it - the makefile will build it automatically as needed.
 Please refer to the official documentation in order to learn more about the bootloader and how to use it.
@@ -65,7 +66,7 @@ The bootloader can be flashed either independently, or as a combined image toget
 If you're not running Linux or OSX natively, you can download
 [Bistromathic - a Linux virtual machine pre-configured for embedded development](https://files.zubax.com/vm/bistromathic.ova).
 
-* Install ARM GCC toolchain version 5.4 or newer
+* Install ARM GCC toolchain version 6.3 or newer
 * Init the sources:
 ```shell
 git submodule update --init --recursive
@@ -78,11 +79,11 @@ make binaries RELEASE=1 # RELEASE is optional; omit to build the debug version
 
 The steps above will produce the following outputs in the build output directory:
 
-* `com.zubax.*.application.bin` - application binary suitable for bootloading, with correct image CRC.
+* `com.zubax.*.application.bin` - application binary suitable for bootloading, with the correct application descriptor.
 * `com.zubax.*.compound.bin` - above image combined with the bootloader; can be flashed on an empty MCU.
-* `compound.elf` - ELF file with embedded bootloader and correct image CRC; can be used for symbol
-debugging. Since this ELF includes the bootloader and has correct image CRC, it can be flashed and executed directly
-with an SWD debugger, no extra steps required.
+* `compound.elf` - ELF file with embedded bootloader and correct application descriptor; can be used for symbol
+debugging. Since this ELF includes the bootloader and has correct application descriptor,
+it can be flashed and executed directly with an SWD debugger, no extra steps required.
 
 ## Loading the firmware
 
