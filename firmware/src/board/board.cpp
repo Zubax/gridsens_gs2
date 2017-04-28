@@ -204,7 +204,7 @@ HardwareVersion detectHardwareVersion()
 {
     auto v = HardwareVersion();
 
-    v.major = HW_VERSION;
+    v.major = HW_VERSION_MAJOR;
 
     if (palReadPad(GPIO_PORT_HWID, GPIO_PIN_HWID_BIT0))
     {

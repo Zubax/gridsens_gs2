@@ -19,7 +19,7 @@
 
 PROJECT = com.zubax.gnss
 
-HW_VERSION = 2
+HW_VERSION_MAJOR = 2
 FW_VERSION_MAJOR = 4
 FW_VERSION_MINOR = 0
 
@@ -36,7 +36,7 @@ UINCDIR = src                \
 
 UDEFS = -DFW_VERSION_MAJOR=$(FW_VERSION_MAJOR)           \
         -DFW_VERSION_MINOR=$(FW_VERSION_MINOR)           \
-        -DHW_VERSION=$(HW_VERSION)                       \
+        -DHW_VERSION_MAJOR=$(HW_VERSION_MAJOR)           \
         -DPRODUCT_ID_STRING=\"$(PROJECT)\"               \
         -DPRODUCT_NAME_STRING=\"Zubax\ GNSS\"
 
@@ -93,7 +93,13 @@ DEBUG_OPT = -O2 -g3 -DDISABLE_WATCHDOG=1
 
 LDSCRIPT = ld.ld
 
-HW_VERSION_MAJOR_MINOR := $(HW_VERSION).2
+# Note that we're explicitly specifying the required minor hardware version here.
+# TODO WARNING FIXME This versioning trick is actually a hack. In the future we should AVOID releasing
+#                    firmware-incompatible hardware versions that share the same major version number.
+#                    In other words, all firmware images that share the same major number should be compatible
+#                    with all versions of hardware that share the same major version number. Ideally the major
+#                    version numbers for the hardware and the software should match.
+HW_VERSION_MAJOR_MINOR := $(HW_VERSION_MAJOR).2
 FW_VERSION_MAJOR_MINOR_VCS_HASH := $(FW_VERSION_MAJOR).$(FW_VERSION_MINOR).$(GIT_HASH)
 COMPOUND_IMAGE_FILE := $(PROJECT)-$(HW_VERSION_MAJOR_MINOR)-$(FW_VERSION_MAJOR_MINOR_VCS_HASH).compound.bin
 
