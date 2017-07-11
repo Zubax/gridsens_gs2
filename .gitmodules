@@ -16,3 +16,6 @@
 [submodule "bootloader/libcanard"]
 	path = bootloader/libcanard
 	url = https://github.com/UAVCAN/libcanard
+[submodule "datasheet/document_templates"]
+	path = datasheet/document_templates
+	url = https://github.com/Zubax/document_templates
