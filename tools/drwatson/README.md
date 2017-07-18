@@ -19,4 +19,4 @@ You can either use it or run drwatson manually as `sudo ./drwatson_zubax_gnss.py
 
 ## Other documentation
 
-Refer to <https://docs.zubax.com/> to find more documentation about anything.
+Refer to <https://kb.zubax.com/> to find more documentation about anything.
