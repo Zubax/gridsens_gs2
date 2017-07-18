@@ -10,8 +10,7 @@ Zubax GNSS 2 supports variety of standard protocols, which ensures compatibility
 software and hardware: [UAVCAN](http://uavcan.org) (over CAN bus), NMEA 0183 (over USB and UART),
 and u-Blox M8 protocol.
 
-* [**LEARN MORE**](http://zubax.com/product/zubax-gnss-2)
-* [**DOCUMENTATION AND TUTORIALS**](http://docs.zubax.com/zubax_gnss_2)
+[**ZUBAX GNSS HOMEPAGE**](https://zubax.com/products/gnss_2)
 
 ## Revisions
 
