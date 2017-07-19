@@ -271,7 +271,6 @@ Update in progress & Solid & Solid & \\
 
 \chapter{UAVCAN interface}
 
-
 This section describes the properties specific for this product only. For general info about the UAVCAN interface, please refer to the UAVCAN interface documentation page.
 If Zubax GNSS 2 is used in a setup with non-redundant CAN bus, only CAN1 must be used.
 
@@ -472,7 +471,8 @@ The following connector pinout can be used to read NMEA over UART:
 	4 & N/C & & \\
 	5 & N/C & & \\
 	6 & GND & GND & Ground \\
-\end{ZubaxSimpleTable}\\\\\\
+\end{ZubaxSimpleTable}
+
 UART parameters are fixed and provided below:
 \begin{itemize}
 \item Baud rate: 115200
@@ -494,7 +494,7 @@ CAN bus bit rate, all interfaces. Value 0 (which is default) causes the device t
 Default value: 0\\
 Units: bits/sec
 
-\textbf{uavcan.uavcan.node{\_}id}\\
+\textbf{uavcan.node{\_}id}\\
 UAVCAN Node ID Value 0 (which is default) causes the device to request a dynamically allocated node ID at every boot up.\\
 Default value: 0
 
@@ -519,7 +519,7 @@ Default value: 0 (disabled)\\
 Units: Microsecond
 
 \textbf{uavcan.prio-pres}\\
-Priority of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.\\
+Priority of \texttt{uavcan.equipment.air{\_}data.StaticPressure}.\\This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.\\
 Default value: 16
  
 \textbf{uavcan.pubp-mag}\\
@@ -606,9 +606,9 @@ This section documents the device properties that are reported in response to id
 \end{itemize}
 
 \chapter{Firmware update}
+
 Instructions below are only applicable to Zubax GNSS v2.2 and newer.\\
-It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware.\\
-Zubax GNSS 2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
+It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware. Zubax GNSS 2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
 
 \begin{figure}[!hbt]
 	\centerline{\includegraphics[width=1.1\textwidth]{bootloader_state_machine}}
@@ -704,9 +704,10 @@ Note that while this command is running, the CLI will be unavailable, since the 
 
 If the YMODEM protocol is used, the file name field in the transfer header packet will be ignored.
 
-There are heaps of software products and scripts that support these file transfer protocols. For instance, the popular program \textbf{sz} (available on most Linux distributions) can be used as follows:\\
-\texttt{sz -vv --ymodem --1k \$file > \$port < \$port}
-
+There are heaps of software products and scripts that support these file transfer protocols. For instance, the popular program \textbf{sz} (available on most Linux distributions) can be used as follows:
+\begin{minted}[linenos = false]{bash}
+sz -vv --ymodem --1k \$file > \$port < \$port
+\end{minted}
 \section{Via CAN bus}
 
 The bootloader supports the UAVCAN firmware update protocol. Please refer to the UAVCAN specification for theory.
@@ -743,16 +744,12 @@ Data type & Note\\
 \clearpage
 \subsection{Supported services}
 
-Servers: 
-
 \begin{ZubaxSimpleTable}{Supported servers}{| l | X |}
 Data type & Note\\
 uavcan.protocol.GetNodeInfo & The nested structure  \textbf{uavcan.protocol.SoftwareVersion} is populated only if there is a valid application.\\
 uavcan.protocol.RestartNode & Restarts the bootloader.\\
 uavcan.protocol.file.BeginFirmwareUpdate & Initiates the firmware update process, unless it was initiated earlier before the application has rebooted into the bootloader.
 \end{ZubaxSimpleTable}
-
-Clients:
 
 \begin{ZubaxSimpleTable}{Supported clients}{| l | l | l | X |}
 Data type & Response timeout & Transfer priority & Note \\
@@ -761,7 +758,9 @@ uavcan.protocol.file.Read & 1 second & 24(low) & Used to download the applicatio
 
 The interval at which the file read requests are issued while downloading the application image is defined by the following formula (all units SI):
 
-\textbf{last{\_}response{\_}latency + 1 / (1 + can{\_}bus{\_}bit{\_}rate / 65536)}
+\begin{equation}
+last{\_}response{\_}latency + 1 / (1 + can{\_}bus{\_}bit{\_}rate / 65536)
+\end{equation}
 
 This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
 
