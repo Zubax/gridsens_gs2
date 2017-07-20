@@ -17,6 +17,7 @@
 \section*{Overview}
 
 Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART. It includes a high-precision barometric altimeter, a 3-axis compass with thermal compensation, and a state-of-the-art multi-system GPS / GLONASS receiver.
+
 \section*{Features}
 
 \begin{itemize}
@@ -47,6 +48,7 @@ Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced vi
 \end{itemize}
 
 \BeginRightColumn
+
 \section*{Applications}
 
 \begin{itemize}
@@ -57,7 +59,6 @@ Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced vi
 \centering
 \includegraphics[width=0.45\textwidth]{GNSS_top}
 \includegraphics[width=0.45\textwidth]{GNSS_bottom}
-
 \end{titlepage}
 
 \tableofcontents
@@ -73,7 +74,7 @@ Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced vi
 
 \section{System integration}
 
-Zubax GNSS 2 can be powered either from UAVCAN 5V rail or from USB
+Zubax GNSS 2 can be powered either from UAVCAN 5 V rail or from USB
 The 5 V rails of the CAN interfaces are not used by the device; rather,
 they connect the 5 V rails of their respective CAN connector pairs directly together.
 
@@ -97,7 +98,7 @@ provide additional safety assurances.
 
 Besides testing, every manufactured device has a digital signature installed,
 that can be used as a strong protection against unlicensed or counterfeit manufacturing.
-Please refer to the section \ref{sec:certificate_of_authenticity} or contact Zubax Robotics
+Please contact Zubax Robotics
 to find out the specifics about digital signature verification.
 
 \section{Enclosure}\label{sec:enclosure}
@@ -155,7 +156,6 @@ Proper operation of the device within the ranges specified in this section is no
 	 Board temperature & -40 & 70 & \degree{}C & GNSS hot start is not expected to work reliably below -20\degree{}C	\\
 	 Magnetic field strength	&	& 9 &	Gauss & 
 \end{ZubaxSimpleTable}
-
 
 \section{Reliability}
 
@@ -218,7 +218,6 @@ for more information on standard connectors and communication interfaces.}.
 The DroneCode debug port provides access to the device's CLI\footnote{Command line interface.}
 via UART.
 
-
 \begin{ZubaxSimpleTable}{DroneCode debug port characteristics}{|c X|c c c|c|}
 	Symbol  & Parameter                                 & Min  & Typ  & Max  & Unit \\
 			& Low-level input voltage                   & -0.3 & 0    & 1.6  & V\\
@@ -232,13 +231,14 @@ via UART.
 	        & Connector resistance during device lifetime &    & 20   & 40   & $\text{m}\Omega$\\
 \end{ZubaxSimpleTable}
 
-
-
 \chapter{LED Indication}
 
 \section{PPS LED}
+
 This LED indicator blinks with the rate of 1 Hz if the GNSS receiver has a navigation fix.
+
 \section{Status LED}
+
 This LED indicator shows the health of the device derived from the continuous self-diagnostics as described above:
 
 \begin{ZubaxSimpleTable}{Status LED indication}{|X|X|}
@@ -257,9 +257,12 @@ Each blink indicates that there was a CAN frame that was successfully transmitte
 Note that CAN frames filtered out by the hardware acceptance filters will not cause the LED indicators to blink.
 
 \section{LED indication during firmware update and bootup}
+
 \subsection{Firmware v4.0 and newer}
+
 During first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the section dedicated to the bootloader below.
 \subsection{Firmware v3.x and older}
+
 During first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the table below.
 
 \begin{ZubaxSimpleTable}{CAN LED indication at bootup}{| X | c | c | c|}
@@ -272,6 +275,7 @@ Update in progress & Solid & Solid & \\
 \chapter{UAVCAN interface}
 
 This section describes the properties specific for this product only. For general info about the UAVCAN interface, please refer to the UAVCAN interface documentation page.
+
 If Zubax GNSS 2 is used in a setup with non-redundant CAN bus, only CAN1 must be used.
 
 \section{Mode and status codes}
@@ -301,7 +305,9 @@ CRITICAL & Firmware update has failed; another attempt will be made soon
 
 This device can act as a UAVCAN-compliant time synchronization master, but this feature is disabled by default. If time synchronization is enabled, the GNSS UTC time will be used as the time source, which implies that the time synchronization master will be functional only if the device has had at least one successful GNSS time fix since power on.
 \clearpage 
+
 \section{Services}
+
 This device does not call any services.
 
 The following service servers are implemented:
@@ -316,8 +322,8 @@ Data type & Note \\
 \texttt{uavcan.protocol.param.GetSet} & Configuration parameters are described in this document below .\\
 \texttt{uavcan.protocol.param.ExecuteOpcode} & Note that this request may cause transient disruptions to output sensor feeds. Starting from firmware v4.0, configuration parameters are saved automatically after modification, so no explicit invokation of this service is necessary.
 \end{ZubaxSimpleTable}
- 
 \clearpage
+
 \section{Messages}
 
 \begin{ZubaxSimpleTable}{Input Messages}{|l|X|}
@@ -338,12 +344,17 @@ Data type & Note \\
 \texttt{uavcan.equipment.air{\_}data.StaticTemperature} & Priority is shared with 
 \texttt{uavcan.equipment.air{\_}data.StaticPressure}  See a note below on publication frequency. Disabled by default.\\
 \texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used to allocate node ID if dynamic node ID allocation is enabled (it is enabled by default).
-
 \end{ZubaxSimpleTable}
+
+The publication frequency of \texttt{uavcan.equipment.air{\_}data.StaticTemperature} is defined as follows:
+\begin{itemize}
+\item For firmware versions prior to v4.0, the message \texttt{uavcan.equipment.air{\_}data.StaticTemperature} is published at the same rate as \texttt{uavcan.equipment.air{\_}data.StaticPressure}.
+\item For firmware versions v4.0 and newer, the message \texttt{uavcan.equipment.air{\_}data.StaticTemperature} is published at 1/5th of the rate of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. E.g. if the pressure data is broadcasted at 20 Hz, the temperature data will be broadcasted at 4 Hz.
+\end{itemize}
 
 \chapter{USB interface}
 
-The USB interface allows to use Zubax GNSS 2 as a standalone USB GNSS receiver (also known as “GPS mouse”) interfaced via the standard NMEA 0183 protocol; also it provides access to configuration parameters.
+The USB interface allows to use Zubax GNSS 2 as a standalone USB GNSS receiver (also known as ''GPS mouse'') interfaced via the standard NMEA 0183 protocol; also it provides access to configuration parameters.
 
 \section{Protocol selection}
 
@@ -351,12 +362,11 @@ Zubax GNSS 2 will automatically enable NMEA output via USB if the virtual serial
  
 The baud rate range is chosen this way because all standard NMEA baud rates fall within this range, which allows to use Zubax GNSS 2 with GNSS software (e.g. GIS systems, navigation software, etc.) right out of the box without any preparatory configuration.
 
-Please refer to the USB command line interface documentation page for more information specific to this interface.
-\section*{NMEA output}
+\section{NMEA output}
 
 Zubax GNSS 2 reports sensor data using the following standard NMEA sentences. Please also refer to the list of configuration parameters below to see what can be adjusted if necessary.
 
-More information on NMEA can be found here: http://www.catb.org/gpsd/NMEA.html.
+More information on NMEA can be found here: \href{http://www.catb.org/gpsd/NMEA.html}{http://www.catb.org/gpsd/NMEA.html}.
 
 Refer to the tutorials to see examples of using Zubax GNSS 2 with GIS software.
 
@@ -370,8 +380,8 @@ NMEA sentence & Component & Purpose\\
 \texttt{YXXDR} (type P) & Altimeter & Static barometric pressure (only if the sensor is enabled).\\
 \texttt{YXXDR} (type C) & Altimeter & Static air temperature (only if the sensor is enabled).
 \end{ZubaxSimpleTable}
-
 \clearpage
+
 \section{Vendor-specific sentences}
 
 The NMEA specification dedicates the prefix {\$}P followed by the vendor ID for vendor-specific sentences. All Zubax products use the vendor-specific prefix ZUBAX. The first field of the sentence contains the sentence type identifier, which is a string containing upper case Latin letters, Arabic digits, and the minus symbol -.
@@ -387,13 +397,17 @@ Fields:
 \item Magnetic field strength of the X axis.
 \item Magnetic field strength of the Y axis.
 \item Magnetic field strength of the Z axis.
-\item A single character G that indicates that the units of measurement are Gauss.
+\item A single character \texttt{G} that indicates that the units of measurement are Gauss.
 \item Reserved.
 \item Reserved.
 \end{enumerate}
-Example: \textbf{{\$}PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12}
+Example: 
+\begin{minted}[linenos = false]{yaml}
+PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12
+\end{minted}
 
 \section{Sample output}
+
 \begin{minted}[linenos = false]{yaml}
 $GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*35
 $GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,13.2,M,,*5E
@@ -411,14 +425,17 @@ $HCHDG,266.2,,,,*42
 $YXXDR,P,0.98968,B*59
 \end{minted}
 \clearpage
+
 \section{Command-line interface}
 
 This section documents supported CLI commands.
 
-\textbf{zubax{\_}id}\\
+\textbf{zubax{\_}id}
+
 This is the standard Zubax identification command. It is supported by all devices that implement a command line interface. Please refer to the USB command line interface documentation page for more info.
 
-\textbf{cfg}\\
+\textbf{cfg}
+
 Allows to view or modify configuration parameters.
 Execute without arguments to get usage info. Supported arguments:
 \begin{itemize}
@@ -430,10 +447,12 @@ Execute without arguments to get usage info. Supported arguments:
 
 Starting from firmware v4.0, configuration parameters are saved automatically after modification. Thus, it is no longer necessary to execute \textbf{cfg save}.
 
-\textbf{reset}\\
+\textbf{reset}
+
 Restarts the device. Note that sensors will not be restarted.
 
-\textbf{gnssbridge}\\
+\textbf{gnssbridge}
+
 Activates the direct bridge connection between USB CLI and the GNSS receiver. This feature allows to receive GNSS information using native u-Blox M8 protocol.
 
 Once the bridge is activated, the state of the device changes as follows until reboot:
@@ -445,20 +464,26 @@ Once the bridge is activated, the state of the device changes as follows until r
 
 Aside from the above, the device continues to work virtually as usual, e.g., its UAVCAN stack operates normally, other sensors are working (if enabled), etc.
 
-\textbf{help}\\
+\textbf{help}
+
 Prints the list of available commands
 
-\textbf{bootloader}\\
-Available in firmware v4.0+.\\
+\textbf{bootloader}
+
+Available in firmware v4.0+.
+
 Reboots the board into the bootloader.
 
 \chapter{DroneCode port}
+
 DroneCode port provides access to JTAG/SWD and UART interfaces. This port allows to update firmware and provides access to the UART interface that is used to log events, report problems, and output measurements in NMEA format. Hardware revisions v2.1 and newer can also be powered via this port.
 
-DroneCode port can be accessed using Zubax DroneCode Probe.
+DroneCode port can be accessed using \href{https://kb.zubax.com/display/MAINKB/Dronecode+Probe+documentation}{Zubax DroneCode Probe}.
 
 If outputting NMEA over UART is not of interest, this port will not be needed during normal use of the device.
+
 \section{NMEA output over UART}
+
 For general information about NMEA output interface, refer to the corresponding section above. Note that NMEA output over UART is disabled by default; refer to the description of configuration parameters to see how to enable it.
 
 The following connector pinout can be used to read NMEA over UART:
@@ -486,28 +511,41 @@ UART parameters are fixed and provided below:
 This section documents the available configuration parameters. Read the documentation on the interfaces to learn how to access the configuration parameters.
 
 Reboot is required in order for all configuration changes to take effect.
+
 Starting from firmware v4.0, configuration parameters are saved automatically after modification.
 
-\textbf{uavcan.bit{\_}rate}\\
-Removed in firmware v4.0.\\
-CAN bus bit rate, all interfaces. Value 0 (which is default) causes the device to detect bit rate automatically at every boot up.\\
-Default value: 0\\
-Units: bits/sec
+\textbf{uavcan.bit{\_}rate}
 
-\textbf{uavcan.node{\_}id}\\
-UAVCAN Node ID Value 0 (which is default) causes the device to request a dynamically allocated node ID at every boot up.\\
+Removed in firmware v4.0.
+
+CAN bus bit rate, all interfaces. Value 0 (which is default) causes the device to detect bit rate automatically at every boot up.
+
 Default value: 0
 
-\textbf{uavcan.pubp-time}\\
-Publication interval of \texttt{uavcan.protocol.GlobalTimeSync}. Zero means disabled.\\
-Default value: 0\\
+Units: bits/sec
+
+\textbf{uavcan.node{\_}id}
+
+UAVCAN Node ID Value 0 (which is default) causes the device to request a dynamically allocated node ID at every boot up.
+
+Default value: 0
+
+\textbf{uavcan.pubp-time}
+
+Publication interval of \texttt{uavcan.protocol.GlobalTimeSync}. Zero means disabled.
+
+Default value: 0
+
 Units: Microsecond
 
-\textbf{uavcan.prio-stat}\\
-Priority of \texttt{uavcan.protocol.NodeStatus}.\\
+\textbf{uavcan.prio-stat}
+
+Priority of \texttt{uavcan.protocol.NodeStatus}.
+
 Default value: 20
 
-\textbf{uavcan.pubp-pres}\\
+\textbf{uavcan.pubp-pres}
+
 Publication interval of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. Zero means disabled. When disabled:
 \begin{itemize}
 \item The driver of the appropriate sensor will not be initialized.
@@ -515,91 +553,138 @@ Publication interval of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. Ze
 \item Measurements will not be reported via any of the available interfaces.
 \end{itemize}
 This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.
-Default value: 0 (disabled)\\
-Units: Microsecond
 
-\textbf{uavcan.prio-pres}\\
-Priority of \texttt{uavcan.equipment.air{\_}data.StaticPressure}.\\This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.\\
-Default value: 16
- 
-\textbf{uavcan.pubp-mag}\\
-Publication interval of \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.\\
-Default value: 20000\\
-Units: Microsecond
-
-\textbf{uavcan.prio-mag}\\
-Priority of \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.\\
-Default value: 16
-
-\textbf{uavcan.pubp-fix}\\
-Publication interval of \texttt{uavcan.equipment.gnss.Fix}.\\
-Default value: 100000\\
-Units: Microsecond
-
-\textbf{uavcan.pubp-aux}\\
-Publication interval of \texttt{uavcan.equipment.gnss.Auxiliary}.\\
-Default value: 1000000\\
-Units: Microsecond
-
-\textbf{uavcan.prio-fix}\\
-Firmware v4.0 and newer\\
-This setting directly assigns the priority of the message \texttt{uavcan.equipment.gnss.Fix2}. The deprecated message  \texttt{uavcan.equipment.gnss.Fix}, if enabled, will be using the next lower priority level. For example, if this setting is set to 16, the deprecated message will be broadcasted at the priority level 17, which is one lower than 16.\\
-Default value: 16
-
-Firmware v3.x and older\\
-Priority of \texttt{uavcan.equipment.gnss.Fix}.\\
-Default value: 16
-
-\textbf{uavcan.prio-aux}\\
-Priority of \texttt{uavcan.equipment.gnss.Auxiliary}.\\
-Default value: 20
-
-\textbf{pres.variance}\\
-Pressure variance reported via \texttt{uavcan.equipment.air{\_}data.StaticAirData}.\\
-Default value: 100\\
-Units: $\text{Pascal}^2$
-
-\textbf{temp.variance}\\
-Temperature variance reported via \texttt{uavcan.equipment.air{\_}data.StaticAirData}.\\
-Default value: 4\\
-Units: $\text{Kelvin}^2$
-
-\textbf{mag.variance}\\
-Magnetic field variance reported via \texttt{uavcan.equipment.ahrs.Magnetometer}.\\
-Default value: 0.005\\
-Units: $\text{Gauss}^2$
-
-\textbf{mag.scaling{\_}coef}\\
-New in firmware v3.1.\\
-Magnetic field vector scale. Some UAV autopilot systems (PX4, APM) do not correclty handle magnetic field measurements made in highly magnetically distorted environments. It is possible to work around these issues by reducing the magnitude of the magnetic field vector.\\
-For PX4 and APM users: if your autopilot reports that magnetometer offsets are too high, reduce this parameter to approximately 0.6 and recalibrate the magnetometer.\\
-Default value: 1.0, i.e. no rescaling.
-
-\textbf{gnss.warn{\_}dimens}\\
-Set the node status to WARNING if the number of dimensions in the GNSS solution is below this threshold. Values: 1 - time-only fix, 2 - 2D fix, 3 - 3D fix.\\
-Default value: 0
-
-\textbf{gnss.warn{\_}sats}\\
-Set the node status to WARNING if the number of satellites used in the GNSS solution is below this threshold.\\
-Default value: 0
-
-\textbf{nmea.uart{\_}on}\\
-Enable NMEA output via DroneCode port (UART). This configuration parameter does not affect NMEA output over USB.\\
 Default value: 0 (disabled)
 
-\textbf{mag.pwron{\_}slftst}\\
-New in firmware v4.0.\\
-Perform power on self test of the magnetometer when booting. Note that the manufacturer of the magnetometer recommends to hold the sensor stationary during the self test procedure. Therefore it is recommended to disable this feature unless it is expected that the board will be always held stationary during powering on. Otherwise the self test may be occasionally failing, delaying the proper start up of the device.\\
+Units: Microsecond
+
+\textbf{uavcan.prio-pres}
+
+Priority of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.
+
+Default value: 16
+ 
+\textbf{uavcan.pubp-mag}
+
+Publication interval of \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.
+
+Default value: 20000
+
+Units: Microsecond
+
+\textbf{uavcan.prio-mag}
+
+Priority of \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.
+
+Default value: 16
+
+\textbf{uavcan.pubp-fix}
+
+Publication interval of \texttt{uavcan.equipment.gnss.Fix}.
+
+Default value: 100000
+
+Units: Microsecond
+
+\textbf{uavcan.pubp-aux}
+
+Publication interval of \texttt{uavcan.equipment.gnss.Auxiliary}.
+
+Default value: 1000000
+
+Units: Microsecond
+
+\textbf{uavcan.prio-fix}
+
+Firmware v4.0 and newer
+
+This setting directly assigns the priority of the message \texttt{uavcan.equipment.gnss.Fix2}. The deprecated message  \texttt{uavcan.equipment.gnss.Fix}, if enabled, will be using the next lower priority level. For example, if this setting is set to 16, the deprecated message will be broadcasted at the priority level 17, which is one lower than 16.
+
+Default value: 16
+
+Firmware v3.x and older
+
+Priority of \texttt{uavcan.equipment.gnss.Fix}.
+
+Default value: 16
+
+\textbf{uavcan.prio-aux}
+
+Priority of \texttt{uavcan.equipment.gnss.Auxiliary}.
+
+Default value: 20
+
+\textbf{pres.variance}
+
+Pressure variance reported via \texttt{uavcan.equipment.air{\_}data.StaticAirData}.
+
+Default value: 100
+
+Units: $\text{Pascal}^2$
+
+\textbf{temp.variance}
+
+Temperature variance reported via \texttt{uavcan.equipment.air{\_}data.StaticAirData}.
+
+Default value: 4
+
+Units: $\text{Kelvin}^2$
+
+\textbf{mag.variance}
+
+Magnetic field variance reported via \texttt{uavcan.equipment.ahrs.Magnetometer}.
+
+Default value: 0.005
+
+Units: $\text{Gauss}^2$
+
+\textbf{mag.scaling{\_}coef}
+
+New in firmware v3.1.
+
+Magnetic field vector scale. Some UAV autopilot systems (PX4, APM) do not correclty handle magnetic field measurements made in highly magnetically distorted environments. It is possible to work around these issues by reducing the magnitude of the magnetic field vector.
+
+For PX4 and APM users: if your autopilot reports that magnetometer offsets are too high, reduce this parameter to approximately 0.6 and recalibrate the magnetometer.
+
+Default value: 1.0, i.e. no rescaling.
+
+\textbf{gnss.warn{\_}dimens}
+
+Set the node status to WARNING if the number of dimensions in the GNSS solution is below this threshold. Values: 1 - time-only fix, 2 - 2D fix, 3 - 3D fix.
+
+Default value: 0
+
+\textbf{gnss.warn{\_}sats}
+
+Set the node status to WARNING if the number of satellites used in the GNSS solution is below this threshold.
+
+Default value: 0
+
+\textbf{nmea.uart{\_}on}
+
+Enable NMEA output via DroneCode port (UART). This configuration parameter does not affect NMEA output over USB.
+
+Default value: 0 (disabled)
+
+\textbf{mag.pwron{\_}slftst}
+
+New in firmware v4.0.
+
+Perform power on self test of the magnetometer when booting. Note that the manufacturer of the magnetometer recommends to hold the sensor stationary during the self test procedure. Therefore it is recommended to disable this feature unless it is expected that the board will be always held stationary during powering on. Otherwise the self test may be occasionally failing, delaying the proper start up of the device.
+
 Default value: 1 (enabled)
 
-\textbf{gnss.old{\_}fix{\_}msg}\\
-New in firmware v4.0.\\
-Broadcast the deprecated message \texttt{uavcan.equipment.gnss.Fix} alongside the new message\\ \texttt{uavcan.equipment.gnss.Fix2}.\\This feature is enabled by default for compatibility purposes; however, it is recommended to disable it in order to reduce the CAN bus traffic if it is not needed.\\
+\textbf{gnss.old{\_}fix{\_}msg}
+
+New in firmware v4.0.
+
+Broadcast the deprecated message \texttt{uavcan.equipment.gnss.Fix} alongside the new message\\ \texttt{uavcan.equipment.gnss.Fix2}.\\This feature is enabled by default for compatibility purposes; however, it is recommended to disable it in order to reduce the CAN bus traffic if it is not needed.
+
 Default value: 1 (compatibility mode)
 
 \chapter{Identification information}
 
-This section documents the device properties that are reported in response to identification requests: the CLI command \textbf{zubax{\_}id} and the UAVCAN service\texttt{uavcan.protocol.GetNodeInfo}.
+This section documents the device properties that are reported in response to identification requests: the CLI command \textbf{zubax{\_}id} and the UAVCAN service \texttt{uavcan.protocol.GetNodeInfo}.
 \begin{itemize}
 \item Product ID and UAVCAN node name: \textbf{com.zubax.gnss}.
 \item Hardware version: 2.x.
@@ -607,8 +692,9 @@ This section documents the device properties that are reported in response to id
 
 \chapter{Firmware update}
 
-Instructions below are only applicable to Zubax GNSS v2.2 and newer.\\
-It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware. Zubax GNSS 2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
+Instructions below are only applicable to Zubax GNSS v2.2 and newer. It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware.
+
+Zubax GNSS 2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
 
 \begin{figure}[!hbt]
 	\centerline{\includegraphics[width=1.1\textwidth]{bootloader_state_machine}}
@@ -637,6 +723,7 @@ CAN1 bus & Autoconfigured & UAVCAN firmware update protocol & Always available o
 As can be seen from the table, there are two families of protocols: serial and CAN based; both are reviewed below.
 
 \section{Error codes}
+
 The table below provides definitions for the well defined error codes that can be reported by the bootloader.
 
 \begin{ZubaxSimpleTable}{Error codes}{| l | X |}
@@ -657,6 +744,7 @@ The table below provides definitions for the well defined error codes that can b
 32767 & Unknown error.
 \end{ZubaxSimpleTable}
 \clearpage
+
 \section{LED indication}
 
 While the bootloader is running, the LED indicators behave as follows:
@@ -675,16 +763,21 @@ AppUpgradeInProgress & 1 Hz, long pulses (500 ms)
 \end{ZubaxSimpleTable}
 
 \section{Via USB/UART}
+
 Once started, the bootloader exposes a CLI via either DCD port or USB. The USB is always preferred if it is connected to the host; otherwise the CLI falls back to the UART interface of the DCD port.
 
 The CLI can be used to query the state of the bootloader, modify it, obtain the information about the running firmware, and upgrade it if necessary.
 
 The CLI prompt is of the following format: \textbf{StateName>}, which features the human readable name of the current state of the bootloader, followed by the ASCII greater character (ASCII code 62), followed by a space. For example:  \textbf{BootDelay>}. Such prompt allows the user (or software) to easily identify the state of the bootloader.
+
 \subsection{CLI commands}
-\textbf{reboot}\\
+
+\textbf{reboot}
+
 Restarts the bootloader.
 
-\textbf{zubax{\_}id}\\
+\textbf{zubax{\_}id}
+
 This is the standard command supported by all products by Zubax Robotics that have a CLI. It takes no arguments, and outputs a YAML key-value dictionary containing the vital information about the device, the firmware it is running, unique ID, installed certificates of authenticity, version of the hardware, and possibly some other information. Aside from the standard fields, this command also provides at least the following fields in its output:
 
 \begin{itemize}
@@ -692,12 +785,15 @@ This is the standard command supported by all products by Zubax Robotics that ha
 \item \textbf{bl{\_}vcs{\_}commit} - build identifier of the bootloader.
 \item \textbf{mode} - set to the string \textbf{bootloader} to indicate that the bootloader is running.
 \end{itemize}
+
 If there is a valid firmware, its version information will also be provided via the standard fields \textbf{fw{\_}version} and  \textbf{fw{\_}vcs{\_}commit}. If the bootloader could not find a valid firmware, these fields will be omitted.
 
-\textbf{wait}\\
+\textbf{wait}
+
 Do not boot the application. If the current state is \textbf{BootDelay}, the state will be switched to \textbf{BootCancelled}. In all other states the command will have no effect.
 
-\textbf{download}\\
+\textbf{download}
+
 Start the serial receiver and prepare to receive the new firmware image as a flat binary via the serial link using either YMODEM, XMODEM, or XMODEM-1K. The bootloader will automatically detect which protocol to use. According to the YMODEM specification, if no transfer was initiated by the host within one minute, the command will exit with an error. Possible error codes are defined in the table above.
 
 Note that while this command is running, the CLI will be unavailable, since the same serial link will be temporarily occupied by the file transfer protocol.
@@ -708,6 +804,7 @@ There are heaps of software products and scripts that support these file transfe
 \begin{minted}[linenos = false]{bash}
 sz -vv --ymodem --1k \$file > \$port < \$port
 \end{minted}
+
 \section{Via CAN bus}
 
 The bootloader supports the UAVCAN firmware update protocol. Please refer to the UAVCAN specification for theory.
@@ -725,8 +822,8 @@ AppUpgradeInProgress & SOFTWARE{\_}UPDATE & OK
 \end{ZubaxSimpleTable}
 
 The vendor specific status code of the node status message contains the status code of the last attempt to upgrade the firmware. Please refer to the error code table provided above.
-
 \clearpage
+
 \subsection{Supported messages}
 \begin{ZubaxSimpleTable}{Supported messages}{| l | l | l | l |}
 Data type & Direction & Period & Transfer priority \\
@@ -742,6 +839,7 @@ Data type & Note\\
 \texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used only during initialization, if the application did not provide a specific node ID to use.
 \end{ZubaxSimpleTable}
 \clearpage
+
 \subsection{Supported services}
 
 \begin{ZubaxSimpleTable}{Supported servers}{| l | X |}
@@ -768,7 +866,8 @@ This formula, combined with the low transfer priority, allows the bootloader to 
 The drawing below documents basic mechanical  characteristics of Zubax GNSS 2, such as the
 placement of connectors and mounting holes.
 \begin{figure}[!hbt]
-	\centerline{\includegraphics[width=2\textwidth]{GNSS2_drawing}}
+\hspace{-7.4cm}
+	\includegraphics[width=1.75\textwidth]{GNSS2_drawing}
 	\caption{GNSS2 drawing.\label{drawing}}
 \end{figure}
 
