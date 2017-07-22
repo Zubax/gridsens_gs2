@@ -62,8 +62,8 @@ The bootloader can be flashed either independently, or as a combined image toget
 
 ## Building the firmware
 
-If you're not running Linux or OSX natively, you can download
-[Bistromathic - a Linux virtual machine pre-configured for embedded development](https://files.zubax.com/vm/bistromathic.ova).
+If you're not running Linux or OSX natively, you can use
+[Bistromathic - a Linux virtual machine pre-configured for embedded development](https://kb.zubax.com/x/KIEh).
 
 * Install ARM GCC toolchain version 5.4 or newer
 * Init the sources:
