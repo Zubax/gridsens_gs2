@@ -71,7 +71,7 @@ Usage instructions:
      8devices USB2CAN. Correct interface name would be "can0".
 
 2. Connect exactly one DroneCode Probe to this computer.
-   For more info refer to https://docs.zubax.com/dronecode_probe.
+   For more info refer to https://kb.zubax.com/x/iIAh.
 
 3. Follow the instructions printed in green. If you have any questions,
    don't hesitate to reach licensing@zubax.com, or use the emergency

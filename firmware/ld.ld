@@ -98,6 +98,11 @@ SECTIONS
         *(.glue_7t)
         *(.glue_7)
         *(.gcc*)
+        /*
+         * Note that SOME DEBUGGERS WILL REFUSE TO LOAD THE ELF if it contains odd-sized sections!
+         * This issue can be observed, for example, with DroneCode Probe.
+         */
+        . = ALIGN(32);
     } > flash
 
     .ARM.extab :
