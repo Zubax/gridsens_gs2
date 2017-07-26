@@ -72,22 +72,9 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
 
 \chapter{Overview}
 
-Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART. It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter, and a 3-axis compass with thermal compensation. Zubax GNSS 2 supports variety of standard protocols, which ensures compatibility with most of existing software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and u-Blox M8 protocol.
-
-\section{System integration}
-
-Zubax GNSS 2 can be powered either from UAVCAN 5 V rail or from USB
-The 5 V rails of the CAN interfaces are not used by the device; rather,
-they connect the 5 V rails of their respective CAN connector pairs directly together.
-
-Application-specific integration documentation is available on the Zubax Robotics website.
-
-\begin{figure}[hb]
-    \centering
-	\includegraphics[width=\textwidth]{can_daisy_chain}
-	\caption{Connection of CAN nodes in non-redundant and doubly redundant CAN bus configurations.
-	\label{can_daisy_chain_non_redundant}}
-\end{figure}
+Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
+It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
+Zubax GNSS 2 supports a variety of standard protocols, which ensures compatibility with third party software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
 
 \section{Quality assurance}
 
@@ -109,10 +96,10 @@ Zubax GNSS 2 is intended for integration into the end system in the form of the 
 as this facilitates lower weight and tighter arrangement of components
 in the end device, all of which are desirable properties in the target application domains.
 
-Shall it be desired to provide additional mechanical protection for the device or to carry it away from possible electromagnetic noise sources, the plastic enclosure and post pictured on the figure \ref{enclosure} can be used.
+Shall it be desired to provide additional mechanical protection for the device or to install it away from possible sources of electromagnetic interference, the plastic components pictured on the figure \ref{enclosure} can be used.
 Please contact your supplier for the ordering information;
 alternatively, visit \url{https://github.com/Zubax/zubax_gnss/} to download
-3D printable enclosure models suitable for in-house manufacturing.
+the 3D printable enclosure models suitable for in-house manufacturing.
 
 \begin{figure}[hb]
 	\centering
@@ -699,7 +686,7 @@ Zubax GNSS 2 employs the Zubax Embedded Bootloader for purposes of firmware upda
 
 \begin{figure}[!hbt]
 	\centerline{\includegraphics[width=1.1\textwidth]{bootloader_state_machine}}
-	\caption{Bootloader state machine.\label{drawing}}
+	\caption{Bootloader state machine.\label{bootloader_state_machine}}
 \end{figure}
 
 \begin{ZubaxSimpleTable}{Bootloader states}{|c | l | X|}
