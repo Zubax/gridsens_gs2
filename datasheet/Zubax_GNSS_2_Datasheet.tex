@@ -17,21 +17,21 @@
 \section*{Overview}
 
 Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
-It includes a high-precision barometric altimeter, a 3-axis compass with thermal compensation,
-and a state-of-the-art multi-system GPS / GLONASS receiver.
+It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter,
+and a 3-axis compass with thermal compensation.
 
 \section*{Features}
 
 \begin{itemize}
     \item State-of-the-art concurrent GPS/GLONASS receiver u-blox MAX-M8Q
     \begin{itemize}
-    		\item Full RF shielding of the GNSS circuits ensures reliable operation in high-EMI environments
-    		\item 35 mm high gain patch antenna with large ground plane for reliable reception even in urban canyons
-    		\item Analog front end with LNA and SAW ensures high noise resilience
-    		\item Rechargeable backup battery enables low time-to-first-fix (a few seconds)
-    		\item Up to 15 Hz update rate
-    	\end{itemize}
-	\item High precision digital barometer MS5611 with  altitude resolution 10 cm
+    	\item Full RF shielding of the GNSS circuits ensures reliable operation in high-EMI environments
+    	\item 35 mm high gain patch antenna with large ground plane for reliable reception even in urban canyons
+    	\item Analog front end with LNA and SAW ensures high noise resilience
+    	\item Rechargeable backup battery enables low time-to-first-fix (a few seconds)
+    	\item Up to 15 Hz update rate
+    \end{itemize}
+	\item High precision digital barometer MS5611 with altitude resolution 10 cm
 	\item Supported interfaces:
     \begin{itemize}
         \item CAN, with optional double redundancy.
@@ -54,8 +54,8 @@ and a state-of-the-art multi-system GPS / GLONASS receiver.
 \section*{Applications}
 
 \begin{itemize}
-	\item GNSS receiver for unmanned aerial vehicles
-    \item Standalone USB GNSS receiver.
+	\item Positioning module for unmanned vehicles (aerial, ground, underwater, etc) and robots.
+    \item General-purpose embedded positioning module.
 \end{itemize}
 
 \centering
@@ -384,17 +384,18 @@ NMEA sentence & Component & Purpose\\
 \end{ZubaxSimpleTable}
 \clearpage
 
-\section{Vendor-specific sentences}
+\subsection{Vendor-specific sentences}
 
 The NMEA specification dedicates the prefix {\$}P followed by the vendor ID for vendor-specific sentences. All Zubax products use the vendor-specific prefix ZUBAX. The first field of the sentence contains the sentence type identifier, which is a string containing upper case Latin letters, Arabic digits, and the minus symbol -.
 
-\textbf{Raw magnetic field strength}
+\subsubsection{Raw magnetic field strength}
 
 Vendor-specific sentence type ID: \textbf{MAG-FLD-XYZ}.
 
 Availability: firmware v4.0 and newer.
 
-Fields: 
+Fields:
+
 \begin{enumerate}
 \item Magnetic field strength of the X axis.
 \item Magnetic field strength of the Y axis.
@@ -403,12 +404,10 @@ Fields:
 \item Reserved.
 \item Reserved.
 \end{enumerate}
-Example: 
-\begin{minted}[linenos = false]{text}
-PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12
-\end{minted}
 
-\section{Sample output}
+Example: \verb|PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12|.
+
+\subsection{Sample output}
 
 \begin{minted}[linenos = false]{text}
 $GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*35
@@ -712,7 +711,7 @@ State ID & State name & Comment \\
 4 & ReadyToBoot & The application is about to boot. This state is very transient and is left automatically as soon as possible.
 \end{ZubaxSimpleTable}
 \clearpage
-On Zubax GNSS 2, the boot delay is set to 5 seconds.\\
+On Zubax GNSS 2, the boot delay is set to 5 seconds.
 The bootloader supports the following communication interfaces:
 
 \begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | l | X | X |}
