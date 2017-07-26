@@ -404,13 +404,13 @@ Fields:
 \item Reserved.
 \end{enumerate}
 Example: 
-\begin{minted}[linenos = false]{yaml}
+\begin{minted}[linenos = false]{text}
 PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12
 \end{minted}
 
 \section{Sample output}
 
-\begin{minted}[linenos = false]{yaml}
+\begin{minted}[linenos = false]{text}
 $GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*35
 $GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,13.2,M,,*5E
 $GPGSV,4,1,15,08,52,283,17,10,80,126,26,14,27,155,34,15,15,039,08*74
@@ -859,7 +859,7 @@ uavcan.protocol.file.Read & 1 second & 24(low) & Used to download the applicatio
 The interval at which the file read requests are issued while downloading the application image is defined by the following formula (all units SI):
 
 \begin{equation}
-last{\_}response{\_}latency + 1 / (1 + can{\_}bus{\_}bit{\_}rate / 65536)
+\text{last{\_}response{\_}latency} + 1 / (1 + \text{can{\_}bus{\_}bit{\_}rate} / 65536)
 \end{equation}
 
 This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
