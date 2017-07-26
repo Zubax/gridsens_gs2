@@ -17,26 +17,27 @@
 \section*{Overview}
 
 Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
-It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter,
-and a 3-axis compass with thermal compensation.
+It includes a state-of-the-art multi-system GPS/\allowbreak{}GLONASS receiver,
+a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
 
 \section*{Features}
 
 \begin{itemize}
-    \item State-of-the-art concurrent GPS/GLONASS receiver u-blox MAX-M8Q
+    \item State-of-the-art concurrent GPS/GLONASS receiver u-blox MAX-M8Q.
     \begin{itemize}
-    	\item Full RF shielding of the GNSS circuits ensures reliable operation in high-EMI environments
-    	\item 35 mm high gain patch antenna with large ground plane for reliable reception even in urban canyons
-    	\item Analog front end with LNA and SAW ensures high noise resilience
-    	\item Rechargeable backup battery enables low time-to-first-fix (a few seconds)
-    	\item Up to 15 Hz update rate
+    	\item Full RF shielding of the GNSS circuits ensures reliable operation in high-EMI environments.
+    	\item 35 mm high-gain patch antenna with large ground plane for reliable reception even in deep urban canyons.
+    	\item Analog front-end with LNA and SAW ensures high noise resilience.
+    	\item Supercapacitor-based backup power source enables low time-to-first-fix (a few seconds).
+    	\item Up to 15 Hz update rate.
     \end{itemize}
-	\item High precision digital barometer MS5611 with altitude resolution 10 cm
+	\item High precision digital barometer TE Connectivity MS5611.
+    \item High precision 3-axis digital compass STMicroelectronics LIS3MDL with thermal compensation.
 	\item Supported interfaces:
     \begin{itemize}
         \item CAN, with optional double redundancy.
         \item UART.
-        \item USB port (CDC ACM profile, also known as virtual serial port).
+        \item USB port, no drivers needed.
     \end{itemize}
     \item High quality assurance:
     \begin{itemize}
@@ -46,7 +47,6 @@ and a 3-axis compass with thermal compensation.
         \item Protection against unlicensed (counterfeit) production by means of a digital signature
         installed on every manufactured unit.
     \end{itemize}
-    \item Open source firmware (3-clause BSD license).
 \end{itemize}
 
 \BeginRightColumn
