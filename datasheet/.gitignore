@@ -180,4 +180,5 @@ TSWLatexianTemp*
 *~[0-9]*
 
 # Outputs
-*.pdf
+Zubax_GNSS2_Datasheet.pdf
+Zubax_GNSS_2_Datasheet.pdf
