@@ -279,7 +279,7 @@ The power supply characteristics documented in the following table are invariant
 	 $I_\text{supply}$  & Supply current & 70  & 95      & 180 & mA   & Any power input\\
 \end{ZubaxSimpleTable}
 
-\chapter{Continuous self-diagnostics}
+\chapter{Continuous self-diagnostics}\label{sec:self-diagnostics}
 
 Zubax GNSS 2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
 Results of the continuous self-testing are mapped to three health codes: OK, Warning, and Error.
@@ -305,37 +305,56 @@ Possible reasons for the health being Warning:
 
 \chapter{LED Indication}
 
-\section{PPS LED}
+The physical locations of the LED indicators are documented in the chapter \ref{sec:mechanical}.
+
+\section{PPS LED indicator}
 
 This LED indicator blinks with the rate of 1 Hz if the GNSS receiver has a navigation fix.
 
-\section{Status LED}
+\section{Status LED indicator}
 
-This LED indicator shows the health of the device derived from the continuous self-diagnostics as described above:
+This LED indicator shows the health of the device derived from the continuous self-diagnostics as described
+in the chapter \ref{sec:self-diagnostics}.
 
-\begin{ZubaxSimpleTable}{Status LED indication}{|X|X|}
-Health 	& Blinking ON/OFF duration \\
-OK		& 0.05/0.95 seconds\\
-WARNING	& 0.05/0.25 seconds\\
-ERROR	& 0.05/0.05 seconds
+\newcommand{\LEDX}{{\rule{0.4em}{0.8em}}}
+\newcommand{\LEDO}{{\rule{0.4em}{0.1em}}}
+
+\begin{ZubaxSimpleTable}{Status LED indication}{|X|X|X|}
+Health 	& Blinking pattern & On/Off duration [second] \\
+OK      & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO
+        & 0.05/0.95 seconds \\
+Warning & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO
+        & 0.05/0.25 seconds \\
+Error   & \LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO
+        & 0.05/0.05 seconds \\
 \end{ZubaxSimpleTable}
 
-\section{CAN1 and CAN2 LEDs}
+\section{CAN1 and CAN2 LED indicators}
 
-These LED indicators show the CAN bus traffic.
+These LED indicators display the intensity of the CAN bus traffic per interface.
 
-Each blink indicates that there was a CAN frame that was successfully transmitted or successfully received during the last few milliseconds. Under high bus load, these LED indicators are expected to glow steadily. If the interface is not connected to the bus, its LED indicator will be inactive, even if the device is actually attempting to transmit.
+Each blink indicates that a CAN frame was successfully transmitted or successfully received during
+the last few milliseconds.
+Under a high bus load, these LED indicators are expected to glow steadily.
+If an interface is not connected to the bus, the corresponding LED indicator will be inactive (turned off),
+even if the device is actually attempting to transmit.
 
-Note that CAN frames filtered out by the hardware acceptance filters will not cause the LED indicators to blink.
+Note that the CAN traffic filtered out by the hardware acceptance filters of the device will not affect the
+state of the LED indicators.
 
 \section{LED indication during firmware update and bootup}
 
-\subsection{Firmware v4.0 and newer}
+\subsection{Hardware version 2.2 and newer}
 
-During first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the section dedicated to the bootloader below.
-\subsection{Firmware v3.x and older}
+This section is valid for all hardware manufactured since 2017.
 
-During first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the table below.
+During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the chapter \ref{sec:bootloader}.
+
+\subsection{Hardware version 2.1 and older}
+
+This section is valid for the hardware manufactured until 2016, inclusive.
+
+During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the table below.
 
 \begin{ZubaxSimpleTable}{CAN LED indication at bootup}{| X | c | c | c|}
 Status & INFO & CAN1 & CAN2 \\
@@ -761,7 +780,7 @@ This section documents the device properties that are reported in response to id
 \item Hardware version: 2.x.
 \end{itemize}
 
-\chapter{Firmware update}
+\chapter{Firmware update}\label{sec:bootloader}
 
 Instructions below are only applicable to Zubax GNSS v2.2 and newer. It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware.
 
@@ -933,7 +952,7 @@ The interval at which the file read requests are issued while downloading the ap
 
 This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
 
-\chapter{Mechanical characteristics}
+\chapter{Mechanical characteristics}\label{sec:mechanical}
 
 The drawing below documents the basic mechanical characteristics of Zubax GNSS 2,
 such as the placement of connectors and mounting holes.
