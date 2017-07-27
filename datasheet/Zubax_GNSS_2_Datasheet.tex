@@ -163,7 +163,7 @@ Proper operation of the device within the ranges specified in this section is no
 	                  & CAN H/L input voltage    & -4   & 16  & V\\
 \end{ZubaxSimpleTable}
 
-\section{Environmental conditions}
+\section{Environmental conditions}\label{environmental_conditions}
 
 The GNSS hot start feature is not expected to work reliably below -20\degree{}C
 due to poor performance of the supercapacitor-based backup power source at low temperatures.
@@ -277,6 +277,30 @@ The power supply characteristics documented in the following table are invariant
 	 $V_\text{supply}$  & Supply voltage & 4.0 & 5.0     & 5.5 & V    & Any power input\\
 	 $I_\text{supply}$  & Supply current & 70  & 95      & 180 & mA   & Any power input\\
 \end{ZubaxSimpleTable}
+
+\chapter{Continuous self-diagnostics}
+
+Zubax GNSS 2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
+Results of the continuous self-testing are mapped to three health codes: OK, Warning, and Error.
+The table below documents how the device uses health codes to report its status.
+
+\begin{ZubaxSimpleTable}{Self-diagnostic health codes}{|l|X|}
+    Health        & Conditions    \\
+    OK            & Everything is OK; all enabled sensors are functioning properly.\\
+    Warning       & See below. \\
+    Error         & Sensor malfunction.
+                    The device may stop sending the measurements obtained from the failed sensor. \\
+\end{ZubaxSimpleTable}
+
+Possible reasons for the health being Warning:
+
+\begin{itemize}
+    \item GNSS fix quality is below the configured threshold (section \ref{configuration_parameters})
+    (disabled by default).
+    \item Determined environmental conditions exceed the specified safe limits
+    (section \ref{environmental_conditions}).
+    \item Magnetic field strength vector remained zero for several seconds (likely a sensor malfunction).
+\end{itemize}
 
 \chapter{LED Indication}
 
@@ -552,7 +576,7 @@ UART parameters are fixed and provided below:
 \item Stop bits: 1
 \end{itemize}
 
-\chapter{Configuration parameters}
+\chapter{Configuration parameters}\label{configuration_parameters}
 
 This section documents the available configuration parameters. Read the documentation on the interfaces to learn how to access the configuration parameters.
 
