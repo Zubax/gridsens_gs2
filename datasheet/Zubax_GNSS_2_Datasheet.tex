@@ -7,6 +7,9 @@
 \documentclass{zubaxdoc}
 \graphicspath{{document_templates/documentation_template_latex/}}
 
+\usepackage{ConfigParamIndex}
+\usepackage{makecell}
+
 \title{Zubax GNSS 2 Datasheet}
 
 \begin{document}
@@ -365,83 +368,224 @@ Update in progress & Solid & Solid & \\
 
 \chapter{UAVCAN interface}
 
-This section describes the properties specific for this product only. For general info about the UAVCAN interface, please refer to the UAVCAN interface documentation page.
+For the background information about the UAVCAN interface please refer to the Zubax Knowledge Base
+at \url{https://kb.zubax.com/x/F4Ah} and the official UAVCAN website at \url{http://uavcan.org}.
 
-If Zubax GNSS 2 is used in a setup with non-redundant CAN bus, only CAN1 must be used.
+The UAVCAN interface enables access to all features of Zubax GNSS 2.
+This interface provides access to the GNSS solutions, magnetic field and barometric pressure measurements,
+precise time (via the time synchronization master), device configuration parameters, firmware upgrade feature,
+and so on.
 
-\section{Mode and status codes}
+This section documents the UAVCAN interface that is available during the normal operation of the device,
+omitting the logic specific to the firmware update mode, which is documented separately in the chapter
+\ref{sec:bootloader}.
 
-Zubax GNSS 2 employs the following UAVCAN-defined operating modes:
+\section{Device interconnection}
 
-\begin{ZubaxSimpleTable}{UAVCAN-defined operating modes}{|c|X|}
-UAVCAN operating mode & Conditions\\
-INITIALIZING		& The device has just started and is not ready to begin normal operation yet.\\
-OPERATIONAL	& This is the main operating mode.\\
-SOFTWARE UPDATE	& The device is undergoing firmware update via UAVCAN. It will automatically transition to OPERATIONAL mode upon completion.
+Zubax GNSS 2 can be used with doubly-redundant and non-redundant CAN buses.
+In the latter case, only CAN1 can be used, and CAN2 must be left unconnected.
+The figure \ref{can_daisy_chain} shows the possible device interconnection schemes.
+
+\begin{figure}[hbt]
+    \center
+	\includegraphics[width=1\textwidth]{can_daisy_chain}
+	\caption{CAN bus interconnection diagram for non-redundant and a doubly-redundant interfaces.
+	\label{can_daisy_chain}}
+\end{figure}
+
+\section{Basic functions}
+
+\subsection{Node status reporting}
+
+The standard node status message \verb|uavcan.protocol.NodeStatus| is broadcasted at 1 hertz.
+The node health codes are mapped directly to the output of the self-diagnostic feature
+documented in the chapter \ref{sec:self-diagnostics}.
+The operating mode codes are summarized below.
+
+\begin{ZubaxSimpleTable}{UAVCAN node mode code interpretation}{|l|X|}
+Node mode & Meaning  \\
+OPERATIONAL        & Operating normally. \\
+INITIALIZATION     & The firmware has just started and is not ready to begin normal operation yet. \\
+MAINTENANCE        & See the chapter \ref{sec:bootloader} about the bootloader. \\
+SOFTWARE\_{}UPDATE & See the chapter \ref{sec:bootloader} about the bootloader. \\
+OFFLINE            & Not applicable. \\
 \end{ZubaxSimpleTable}
 
-While the device resides in OPERATIONAL mode, its internal health codes are mapped directly to UAVCAN health codes. The description of internal health codes is provided above.
+The vendor-specific status code field is not used by the device.
 
-The following table describes the meanings of the standard UAVCAN health codes in the mode SOFTWARE\_UPDATE.
+Node uptime is reported from the moment when the firmware is started.
+The time while the bootloader was running is not included in the reported uptime value.
 
-\begin{ZubaxSimpleTable}{UAVCAN-defined operating modes}{|c|X|}
-UAVCAN health code & Possible reasons\\
-OK 		& 	Everything is OK.\\
-WARNING	& Not used.\\
-ERROR 	& Not used.\\
-CRITICAL & Firmware update has failed; another attempt will be made soon
-\end{ZubaxSimpleTable}
+\subsection{Node identification}\label{sec:uavcan_node_identification}
 
-\section{Time synchronization}
+The service \verb|uavcan.protocol.GetNodeInfo| is responded to as follows.
 
-This device can act as a UAVCAN-compliant time synchronization master, but this feature is disabled by default. If time synchronization is enabled, the GNSS UTC time will be used as the time source, which implies that the time synchronization master will be functional only if the device has had at least one successful GNSS time fix since power on.
-\clearpage 
+All fields of the nested structure \verb|uavcan.protocol.SoftwareVersion|
+are populated, which are \verb|major|, \verb|minor|, \verb|vcs_commit|, and \verb|image_crc|.
 
-\section{Services}
+The following fields of the nested structure \verb|uavcan.protocol.HardwareVersion|
+are always populated: \verb|major|, \verb|minor|, \verb|unique_id|, and \verb|certificate_of_authenticity|.
 
-This device does not call any services.
+The field \verb|name| is set to the string \verb|com.zubax.gnss|.
 
-The following service servers are implemented:
+\subsection{Node restarting}
 
-\begin{ZubaxSimpleTable}{UAVCAN services}{|l|X|}
-Data type & Note \\
-\texttt{uavcan.protocol.GetNodeInfo} & Please refer to the identification information section. \\
-\texttt{uavcan.protocol.GetDataTypeInfo}& \\
-\texttt{uavcan.protocol.GetTransportStats} & \\
-\texttt{uavcan.protocol.RestartNode} & \\
-\texttt{uavcan.protocol.file.BeginFirmwareUpdate} & Reboots the device into the bootloader and commences the firmware download process.\\
-\texttt{uavcan.protocol.param.GetSet} & Configuration parameters are described in this document below .\\
-\texttt{uavcan.protocol.param.ExecuteOpcode} & Note that this request may cause transient disruptions to output sensor feeds. Starting from firmware v4.0, configuration parameters are saved automatically after modification, so no explicit invocation of this service is necessary.
-\end{ZubaxSimpleTable}
-\clearpage
+The service \verb|uavcan.protocol.RestartNode|, if the provided magic number is correct,
+unconditionally reboots the device.
+If the provided magic number is incorrect, the device returns a response with the field \verb|ok|
+set to zero (false).
 
-\section{Messages}
+\subsection{Interface statistics}
 
-\begin{ZubaxSimpleTable}{Input Messages}{|l|X|}
-Data type & Note \\
-\texttt{uavcan.protocol.GlobalTimeSync} & Always synchronizes with network time, if present. \\
-\texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used to allocate node ID if dynamic node ID allocation is enabled (it is enabled by default).
-\end{ZubaxSimpleTable}
+The service \verb|uavcan.protocol.GetTransportStats| returns the current statistic counters
+for both supported CAN interfaces, even if the hardware uses only one of them.
+All fields of all nested structures are populated.
 
-\begin{ZubaxSimpleTable}{Output Messages}{|X|X|}
-Data type & Note \\
-\texttt{uavcan.protocol.GlobalTimeSync} & Disabled by default.\\
-\texttt{uavcan.protocol.NodeStatus} &  \\
-\texttt{uavcan.equipment.gnss.Fix} & This message definition is deprecated; refer to the UAVCAN specification for detail. Enabled by default for compatibility reasons, but \textbf{it is recommended to disable it}.\\
-\texttt{uavcan.equipment.gnss.Fix2} & This is a replacement to the deprecated message type \texttt{uavcan.equipment.gnss.Fix}.\\
-\texttt{uavcan.equipment.gnss.Auxiliary} & \\
-\texttt{uavcan.equipment.ahrs.MagneticFieldStrength} & \\
-\texttt{uavcan.equipment.air{\_}data.StaticPressure} & Disabled by default.\\
-\texttt{uavcan.equipment.air{\_}data.StaticTemperature} & Priority is shared with 
-\texttt{uavcan.equipment.air{\_}data.StaticPressure}  See a note below on publication frequency. Disabled by default.\\
-\texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used to allocate node ID if dynamic node ID allocation is enabled (it is enabled by default).
-\end{ZubaxSimpleTable}
+\subsection{Data type information}
 
-The publication frequency of \texttt{uavcan.equipment.air{\_}data.StaticTemperature} is defined as follows:
+The service \verb|uavcan.protocol.GetDataTypeInfo| provides extensive information about the
+supported UAVCAN data types.
+No special cases apply.
+
+\section{Initialization}
+
+Zubax GNSS 2 is a full plug-and-play UAVCAN node that requires no mandatory initial configuration prior to use.
+
+\subsection{CAN bus bit rate detection}
+
+Once started, Zubax GNSS 2 will automatically detect the bit rate of the CAN bus it is connected to
+(if connected to any at all), and remember the detected bit rate until the next boot up.
+There is no detection timeout, which means that the device can be connected to a CAN bus at
+any moment after powering up, and it will configure itself immediately.
+
+It is not possible to specify the bit rate manually.
+
+Zubax GNSS 2 requires up to approximately 4 seconds to perform the bit rate detection on a properly
+functioning CAN bus.
+If the bus is exhibiting erroneous behavior, the device may need a longer time to complete the bit rate
+detection procedure.
+
+The following bit rates can be detected by Zubax GNSS 2 automatically:
 \begin{itemize}
-\item For firmware versions prior to v4.0, the message \texttt{uavcan.equipment.air{\_}data.StaticTemperature} is published at the same rate as \texttt{uavcan.equipment.air{\_}data.StaticPressure}.
-\item For firmware versions v4.0 and newer, the message \texttt{uavcan.equipment.air{\_}data.StaticTemperature} is published at 1/5th of the rate of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. E.g. if the pressure data is broadcasted at 20 Hz, the temperature data will be broadcasted at 4 Hz.
+\item 1 Mbit/s
+\item 500 kbit/s
+\item 250 kbit/s
+\item 125 kbit/s
 \end{itemize}
+Zubax GNSS 2 cannot be interfaced with a CAN bus that operates at a different bit rate.
+
+\subsection{Node ID allocation}
+
+The configuration parameter \CfgRef{uavcan.node+id}, when set to a non-zero value,
+defines the node ID of the local UAVCAN node.
+
+If this parameter is set to zero, which is the default, the device will request a dynamic UAVCAN node ID
+from the bus.
+
+Until there is a valid node ID available for the local UAVCAN node (either specified
+statically via the configuration parameter, or provided dynamically),
+no other functions of the UAVCAN interface will work.
+
+\section{Configuration parameter management}
+
+The standard UAVCAN configuration parameter management interface is supported
+by means of the service data types defined in the namespace \verb|uavcan.protocol.param|.
+
+Note that the save action available via the service \verb|uavcan.protocol.param.ExecuteOpcode|
+is supported, but is redundant, because Zubax GNSS 2 commits all the configuration parameters
+to the non-volatile configuration storage memory automatically after modification.
+
+When obtaining the list of all available configuration parameters using the field \verb|index|
+of the service \verb|uavcan.protocol.param.GetSet|, the ordering of the returned configuration
+parameters is undefined, but it is guaranteed to be consistent within the same firmware build.
+Updating the firmware to different versions or even different builds of the same version
+may change the ordering of the configuration parameters.
+
+\section{Firmware upgrade}
+
+The service \verb|uavcan.protocol.file.BeginFirmwareUpdate| reboots the device into the bootloader
+mode.
+The bootloader mode is documented in the chapter \ref{sec:bootloader}.
+
+\section{Data type summary}
+
+{\small
+\begin{ZubaxSimpleTable}{UAVCAN broadcast messages}{|l|l|l|X|}
+    Data type name                                        & Period     & Transfer priority & Note \\
+
+    \texttt{uavcan.protocol.NodeStatus}                   & \CfgRefX{uavcan.pubp-stat}
+                                                          & \CfgRefX{uavcan.prio-stat}
+                                                          & \\
+
+    \texttt{uavcan.protocol.GlobalTimeSync}               & \CfgRefX{uavcan.pubp-time}
+                                                          & \CfgRefX{uavcan.prio-time}
+                                                          & Disabled by default. \\
+
+    \texttt{uavcan.equipment.gnss.Fix}                    & \CfgRefX{uavcan.pubp-fix}
+                                                          & \CfgRefX{uavcan.prio-fix}
+                                                          & \\
+
+    \texttt{uavcan.equipment.gnss.Fix2}                   & \CfgRefX{uavcan.pubp-fix}
+                                                          & \CfgRefX{uavcan.prio-fix}
+                                                          & Can be disabled via \CfgRefX{gnss.old+fix+msg}. \\
+
+    \texttt{uavcan.equipment.gnss.Auxiliary}              & \CfgRefX{uavcan.pubp-aux}
+                                                          & \CfgRefX{uavcan.prio-aux}
+                                                          & \\
+
+    \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}  & \CfgRefX{uavcan.pubp-mag}
+                                                          & \CfgRefX{uavcan.prio-mag}
+                                                          & \\
+
+    \texttt{uavcan.equipment.air\_data.StaticPressure}    & \CfgRefX{uavcan.pubp-pres}
+                                                          & \CfgRefX{uavcan.prio-pres}
+                                                          & \\
+
+    \texttt{uavcan.equipment.air\_data.StaticTemperature} & \makecell[lt]{\CfgRefX{uavcan.pubp-pres}\\
+                                                                          divided by 5}
+                                                          & \CfgRefX{uavcan.prio-pres}
+                                                          & On firmware v3.x and earlier, the publication
+                                                            period is fixed to \CfgRefX{uavcan.pubp-pres}. \\
+
+    \texttt{uavcan.protocol.dynamic\_node\_id.Allocation} & Aperiodic
+                                                          & 30 (low)
+                                                          & Only during the initialization or while
+                                                            in the bootloader. \\
+
+    \texttt{uavcan.protocol.debug.LogMessage}             & Aperiodic
+                                                          & 31 (lowest)
+                                                          & Only upon detection of critical failures.\\
+\end{ZubaxSimpleTable}
+}
+
+{\small
+\begin{ZubaxSimpleTable}{UAVCAN subscribed messages}{|l|X|}
+    Data type name                                         & Note \\
+    \texttt{uavcan.protocol.dynamic\_node\_id.Allocation}  & Only during the initialization or while
+                                                             in the bootloader. \\
+    \texttt{uavcan.protocol.GlobalTimeSync}                & Time synchronization slave is always active,
+                                                             regardless of whether the master is enabled or not.
+                                                             More info at \url{http://uavcan.org}.
+\end{ZubaxSimpleTable}
+}
+
+{\small
+\begin{ZubaxSimpleTable}{UAVCAN provided services}{|l|X|}
+    Data type name                                         & Note \\
+    \texttt{uavcan.protocol.GetNodeInfo}                   & Section \ref{sec:uavcan_node_identification}.\\
+    \texttt{uavcan.protocol.GetDataTypeInfo}               & Provided by Libuavcan. \\
+    \texttt{uavcan.protocol.GetTransportStats}             & Provided by Libuavcan. \\
+    \texttt{uavcan.protocol.RestartNode}                   & \\
+    \texttt{uavcan.protocol.file.BeginFirmwareUpdate}      & The bootloader is documented in the section
+                                                             \ref{sec:bootloader}. \\
+    \texttt{uavcan.protocol.param.ExecuteOpcode}           & \\
+    \texttt{uavcan.protocol.param.GetSet}                  & \\
+\end{ZubaxSimpleTable}
+}
+
+%
+% END OF THE UAVCAN CHAPTER
+%
 
 \chapter{USB interface}
 
@@ -597,6 +741,30 @@ UART parameters are fixed and provided below:
 \end{itemize}
 
 \chapter{Configuration parameters}\label{configuration_parameters}
+
+\CfgDef{uavcan.bit+rate}
+\CfgDef{uavcan.node+id}
+\CfgDef{uavcan.pubp-time}
+\CfgDef{uavcan.prio-time}
+\CfgDef{uavcan.pubp-stat}
+\CfgDef{uavcan.prio-stat}
+\CfgDef{uavcan.pubp-pres}
+\CfgDef{uavcan.prio-pres}
+\CfgDef{uavcan.pubp-mag}
+\CfgDef{uavcan.prio-mag}
+\CfgDef{uavcan.pubp-fix}
+\CfgDef{uavcan.pubp-aux}
+\CfgDef{uavcan.prio-fix}
+\CfgDef{uavcan.prio-aux}
+\CfgDef{pres.variance}
+\CfgDef{temp.variance}
+\CfgDef{mag.variance}
+\CfgDef{mag.scaling+coef}
+\CfgDef{gnss.warn+dimens}
+\CfgDef{gnss.warn+sats}
+\CfgDef{nmea.uart+on}
+\CfgDef{mag.pwron+slftst}
+\CfgDef{gnss.old+fix+msg}
 
 This section documents the available configuration parameters. Read the documentation on the interfaces to learn how to access the configuration parameters.
 
