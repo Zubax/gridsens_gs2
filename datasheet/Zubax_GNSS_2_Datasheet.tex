@@ -76,6 +76,63 @@ Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced vi
 It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
 Zubax GNSS 2 supports a variety of standard protocols, which ensures compatibility with third party software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
 
+\section{Sensor suite}
+
+\subsection{GNSS receiver}
+
+The device employs the \textbf{u-Blox MAX-M8Q} GNSS receiver module.
+Please refer to the specifications provided by u-Blox to gain additional information about the module.
+
+\subsection{Digital barometric altimeter}
+
+The device employs the \textbf{TE Connectivity MS5611} digital barometric altimeter.
+Please refer to the specifications provided by TE Connectivity to gain additional information about the sensor.
+
+\subsection{Three-axis digital compass with thermal compensation}
+
+The device employs the \textbf{STMicroelectronics LIS3MDL} digital three-axis compass with thermal compensation.
+Please refer to the specifications provided by STMicroelectronics to gain additional information about the sensor.
+
+Zubax GNSS v2.1 and older (manufacturing years 2015--2016) used to employ \textbf{Honeywell HMC5983} instead.
+These modifications of the hardware are no longer manufactured.
+
+\section{Accessories}
+
+Zubax GNSS 2 can be used with the following accessories:
+
+\begin{itemize}
+    \item Plastic enclosure described in the section \ref{sec:enclosure}.
+    \item UAVCAN cabling and related items. Refer to \url{https://kb.zubax.com/x/EoAh} for more information.
+    \item Zubax Dronecode probe. Refer to \url{https://kb.zubax.com/x/iIAh} for more information.
+\end{itemize}
+
+Please contact your supplier for ordering information.
+
+\subsection{Enclosure}\label{sec:enclosure}
+
+Zubax GNSS 2 is intended for integration into the end system in the form of the bare PCB,
+as this facilitates lower weight and tighter arrangement of components
+in the end device, all of which are desirable properties in the target application domains.
+
+Shall it be desired to provide additional mechanical protection for the device or to install it away from possible sources of electromagnetic interference, the plastic components pictured on the figure \ref{enclosure} can be used.
+Please contact your supplier for the ordering information;
+alternatively, visit \url{https://github.com/Zubax/zubax_gnss} to download
+the 3D printable models suitable for in-house manufacturing.
+
+\begin{figure}[hbt]
+	\centering
+	\includegraphics[width=0.45\textwidth]{enclosure_assembled_top}
+	\includegraphics[width=0.45\textwidth]{enclosure_assembled_bottom}
+	\caption{Plastic enclosure suitable for 3D-printing, top and bottom, assembled.\label{enclosure}}
+\end{figure}
+
+\begin{figure}[hbt]
+	\centering
+	\includegraphics[width=0.45\textwidth]{enclosure_pcb_top}
+	\includegraphics[width=0.45\textwidth]{enclosure_pcb_bottom}
+	\caption{Top and bottom parts of the enclosure with the device inside.}
+\end{figure}
+
 \section{Quality assurance}
 
 Every manufactured Zubax GNSS 2 undergoes an automated testing procedure that validates that
@@ -90,38 +147,6 @@ that can be used as a strong protection against unlicensed or counterfeit manufa
 Please contact Zubax Robotics
 to find out the specifics about digital signature verification.
 
-\section{Enclosure}\label{sec:enclosure}
-
-Zubax GNSS 2 is intended for integration into the end system in the form of the bare PCB,
-as this facilitates lower weight and tighter arrangement of components
-in the end device, all of which are desirable properties in the target application domains.
-
-Shall it be desired to provide additional mechanical protection for the device or to install it away from possible sources of electromagnetic interference, the plastic components pictured on the figure \ref{enclosure} can be used.
-Please contact your supplier for the ordering information;
-alternatively, visit \url{https://github.com/Zubax/zubax_gnss/} to download
-the 3D printable enclosure models suitable for in-house manufacturing.
-
-\begin{figure}[hb]
-	\centering
-	\includegraphics[width=0.45\textwidth]{housing}
-	\includegraphics[width=0.45\textwidth]{post}
-	\caption{Plastic enclosure and post.\label{enclosure}}
-\end{figure}
-
-\section{Accessories}
-
-Zubax GNSS 2 can be used with the following accessories:
-
-\begin{itemize}
-    \item Enclosure (suitable for 3D printing). See section \ref{sec:enclosure}.
-    \item UAVCAN Micro patch cable.
-    \item UAVCAN Micro adapter cables.
-    \item UAVCAN Micro termination plug.
-    \item Zubax DroneCode Debug Probe.
-\end{itemize}
-
-Please contact your supplier for ordering information.
-
 \chapter{Characteristics}
 
 \section{Absolute maximum ratings}
@@ -132,55 +157,59 @@ Proper operation of the device within the ranges specified in this section is no
 
 \begin{ZubaxSimpleTable}{Absolute maximum ratings}{|c X|c c|c|}
     Symbol            & Parameter                & Min  & Max & Unit \\
-	$V_\text{inv}$    & Supply voltage           & -0.3 & 6   & V \\
-	$T_\text{oper}$   & Operating temperature    & -50  & 125 & \degree{}C \\
+	$V_\text{supply}$ & Supply voltage           & -0.3 & 6   & V \\
+	$T_\text{oper}$   & Operating temperature    & -40  & 105 & \degree{}C \\
 	                  & UART input voltage 		& -0.3 & 6   & V\\
 	                  & CAN H/L input voltage    & -4   & 16  & V\\
 \end{ZubaxSimpleTable}
 
 \section{Environmental conditions}
 
-\begin{ZubaxSimpleTable}{Environmental conditions}{|c |l c|c|c|}
-     Parameter &  Min & Max & Unit  & Note \\
-	 Board temperature & -40 & 70 & \degree{}C & GNSS hot start is not expected to work reliably below -20\degree{}C	\\
-	 Magnetic field strength	&	& 9 &	Gauss & 
-\end{ZubaxSimpleTable}
+The GNSS hot start feature is not expected to work reliably below -20\degree{}C
+due to poor performance of the supercapacitor-based backup power source at low temperatures.
+However, this should not have any adverse side effects on the general performance of
+the unit except that the time-to-first-fix (TTFF) may be higher than normal.
+
+Magnetic fields whose magnitude exceeds the limit may render the compass temporarily dysfunctional.
+Other components are unlikely to be affected.
+
+\begin{ZubaxTableWrapper}{Environmental conditions}
+    \begin{ZubaxWrappedTable}{|c X|l c|c|c|}
+        Symbol            & Parameter                     &  Min & Max & Unit \\
+        $T_\text{oper}$   & Operating temperature         & -40  & 100 & \degree{}C \\
+        $B$               & Magnetic field strength       &      & 9   & Gauss \\
+        $\phi_\text{oper}$& Operating humidity\tnote{1}   & 0    & 100 & \%RH\\
+        $h_\text{oper}$   & Operating altitude above mean sea level (MSL) &     & 10  & km\\
+    \end{ZubaxWrappedTable}
+    \begin{tablenotes}
+        \item[1] Condensation not permitted.
+    \end{tablenotes}
+\end{ZubaxTableWrapper}
 
 \section{Reliability}
 
+Please contact Zubax Robotics for additional reliability and safety information.
+
 \begin{ZubaxSimpleTable}{Reliability}{|c X|c|c|}
     Symbol & Parameter & Typ & Unit \\
-	MTTF   & Mean time to failure & 100000 & hours \\
-\end{ZubaxSimpleTable}
-
-\section{Power Supply}
-
-\begin{ZubaxSimpleTable}{Power supply}{|c |c c c | c|X|}
-     Parameter &  Min & Typical & Max & Unit  & Note \\
-	 Supply voltage & 4.5 & 5.0 & 5.5 & V  & Any power input\\
-	 Supply current & 70  & 95  & 180 & mA & Any power input\\
+	MTTF   & Mean time to failure & 500000 & hours \\
 \end{ZubaxSimpleTable}
 
 \section{Communication interfaces}
 
-Zubax GNSS 2 features three communication interfaces, each of which is described in detail in the subsequent parts of this document. The interfaces are as follows:
+Zubax GNSS 2 features three communication interfaces. Each is described in detail in the subsequent parts of this document.
 \begin {itemize}
-\item Doubly redundant UAVCAN interface with two connectors for each interface. This interface provides access to all features of Zubax GNSS 2, including measurements output, configuration, time synchronization, firmware update, etc. Connector type is UAVCAN Micro connector (JST GH).
-\item USB port (CDC ACM profile, also known as virtual serial port). This interface can be used for NMEA output and configuration. Connector type is USB micro B (which is the most common USB connector).
-\item DroneCode port, used for NMEA output and diagnostics. Connector type is DCD-M (JST SH)
+\item Doubly redundant UAVCAN interface with two connectors for each interface.
+\item USB port.
+\item Dronecode port.
 \end{itemize}
 
-The device can be powered via the following:
-\begin {itemize}
-\item Any single UAVCAN port.
-\item Both UAVCAN ports simultaneously (the power supply circuit prevents direct current flow between these power inputs).
-\item USB
-\item DroneCode port (hardware revisions v2.1 and newer).
-\end{itemize}
+\subsection{CAN bus interface}
 
-It is allowed to power the device simultaneously via USB and UAVCAN, since the power supply circuit prevents back-powering via these interfaces.
+This interface provides full access to all features of Zubax GNSS 2, including the output of measurements,
+reconfiguration, time synchronization, firmware update, etc.
 
-Power supply characteristics are identical regardless of the power input used - refer to the tables below for details.
+The connector type is UAVCAN Micro connector (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}.
 
 \begin{ZubaxTableWrapper}{Characteristics of CAN bus interfaces}
 	\begin{ZubaxWrappedTable}{|c X|c c c|c|}
@@ -190,8 +219,7 @@ Power supply characteristics are identical regardless of the power input used - 
 		        & Negative-going input threshold voltage    & 500  & 600  &      & mV \\
 		        & Differential output voltage, dominant     & 1.5  & 2.0  & 3.0  & V \\
 		        & Differential output voltage, recessive    & -120 & 0    & 12   & mV \\
-		        & Bus power rail\tnote{1}\space{} voltage   & -10  &      & 10   & V \\
-		        & Inter-connector current\tnote{1}          & -1 &  & 1    & A \\
+		        & Inter-connector current\tnote{1}          & -1   &      & 1    & A \\
 		        & Connector resistance during device lifetime &    & 30   & 50   & $\text{m}\Omega$ \\
 	\end{ZubaxWrappedTable}
 	\begin{tablenotes}
@@ -199,25 +227,55 @@ Power supply characteristics are identical regardless of the power input used - 
 	\end{tablenotes}
 \end{ZubaxTableWrapper}
 
-\subsection{DroneCode debug port}
+\subsection{USB interface}
 
-The device features a DroneCode debug port available via the standard
-DroneCode Mini debug connector (DCD-M)\footnote{Refer to the DroneCode documentation
-for more information on standard connectors and communication interfaces.}.
-The DroneCode debug port provides access to the device's CLI\footnote{Command line interface.}
-via UART.
+The device implements a full-speed USB 2.0 port with the standard CDC ACM interface.
+The device features driverless compatibility with all major operating systems (Windows, GNU/Linux, Mac).
 
-\begin{ZubaxSimpleTable}{DroneCode debug port characteristics}{|c X|c c c|c|}
+This interface can be used for NMEA output, configuration, firmware update,
+and general-purpose CLI\footnote{Command line interface.} access.
+
+The connector type is USB micro B (which is the most common USB connector type).
+
+Note that the virtual serial port interface is sensitive to the baud rate configuration.
+More details are provided in the section \ref{usb_protocol_selection}.
+
+\subsection{Dronecode debug port interface}
+
+The device features a Dronecode debug port interface available via the standard
+Dronecode Debug Mini connector (DCD-Mini)\footnote{\url{https://wiki.dronecode.org/workgroup/connectors/start}}.
+
+\begin{ZubaxSimpleTable}{Dronecode debug port characteristics}{|c X|c c c|c|}
 	Symbol  & Parameter                                 & Min  & Typ  & Max  & Unit \\
 			& Low-level input voltage                   & -0.3 & 0    & 1.6  & V\\
 			& High-level input voltage                  & 2.1  & 3.3  & 5.5  & V\\
 			& Low-level output voltage                  & 0    & 0    & 0.5  & V\\
 			& High-level output voltage                 & 2.8  & 3.3  & 3.4  & V\\
 			& Source/sink current via data pins         &      &      & 10   & mA\\
-			& UART RX 							       & 15   & 20   & 25   & $\text{k}\Omega$\\
-	$V_\text{DCDP}$ & Power rail output voltage         & 3.2  & 3.3  & 3.4  & V\\
-	$I_\text{DCDP}$ & Power rail load capability        &      &      & 3    & mA\\
+			& UART RX pull down resistance              & 30   & 40   & 50   & $\text{k}\Omega$\\
 	        & Connector resistance during device lifetime &    & 20   & 40   & $\text{m}\Omega$\\
+\end{ZubaxSimpleTable}
+
+\section{Power supply}
+
+The device can be powered via the following inputs:
+\begin {itemize}
+\item Any single UAVCAN port.
+\item Both UAVCAN ports simultaneously
+(the power supply circuit prevents direct current flow between these power inputs).
+\item USB port.
+\item Dronecode port (hardware revisions v2.1 and newer).
+\end{itemize}
+
+It is allowed to power the device simultaneously via USB and UAVCAN, since the power supply circuits prevent back-powering via these interfaces.
+It is not recommended to supply power via the Dronecode port while any other power input is used concurrently.
+
+The power supply characteristics documented in the following table are invariant to the power input used.
+
+\begin{ZubaxSimpleTable}{Power supply}{|c X|c c c|c|X|}
+     Symbol             & Parameter      & Min & Typical & Max & Unit & Note \\
+	 $V_\text{supply}$  & Supply voltage & 4.0 & 5.0     & 5.5 & V    & Any power input\\
+	 $I_\text{supply}$  & Supply current & 70  & 95      & 180 & mA   & Any power input\\
 \end{ZubaxSimpleTable}
 
 \chapter{LED Indication}
@@ -345,7 +403,7 @@ The publication frequency of \texttt{uavcan.equipment.air{\_}data.StaticTemperat
 
 The USB interface allows to use Zubax GNSS 2 as a standalone USB GNSS receiver (also known as ''GPS mouse'') interfaced via the standard NMEA 0183 protocol; also it provides access to configuration parameters.
 
-\section{Protocol selection}
+\section{Protocol selection}\label{usb_protocol_selection}
 
 Zubax GNSS 2 will automatically enable NMEA output via USB if the virtual serial port is opened with any baud rate within the range 4800 to 57600 baud, inclusive. If the port is open with any other baud rate, e.g. 115200, NMEA output will not be enabled, and only the command line interface will be available.
  
