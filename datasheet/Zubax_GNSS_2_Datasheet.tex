@@ -299,7 +299,7 @@ The table below documents how the device uses health codes to report its status.
 Possible reasons for the health being Warning:
 
 \begin{itemize}
-    \item GNSS fix quality is below the configured threshold (section \ref{configuration_parameters})
+    \item GNSS fix quality is below the configured threshold (section \ref{sec:configuration_parameters})
     (disabled by default).
     \item Determined environmental conditions exceed the specified safe limits
     (section \ref{environmental_conditions}).
@@ -486,6 +486,173 @@ Until there is a valid node ID available for the local UAVCAN node (either speci
 statically via the configuration parameter, or provided dynamically),
 no other functions of the UAVCAN interface will work.
 
+\section{Broadcasting  of GNSS data}
+
+Zubax GNSS 2 broadcasts the GNSS data using the messages
+\verb|uavcan.equipment.gnss.Fix2| and \verb|uavcan.equipment.gnss.Auxiliary|.
+
+The broadcasting period of \verb|uavcan.equipment.gnss.Fix2| is defined by the configuration
+parameter \CfgRef{uavcan.pubp-fix}, in microseconds, and its transfer priority is defined by the
+parameter \CfgRef{uavcan.prio-fix}.
+
+The broadcasting period of \verb|uavcan.equipment.gnss.Auxiliary| is defined by the configuration
+parameter \CfgRef{uavcan.pubp-aux}, in microseconds, and its transfer priority is defined by the
+parameter \CfgRef{uavcan.prio-aux}.
+
+For the reasons of compatibility, Zubax GNSS 2 also supports the deprecated UAVCAN message
+\verb|uavcan.equipment.gnss.Fix|, which is broadcasted with the same period and
+synchronously with \verb|Fix2|, at the priority level one lower than
+defined by the parameter \CfgRef{uavcan.prio-fix}.
+Broadcasting of this message is enabled by default in order to enhance compatibility with old systems,
+but it is recommended to disable it in order to reduce CAN bus utilization by setting
+the parameter \CfgRef{gnss.old+fix+msg} to zero (false).
+
+\subsection{GNSS fix data fields}
+
+The data items reported via the message \verb|uavcan.equipment.gnss.Fix2| are briefly reviewed in this section.
+More information about the standard UAVCAN data structures can be obtained from the website at
+\url{http://uavcan.org}.
+
+\begin{description}
+    \item[\texttt{timestamp}] The network-synchronized timestamp of the GNSS solution.
+    Zubax GNSS 2 performs automatic compensation of the inner delays.
+    The expected precision of the timestamp is under 10 microseconds.
+
+    \item[\texttt{gnss\_timestamp}] The timestamp of the GNSS solution in the UTC time domain.
+    This timestamp is not affected by the network-wide synchronized time.
+
+    \item[\texttt{num\_leap\_seconds}] The current number of leap seconds is always populated,
+    except if the GNSS received has not obtained this information from the satellite network yet.
+    This data can be used to perform conversions between different time systems.
+
+    \item[\texttt{longitude\_deg\_1e8}, \texttt{latitude\_deg\_1e8}] Estimated latitude and longitude
+    in angular degrees scaled by $10^8$.
+
+    \item[\texttt{height\_ellipsoid\_mm}] Height above the WGS84 ellipsoid, in millimeters.
+
+    \item[\texttt{height\_msl\_mm}] Height above the mean sea level, in millimeters.
+
+    \item[\texttt{ned\_velocity}] Velocity of the antenna in the north-east-down coordinate frame,
+    in meters per second.
+    
+    \item[\texttt{sats\_used}] The number of satellites that were included in the current navigation solution.
+    This number includes satellites from all supported satellite navigation and augmentation systems.
+    See also \CfgRef{gnss.warn+sats}.
+    
+    \item[\texttt{status}] The status of the navigation solution.
+    See also \CfgRef{gnss.warn+dimens}.
+    
+    \item[\texttt{covariance}] The $6\times6$ position and velocity error covariance matrix.
+    Only the diagonal is reported. The items on the diagonal are ordered as follows:
+    \begin{enumerate}
+        \item Longitude error variance, in $\text{meters}^2$.
+        \item Latitude error variance, in $\text{meters}^2$.
+        \item Altitude error variance, in $\text{meters}^2$.
+        \item Longitudinal velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+        \item Lateral velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+        \item Vertical velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+    \end{enumerate}
+    
+    \item[\texttt{pdop}] 3D geometric dilution of precision (PDOP).
+    
+    \item[\texttt{ecef\_position\_velocity}] Navigation solution in the
+    ECEF\footnote{Earth-centered, earth-fixed coordinate frame.}
+    The contents of this nested data structure are documented below.
+\end{description}
+
+The nested data structure \verb|ecef_position_velocity| contains the following fields:
+
+\begin{description}
+    \item[\texttt{velocity\_xyz}] Estimated velocity vector in meters per second along the ECEF axes X, Y, and Z.
+    
+    \item[\texttt{position\_xyz\_mm}] Estimated coordinate in the ECEF frame, in millimeters.
+    The axes ordering is X, Y, Z.
+    
+    \item[\texttt{covariance}] The $6\times6$ position and velocity error covariance matrix.
+    Only the diagonal is reported. The items on the diagonal are ordered as follows:
+    \begin{enumerate}
+        \item ECEF-X coordinate error variance, in $\text{meters}^2$.
+        \item ECEF-Y coordinate error variance, in $\text{meters}^2$.
+        \item ECEF-Z coordinate error variance, in $\text{meters}^2$.
+        \item ECEF-X velocity error variance, in $\frac{\text{meters}}{\text{second}}^2$.
+        \item ECEF-Y velocity error variance, in $\frac{\text{meters}}{\text{second}}^2$.
+        \item ECEF-Z velocity error variance, in $\frac{\text{meters}}{\text{second}}^2$.
+    \end{enumerate}
+\end{description}
+
+\subsection{GNSS auxiliary data fields}
+
+The data items reported via the message \verb|uavcan.equipment.gnss.Auxiliary| are briefly reviewed
+in this section.
+More information about the standard UAVCAN data structures can be obtained from the website at
+\url{http://uavcan.org}.
+
+The fields for GDOP, HDOP, PDOP\footnote{Also reported via the fix message.}, TDOP, VDOP, NDOP, EDOP
+are all populated.
+
+The field \verb|sats_visible| displays the total number of satellites that are being tracked by the received.
+A fraction of them is used to compute the navigation solution.
+
+The field \verb|sats_used| mirrors the homonymous field from the fix message.
+
+\section{Broadcasting of magnetic field measurements}
+
+The message \verb|uavcan.equipment.ahrs.MagneticFieldStrength| is used to broadcast magnetic field measurements.
+
+The broadcasting period is defined by the configuration
+parameter \CfgRef{uavcan.pubp-mag}, in microseconds, and the transfer priority is defined by the
+parameter \CfgRef{uavcan.prio-mag}.
+
+The field \verb|magnetic_field_ga| contains the latest magnetic field measurements, in gauss.
+
+The parameter \CfgRef{mag.scaling+coef} can be used to rescale the magnetic field measurements.
+Normally, the rescaling feature need not be used.
+However, certain equipment may mistakenly reject the measurements if the estimated
+magnetic field strength exceeds a certain limit. In that case, setting this parameter to a value
+less than 1 may help to alleviate the problem.
+The parameter is dimensionless.
+
+The error covariance matrix \verb|magnetic_field_covariance| is reported as a compressed scalar matrix,
+which means that only one value is set, which is assumed to be distributed along the diagonal.
+The value is defined by the parameter \CfgRef{mag.variance}, in $\text{gauss}^2$.
+
+\section{Broadcasting of air data measurements}
+
+\subsection{Barometric pressure}
+
+The message \verb|uavcan.equipment.air_data.StaticPressure| is used to broadcast the
+estimated barometric pressure.
+
+The broadcasting period is defined by the configuration
+parameter \CfgRef{uavcan.pubp-pres}, in microseconds, and the transfer priority is defined by the
+parameter \CfgRef{uavcan.prio-pres}.
+
+The field \verb|static_pressure| contains the latest barometric pressure measurement, in pascal.
+
+The value of the error variance field \verb|static_pressure_variance| is defined by the configuration
+parameter \CfgRef{pres.variance}, in $\text{pascal}^2$.
+
+\subsection{Temperature}
+
+The message \verb|uavcan.equipment.air_data.StaticTemperature| is used to broadcast the
+estimated air temperature.
+
+The transfer priority is defined by the configuration parameter \CfgRef{uavcan.prio-pres},
+which is also used with the barometric pressure.
+
+The broadcasting period is set to one-fifth of the value defined by the configuration
+parameter \CfgRef{uavcan.pubp-pres}, in microseconds.
+However, firmware version 3.x and older sets the broadcasting period directly to the value
+of \CfgRef{uavcan.pubp-pres}.
+All Zubax GNSS 2 manufactured in 2017 and later ship with the firmware v4.0 or newer.
+
+The field \verb|static_temperature| contains the latest temperature measurement, in kelvin.
+
+The value of the error variance field \verb|static_temperature_variance| is defined by the configuration
+parameter \CfgRef{temp.variance}, in $\text{kelvin}^2$.
+
+\section{Network-wide time synchronization}
+
 \section{Configuration parameter management}
 
 The standard UAVCAN configuration parameter management interface is supported
@@ -500,6 +667,9 @@ of the service \verb|uavcan.protocol.param.GetSet|, the ordering of the returned
 parameters is undefined, but it is guaranteed to be consistent within the same firmware build.
 Updating the firmware to different versions or even different builds of the same version
 may change the ordering of the configuration parameters.
+
+General information about the device configuration options is available in the chapter 
+\ref{sec:configuration_parameters}.
 
 \section{Firmware upgrade}
 
@@ -740,7 +910,7 @@ UART parameters are fixed and provided below:
 \item Stop bits: 1
 \end{itemize}
 
-\chapter{Configuration parameters}\label{configuration_parameters}
+\chapter{Configuration parameters}\label{sec:configuration_parameters}
 
 \CfgDef{uavcan.bit+rate}
 \CfgDef{uavcan.node+id}
