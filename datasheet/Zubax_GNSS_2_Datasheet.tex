@@ -627,6 +627,11 @@ The broadcasting period is defined by the configuration
 parameter \CfgRef{uavcan.pubp-pres}, in microseconds, and the transfer priority is defined by the
 parameter \CfgRef{uavcan.prio-pres}.
 
+The parameter \CfgRef{uavcan.pubp-pres} can be set to zero, which disables broadcasting of all
+air data related messages.
+While the air data broadcasting is disabled, Zubax GNSS 2 does not monitor the health of the
+air data sensor.
+
 The field \verb|static_pressure| contains the latest barometric pressure measurement, in pascal.
 
 The value of the error variance field \verb|static_pressure_variance| is defined by the configuration
@@ -642,6 +647,7 @@ which is also used with the barometric pressure.
 
 The broadcasting period is set to one-fifth of the value defined by the configuration
 parameter \CfgRef{uavcan.pubp-pres}, in microseconds.
+If the parameter is set to zero, broadacsting of all air data measurements will be disabled.
 However, firmware version 3.x and older sets the broadcasting period directly to the value
 of \CfgRef{uavcan.pubp-pres}.
 All Zubax GNSS 2 manufactured in 2017 and later ship with the firmware v4.0 or newer.
@@ -652,6 +658,31 @@ The value of the error variance field \verb|static_temperature_variance| is defi
 parameter \CfgRef{temp.variance}, in $\text{kelvin}^2$.
 
 \section{Network-wide time synchronization}
+
+The UAVCAN protocol has a built-in network-wide time synchronization feature
+that can be used to maintain the same time base distributed across all devices in the network
+with the resolution of up to one
+microsecond.\footnote{Refer to \url{http://uavcan.org} for the detailed information.}
+
+Zubax GNSS 2 can operate as a time synchronization master, but this feature is disabled by default.
+In order to enable it, the configuration parameter \CfgRef{uavcan.pubp-time} needs be set to a
+positive value, which specifies the broadcasting period of the time synchronization message
+\verb|uavcan.protocol.GlobalTimeSync|.
+
+The priority of the time synchronization message can be configured via the parameter
+\CfgRef{uavcan.prio-time}.
+Note that it is not recommended to assign a lower priority than the default because it may impair
+the performance of the time synchronization feature.
+
+When the time synchronization feature is disabled,
+Zubax GNSS 2 will not emit any time synchronization messages,
+but it will always keep its own internal clock synchronized with the network
+as long as there is an active time synchronization master.
+
+The accuracy of the time base provided by the time synchronization master is defined by the
+operating conditions of the GNSS receiver.
+Please contact Zubax Robotics to obtain detailed information about the performance of the
+time synchronization feature.
 
 \section{Configuration parameter management}
 
