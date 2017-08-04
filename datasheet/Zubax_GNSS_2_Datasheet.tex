@@ -80,26 +80,6 @@ Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced vi
 It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
 Zubax GNSS 2 supports a variety of standard protocols, which ensures compatibility with third party software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
 
-\section{Sensor suite}
-
-\subsection{GNSS receiver}
-
-The device employs the \textbf{u-Blox MAX-M8Q} GNSS receiver module.
-Please refer to the specifications provided by u-Blox to gain additional information about the module.
-
-\subsection{Digital barometric altimeter}
-
-The device employs the \textbf{TE Connectivity MS5611} digital barometric altimeter.
-Please refer to the specifications provided by TE Connectivity to gain additional information about the sensor.
-
-\subsection{Three-axis digital compass with thermal compensation}
-
-The device employs the \textbf{STMicroelectronics LIS3MDL} digital three-axis compass with thermal compensation.
-Please refer to the specifications provided by STMicroelectronics to gain additional information about the sensor.
-
-Zubax GNSS v2.1 and older (manufacturing years 2015--2016) used to employ \textbf{Honeywell HMC5983} instead.
-These modifications of the hardware are no longer manufactured.
-
 \section{Accessories}
 
 Zubax GNSS 2 can be used with the following accessories:
@@ -198,6 +178,53 @@ Please contact Zubax Robotics for additional reliability and safety information.
     Symbol & Parameter & Typ & Unit \\
 	MTTF   & Mean time to failure & 500000 & hours \\
 \end{ZubaxSimpleTable}
+
+\section{Sensor suite}
+
+\subsection{GNSS receiver}
+
+The device employs the \textbf{u-Blox MAX-M8Q} GNSS receiver module.
+Please refer to the specifications provided by u-Blox to gain additional information about the module.
+
+The internal delay (lag) of the GNSS receiver is approximately 200 milliseconds.
+
+The period of GNSS solution reporting is defined by the configuration parameters
+\CfgRef{uavcan.pubp-fix} and \CfgRef{uavcan.pubp-aux}, in microseconds.
+
+The parameters \CfgRef{gnss.warn+dimens} and \CfgRef{gnss.warn+sats} can be used to reflect the quality of
+the GNSS solution in the device health code.
+
+\subsection{Digital barometric altimeter}
+
+The device employs the \textbf{TE Connectivity MS5611} digital barometric altimeter.
+Please refer to the specifications provided by TE Connectivity to gain additional information about the sensor.
+
+The measurement period (which equals the reporting period) is defined by the configuration parameter 
+\CfgRef{uavcan.pubp-pres}, in microseconds.
+The reported error variances for pressure and temperature estimates are defined by the parameters
+\CfgRef{pres.variance}, in $\text{pascal}^2$, and \CfgRef{temp.variance}, in $\text{kelvin}^2$,
+respectively.
+
+\subsection{Three-axis digital compass with thermal compensation}
+
+The device employs the \textbf{STMicroelectronics LIS3MDL} digital three-axis compass with thermal compensation.
+Please refer to the specifications provided by STMicroelectronics to gain additional information about the sensor.
+
+Zubax GNSS v2.1 and older (manufacturing years 2015--2016) used to employ \textbf{Honeywell HMC5983} instead.
+These modifications of the hardware are no longer manufactured.
+
+The measurement period (which equals the reporting period) is defined by the configuration parameter 
+\CfgRef{uavcan.pubp-mag}, in microseconds.
+The reported error variance for magnetic field strength measurements is defined by the parameter
+\CfgRef{mag.variance}, in $\text{gauss}^2$.
+
+The measured magnetic field vector can be rescaled with the help of the parameter \CfgRef{mag.scaling+coef}.
+This feature can be used to work-around magnetic field scaling issues in some commercial UAV autopilots.
+
+The parameter \CfgRef{mag.pwron+slftst} can be used to control whether the magnetic field sensor should be
+subjected to a self-test when the device is powered on.\footnote{Available for hardware v2.2 and newer.}
+This feature must be disabled if the device is expected to be powered on while non-stationary,
+otherwise false failures may be detected.
 
 \section{Communication interfaces}
 
@@ -299,11 +326,16 @@ The table below documents how the device uses health codes to report its status.
 Possible reasons for the health being Warning:
 
 \begin{itemize}
-    \item GNSS fix quality is below the configured threshold (section \ref{sec:configuration_parameters})
-    (disabled by default).
+    \item GNSS fix quality is lower than the configured goal:
+    \begin{itemize}
+        \item The dimensionality of the GNSS solution is less than the minimum specified by the parameter
+        \CfgRef{gnss.warn+dimens}. This feature is disabled by default.
+        \item The number of satellites used in the GNSS solution is less than the minimum specified by the
+        parameter \CfgRef{gnss.warn+sats}. This feature is disabled by default.
+    \end{itemize}
     \item Determined environmental conditions exceed the specified safe limits
     (section \ref{environmental_conditions}).
-    \item Magnetic field strength vector remained zero for several seconds (likely a sensor malfunction).
+    \item Magnetic field strength vector remained zero for more than 5 seconds (likely a sensor malfunction).
 \end{itemize}
 
 \chapter{LED Indication}
@@ -458,7 +490,9 @@ Once started, Zubax GNSS 2 will automatically detect the bit rate of the CAN bus
 There is no detection timeout, which means that the device can be connected to a CAN bus at
 any moment after powering up, and it will configure itself immediately.
 
-It is not possible to specify the bit rate manually.
+It is not possible to specify the bit rate manually.\footnote{This feature was removed in the firmware v4.0.
+Earlier versions of the firmware used to provide the configuration parameter
+\CfgRef{uavcan.bit+rate}, which could be used to assign the bit rate manually.}
 
 Zubax GNSS 2 requires up to approximately 4 seconds to perform the bit rate detection on a properly
 functioning CAN bus.
@@ -631,6 +665,7 @@ The parameter \CfgRef{uavcan.pubp-pres} can be set to zero, which disables broad
 air data related messages.
 While the air data broadcasting is disabled, Zubax GNSS 2 does not monitor the health of the
 air data sensor.
+When enabled, the broadcasting interval cannot be less than 25~000 microseconds.
 
 The field \verb|static_pressure| contains the latest barometric pressure measurement, in pascal.
 
@@ -668,6 +703,7 @@ Zubax GNSS 2 can operate as a time synchronization master, but this feature is d
 In order to enable it, the configuration parameter \CfgRef{uavcan.pubp-time} needs be set to a
 positive value, which specifies the broadcasting period of the time synchronization message
 \verb|uavcan.protocol.GlobalTimeSync|.
+When enabled, the broadcasting interval cannot be less than 500~000 microseconds.
 
 The priority of the time synchronization message can be configured via the parameter
 \CfgRef{uavcan.prio-time}.
