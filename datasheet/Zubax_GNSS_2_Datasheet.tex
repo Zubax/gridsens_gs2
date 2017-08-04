@@ -941,206 +941,6 @@ UART parameters are fixed and provided below:
 \item Stop bits: 1
 \end{itemize}
 
-\chapter{Configuration parameters}\label{sec:configuration_parameters}
-
-\CfgDef{uavcan.bit+rate}
-\CfgDef{uavcan.node+id}
-\CfgDef{uavcan.pubp-time}
-\CfgDef{uavcan.prio-time}
-\CfgDef{uavcan.pubp-stat}
-\CfgDef{uavcan.prio-stat}
-\CfgDef{uavcan.pubp-pres}
-\CfgDef{uavcan.prio-pres}
-\CfgDef{uavcan.pubp-mag}
-\CfgDef{uavcan.prio-mag}
-\CfgDef{uavcan.pubp-fix}
-\CfgDef{uavcan.pubp-aux}
-\CfgDef{uavcan.prio-fix}
-\CfgDef{uavcan.prio-aux}
-\CfgDef{pres.variance}
-\CfgDef{temp.variance}
-\CfgDef{mag.variance}
-\CfgDef{mag.scaling+coef}
-\CfgDef{gnss.warn+dimens}
-\CfgDef{gnss.warn+sats}
-\CfgDef{nmea.uart+on}
-\CfgDef{mag.pwron+slftst}
-\CfgDef{gnss.old+fix+msg}
-
-This section documents the available configuration parameters. Read the documentation on the interfaces to learn how to access the configuration parameters.
-
-Reboot is required in order for all configuration changes to take effect.
-
-Starting from firmware v4.0, configuration parameters are saved automatically after modification.
-
-\textbf{uavcan.bit{\_}rate}
-
-Removed in firmware v4.0.
-
-CAN bus bit rate, all interfaces. Value 0 (which is default) causes the device to detect bit rate automatically at every boot up.
-
-Default value: 0
-
-Units: bits/sec
-
-\textbf{uavcan.node{\_}id}
-
-UAVCAN Node ID Value 0 (which is default) causes the device to request a dynamically allocated node ID at every boot up.
-
-Default value: 0
-
-\textbf{uavcan.pubp-time}
-
-Publication interval of \texttt{uavcan.protocol.GlobalTimeSync}. Zero means disabled.
-
-Default value: 0
-
-Units: Microsecond
-
-\textbf{uavcan.prio-stat}
-
-Priority of \texttt{uavcan.protocol.NodeStatus}.
-
-Default value: 20
-
-\textbf{uavcan.pubp-pres}
-
-Publication interval of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. Zero means disabled. When disabled:
-\begin{itemize}
-\item The driver of the appropriate sensor will not be initialized.
-\item The sensor will not be monitored - implying that, if it fails, it will not be detected and reported.
-\item Measurements will not be reported via any of the available interfaces.
-\end{itemize}
-This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.
-
-Default value: 0 (disabled)
-
-Units: Microsecond
-
-\textbf{uavcan.prio-pres}
-
-Priority of \texttt{uavcan.equipment.air{\_}data.StaticPressure}. This setting also affects \texttt{uavcan.equipment.air{\_}data.StaticPressure}.
-
-Default value: 16
- 
-\textbf{uavcan.pubp-mag}
-
-Publication interval of \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.
-
-Default value: 20000
-
-Units: Microsecond
-
-\textbf{uavcan.prio-mag}
-
-Priority of \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.
-
-Default value: 16
-
-\textbf{uavcan.pubp-fix}
-
-Publication interval of \texttt{uavcan.equipment.gnss.Fix}.
-
-Default value: 100000
-
-Units: Microsecond
-
-\textbf{uavcan.pubp-aux}
-
-Publication interval of \texttt{uavcan.equipment.gnss.Auxiliary}.
-
-Default value: 1000000
-
-Units: Microsecond
-
-\textbf{uavcan.prio-fix}
-
-Firmware v4.0 and newer
-
-This setting directly assigns the priority of the message \texttt{uavcan.equipment.gnss.Fix2}. The deprecated message  \texttt{uavcan.equipment.gnss.Fix}, if enabled, will be using the next lower priority level. For example, if this setting is set to 16, the deprecated message will be broadcasted at the priority level 17, which is one lower than 16.
-
-Default value: 16
-
-Firmware v3.x and older
-
-Priority of \texttt{uavcan.equipment.gnss.Fix}.
-
-Default value: 16
-
-\textbf{uavcan.prio-aux}
-
-Priority of \texttt{uavcan.equipment.gnss.Auxiliary}.
-
-Default value: 20
-
-\textbf{pres.variance}
-
-Pressure variance reported via \texttt{uavcan.equipment.air{\_}data.StaticAirData}.
-
-Default value: 100
-
-Units: $\text{Pascal}^2$
-
-\textbf{temp.variance}
-
-Temperature variance reported via \texttt{uavcan.equipment.air{\_}data.StaticAirData}.
-
-Default value: 4
-
-Units: $\text{Kelvin}^2$
-
-\textbf{mag.variance}
-
-Magnetic field variance reported via \texttt{uavcan.equipment.ahrs.Magnetometer}.
-
-Default value: 0.005
-
-Units: $\text{Gauss}^2$
-
-\textbf{mag.scaling{\_}coef}
-
-New in firmware v3.1.
-
-Magnetic field vector scale. Some UAV autopilot systems (PX4, APM) do not correctly handle magnetic field measurements made in highly magnetically distorted environments. It is possible to work around these issues by reducing the magnitude of the magnetic field vector.
-
-For PX4 and APM users: if your autopilot reports that magnetometer offsets are too high, reduce this parameter to approximately 0.6 and recalibrate the magnetometer.
-
-Default value: 1.0, i.e. no rescaling.
-
-\textbf{gnss.warn{\_}dimens}
-
-Set the node status to WARNING if the number of dimensions in the GNSS solution is below this threshold. Values: 1 - time-only fix, 2 - 2D fix, 3 - 3D fix.
-
-Default value: 0
-
-\textbf{gnss.warn{\_}sats}
-
-Set the node status to WARNING if the number of satellites used in the GNSS solution is below this threshold.
-
-Default value: 0
-
-\textbf{nmea.uart{\_}on}
-
-Enable NMEA output via DroneCode port (UART). This configuration parameter does not affect NMEA output over USB.
-
-Default value: 0 (disabled)
-
-\textbf{mag.pwron{\_}slftst}
-
-New in firmware v4.0.
-
-Perform power on self test of the magnetometer when booting. Note that the manufacturer of the magnetometer recommends to hold the sensor stationary during the self test procedure. Therefore it is recommended to disable this feature unless it is expected that the board will be always held stationary during powering on. Otherwise the self test may be occasionally failing, delaying the proper start up of the device.
-
-Default value: 1 (enabled)
-
-\textbf{gnss.old{\_}fix{\_}msg}
-
-New in firmware v4.0.
-
-Broadcast the deprecated message \texttt{uavcan.equipment.gnss.Fix} alongside the new message\\ \texttt{uavcan.equipment.gnss.Fix2}.\\This feature is enabled by default for compatibility purposes; however, it is recommended to disable it in order to reduce the CAN bus traffic if it is not needed.
-
-Default value: 1 (compatibility mode)
-
 \chapter{Identification information}
 
 This section documents the device properties that are reported in response to identification requests: the CLI command \textbf{zubax{\_}id} and the UAVCAN service \texttt{uavcan.protocol.GetNodeInfo}.
@@ -1148,6 +948,169 @@ This section documents the device properties that are reported in response to id
 \item Product ID and UAVCAN node name: \textbf{com.zubax.gnss}.
 \item Hardware version: 2.x.
 \end{itemize}
+
+\chapter{Configuration parameters}\label{sec:configuration_parameters}
+
+This chapter summarizes all configuration parameters available in Zubax GNSS 2.
+
+The length of configuration parameter names does not exceed 16 characters,
+which ensures compatibility with MAVLink.
+
+\section{Non-volatile configuration storage}
+
+All configuration parameters are stored in a non-volatile memory
+that retains its contents across power cycles.
+
+Modification of any single parameter will trigger the device to commit all of them into the non-volatile
+memory approximately one second after the last modification has taken
+place.\footnote{The auto-save feature is available since firmware v4.0.}
+The delay ensures that no excessive modifications of the non-volatile memory will be carried out
+when multiple configuration parameters are changed at the same time.
+
+Note that while the non-volatile memory is being modified,
+the output sensor feed may suffer temporary disturbances:
+\begin{itemize}
+    \item Some of cyclically broadcasted measurements may be skipped.
+    \item The device may log sensor data integrity warnings via its debug interfaces, which are safe to ignore.
+\end{itemize}
+The sensor feeds will stabilize within one second after the last modification of the
+non-volatile memory has taken place.
+
+If the device is turned off while the configuration storage was being updated,
+the stored configuration data may get damaged.
+
+The stored configuration is read from the non-volatile memory once upon boot-up.
+If the device detects that the stored configuration data has been damaged,
+it will automatically revert to the factory default configuration.
+Zubax GNSS 2 can always reliably detect damage of the stored configuration data,
+so it is guaranteed that an invalid configuration can never be loaded.
+
+\section{Effects of configuration parameter changes}
+
+Unless specifically stated otherwise, changes to any configuration parameter will not take effect until
+the device is rebooted or power cycled.
+
+It is guaranteed that a power cycle or a reboot is a sufficient measure to apply all configuration parameter
+changes.
+
+\section{Firmware upgrade considerations}
+
+Configuration parameters of different revisions of the firmware may be incompatible with each other.
+For instance, some configuration parameters may be added, removed, or their value intervals may be changed.
+
+Zubax GNSS 2 always checks whether the stored configuration data is compatible with the current
+firmware revision.
+If it is detected that the stored configuration cannot be applied to the current version of the firmware,
+the device will automatically revert to the factory default configuration.
+
+Keep these considerations in mind when upgrading the firmware.
+
+\section{Configuration parameter index}
+
+The minimum, maximum, and default values provided in the table are shown for exemplary purposes only,
+and they are \emph{not expected to be valid} for all firmware revisions that this document applies to.
+Intervals and default values may change in newer firmware or hardware revisions.
+
+The table uses the following abbreviations:
+\begin{description}
+\item[Def.] Short for ``default value''.
+\item[BCI] Short for ``broadcasting interval''.
+\end{description}
+
+% name, unit, takes effect at, min, max, default, note
+\newcommand\CfgParamIndexEntry[6]{%
+    \CfgDef{#1} & \footnotesize{#2} & \footnotesize{\CfgListReferences{#1}} &
+    \footnotesize{#3} & \footnotesize{#4} & \footnotesize{#5} & \footnotesize{#6}
+    \tabularnewline
+}%
+
+\newenvironment{CfgParamIndex}[1]{%
+    \begin{ZubaxTableWrapper}{#1}
+    \setlength\tabcolsep{2.5pt}
+    \begin{ZubaxWrappedTable}{@{} l l l | c c c | X @{}}
+    Name & Unit & Pages & Min & Max & Def. & Description \\
+}{%
+    \end{ZubaxWrappedTable}
+    \end{ZubaxTableWrapper}
+}
+
+\begin{CfgParamIndex}{Configuration parameter index}
+
+\CfgParamIndexEntry{uavcan.node+id}{}{0}{127}{0}
+{Node ID of the local UAVCAN node. Zero enables dynamic allocation.}
+
+\CfgParamIndexEntry{uavcan.pubp-time}{microsecond}{0}{1 000 000}{0}{BCI of
+\texttt{uavcan.protocol.GlobalTimeSync}. Zero disables the time synchronization master.}
+
+\CfgParamIndexEntry{uavcan.prio-time}{}{0}{31}{1}{Priority of \texttt{uavcan.protocol.GlobalTimeSync}.}
+
+\CfgParamIndexEntry{uavcan.pubp-stat}{microsecond}{2000}{1 000 000}{200 000}{BCI of
+\texttt{uavcan.protocol.NodeStatus}.}
+
+\CfgParamIndexEntry{uavcan.prio-stat}{}{0}{31}{20}{Priority of \texttt{uavcan.protocol.NodeStatus}.}
+
+\CfgParamIndexEntry{uavcan.pubp-pres}{microsecond}{0}{1 000 000}{0}{BCI of
+\texttt{uavcan.equipment.air\_data.StaticPressure}, and one-fifth of the broadcasting interval of
+\texttt{uavcan.equipment.air\_data.StaticTemperature}.}
+
+\CfgParamIndexEntry{uavcan.prio-pres}{}{0}{31}{16}{Priority of
+\texttt{uavcan.equipment.air\_data.StaticPressure} and
+\texttt{uavcan.equipment.air\_data.StaticTemperature}.}
+
+\CfgParamIndexEntry{uavcan.pubp-mag}{microsecond}{6666}{1 000 000}{10 000}{BCI of
+\texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.}
+
+\CfgParamIndexEntry{uavcan.prio-mag}{}{0}{31}{16}{\texttt{uavcan.equipment.ahrs.MagneticFieldStrength}
+priority.}
+
+\CfgParamIndexEntry{uavcan.pubp-fix}{microsecond}{66 666}{2 000 000}{100 000}{BCI of
+\texttt{uavcan.equipment.gnss.Fix2}.}
+
+\CfgParamIndexEntry{uavcan.pubp-aux}{microsecond}{100 000}{1 000 000}{1 000 000}{BCI of
+\texttt{uavcan.equipment.gnss.Auxiliary}.}
+
+\CfgParamIndexEntry{uavcan.prio-fix}{}{0}{31}{16}{Priority of
+\texttt{uavcan.equipment.gnss.Fix2}.}
+
+\CfgParamIndexEntry{uavcan.prio-aux}{}{0}{31}{20}{Priority of
+\texttt{uavcan.equipment.gnss.Auxiliary}.}
+
+\CfgParamIndexEntry{gnss.warn+dimens}{}{0}{3}{0}{Set the device health to Warning if the dimensionality of
+the GNSS solution is less than this value. 3 for the full (3D) solution, 2 for planar (2D) solution,
+1 for time-only solution, 0 disables the feature.}
+
+\CfgParamIndexEntry{gnss.warn+sats}{}{0}{20}{0}{Set the device health to Warning if the number of satellites
+used in the GNSS solution is below this threshold. Zero disables the feature.}
+
+\CfgParamIndexEntry{gnss.old+fix+msg}{}{0}{1}{1}{Broadcast the old (deprecated) GNSS fix message
+\texttt{uavcan.equipment.gnss.Fix} alongside the new alternative \texttt{uavcan.equipment.gnss.Fix2}.
+It is recommended to disable this feature to reduce the CAN bus traffic.}
+
+\CfgParamIndexEntry{pres.variance}{$\text{pascal}^2$}{1}{4000}{100}{Barometric pressure error variance.}
+
+\CfgParamIndexEntry{temp.variance}{$\text{kelvin}^2$}{1}{100}{4}{Air temperature error variance.}
+
+\CfgParamIndexEntry{mag.variance}{$\text{gauss}^2$}{$\text{10}^{\text{-6}}$}{1}{0.005}
+{Magnetic field strength error variance.}
+
+\CfgParamIndexEntry{mag.scaling+coef}{}{0.1}{2}{1}{Scaling coefficient of the measured magnetic field vector.
+Used to work-around issues in some commercial UAV autopilots.}
+
+\CfgParamIndexEntry{mag.pwron+slftst}{}{0}{1}{1}{Self-test the magnetic field sensor (compass) when powering on.
+This feature must be disabled if the device is expected to be powered on while non-stationary,
+otherwise false failures may be detected.}
+
+\CfgParamIndexEntry{nmea.uart+on}{}{0}{1}{0}{Report all measurements via the UART port using the
+standard NMEA 0183 protocol.}
+
+\end{CfgParamIndex}
+
+\begin{CfgParamIndex}{Configuration parameters that are no longer available}
+
+\CfgParamIndexEntry{uavcan.bit+rate}{$\frac{\text{bit}}{\text{second}}$}{0}{1 000 000}{0}
+{Fixed CAN bus bit rate. Not available since firmware v4.0 in favor of automatic bit rate detection.}
+
+\end{CfgParamIndex}
 
 \chapter{Firmware update}\label{sec:bootloader}
 
