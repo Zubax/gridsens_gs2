@@ -940,7 +940,6 @@ NMEA sentence & Component & Purpose\\
 \texttt{YXXDR} (type P) & Altimeter & Static barometric pressure (only if the sensor is enabled).\\
 \texttt{YXXDR} (type C) & Altimeter & Static air temperature (only if the sensor is enabled).
 \end{ZubaxSimpleTable}
-\clearpage
 
 \section{Vendor-specific sentences}
 
@@ -983,7 +982,6 @@ $GPGSA,A,3,08,10,14,18,21,22,27,01,02,23,24,12,2.24,1.44,1.71*04
 $HCHDG,266.2,,,,*42
 $YXXDR,P,0.98968,B*59
 \end{minted}
-\clearpage
 
 \chapter{Command-line interface}\label{command-line_interface}
 
@@ -1223,7 +1221,7 @@ State ID & State name & Comment \\
 3 & AppUpgradeinProgress & Application is currently being upgraded. If interrupted, the bootloader will go into either \textbf{NoAppToBoot} or \textbf{BootCancelled}.\\
 4 & ReadyToBoot & The application is about to boot. This state is very transient and is left automatically as soon as possible.
 \end{ZubaxSimpleTable}
-\clearpage
+
 On Zubax~GNSS~2, the boot delay is set to 5 seconds.
 The bootloader supports the following communication interfaces:
 
@@ -1257,7 +1255,6 @@ The table below provides definitions for the well defined error codes that can b
 30002 & UAVCAN file downloading has been interrupted.\\
 32767 & Unknown error.
 \end{ZubaxSimpleTable}
-\clearpage
 
 \section{LED indication}
 
@@ -1336,7 +1333,6 @@ AppUpgradeInProgress & SOFTWARE{\_}UPDATE & OK
 \end{ZubaxSimpleTable}
 
 The vendor specific status code of the node status message contains the status code of the last attempt to upgrade the firmware. Please refer to the error code table provided above.
-\clearpage
 
 \subsection{Supported messages}
 \begin{ZubaxSimpleTable}{Supported messages}{| l | l | l | l |}
@@ -1352,7 +1348,6 @@ Data type & Note\\
 \texttt{uavcan.protocol.debug.LogMessage} & Used to report the application upgrade progress and status in a human readable form.\\
 \texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used only during initialization, if the application did not provide a specific node ID to use.
 \end{ZubaxSimpleTable}
-\clearpage
 
 \subsection{Supported services}
 
