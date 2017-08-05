@@ -782,7 +782,7 @@ which is also used with the barometric pressure.
 
 The broadcasting period is set to one-fifth of the value defined by the configuration
 parameter \CfgRef{uavcan.pubp-pres}, in microseconds.
-If the parameter is set to zero, broadacsting of all air data measurements will be disabled.
+If the parameter is set to zero, broadcasting of all air data measurements will be disabled.
 However, firmware version 3.x and older sets the broadcasting period directly to the value
 of \CfgRef{uavcan.pubp-pres}.
 All Zubax~GNSS~2 manufactured in 2017 and later ship with the firmware v4.0 or newer.
@@ -924,13 +924,108 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 % END OF THE UAVCAN CHAPTER
 %
 
-\chapter{NMEA output}\label{nmea_output}
+\chapter{NMEA interface}\label{nmea_output}
 
-Zubax~GNSS~2 reports sensor data using the following standard NMEA sentences.
+Zubax~GNSS~2 can be configured to emit sensor data using the industry-standard NMEA 0183 protocol
+over USB, UART, or both simultaneously.
+The device supports a number of standard NMEA sentences alongside a few vendor-specific sentences
+defined by Zubax Robotics.
 
-More information on NMEA can be found here: \url{http://www.catb.org/gpsd/NMEA.html}.
+\section{Brief overview of the NMEA 0183 protocol}
 
-\begin{ZubaxSimpleTable}{Input Messages}{|l|c|X|}
+The overview provided here is not expected to be a replacement of the NMEA 0183 specification.
+It is intended as a quick introduction for users who are not familiar with the protocol.
+
+NMEA 0183 is an ASCII text-based protocol that encodes data in \emph{sentences}.
+Each sentence occupies one line of text terminated with the ASCII
+carriage return (\verb|LF|) plus line feed (\verb|LF|) character sequence (\verb|\r\n|).
+
+\subsection{Sentence structure}
+
+NMEA sentences consist of printable ASCII characters in the range from 32 (space) to 126 (\verb|~|).
+Each sentence may include at most 82 characters, including the line termination sequence.
+NMEA sentences are typically formatted as follows:
+
+\verb|$<Talker ID><Sentence ID>,<Field>[,<Field>]*<Checksum>|
+
+As can be seen above, each sentence begins with the character \verb|$|, immediately followed by
+the \emph{talker ID} and the \emph{sentence ID} with no separators in between.
+
+\begin{ZubaxSimpleTable}{Some of the standard NMEA talker ID values}{|l X|}
+    Talker ID & Purpose \\
+    HC        & Heading information from a magnetic compass. \\
+    GP        & GPS data. \\
+    GL        & GLONASS data. Some software products do not recognize this talker ID. \\
+    GN        & Fused GPS and GLONASS data. Some software products do not recognize this talker ID. \\
+    YX        & Transducer. The type of transducer is further specified in the first parameter. \\
+    P         & Vendor-specific sentence prefix. \\
+\end{ZubaxSimpleTable}
+
+It should be noted that Zubax GNSS 2 uses the \verb|GP| talker ID for GNSS data instead of the more
+suitable \verb|GN| because some client software that is supposed to understand NMEA can only parse
+sentences that use the \verb|GP| talker ID.
+
+Some of the standard sentences are documented in the following section \ref{nmea_standard_sentences}.
+
+After the sentence ID follows a comma (\verb|,|) followed by a list of comma-separated parameters.
+The list of parameters is terminated by an asterisk (\verb|*|),
+after which there is a checksum.
+
+The checksum is computed <TODO>.
+
+\subsection{Standard sentences}\label{nmea_standard_sentences}
+
+\subsection{Vendor-specific sentences}
+
+The vendor-specific sentences defined by Zubax Robotics use the prefix \verb|ZUBAX|.
+An example sentence would look as follows: \verb|$PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12|.
+
+\section{Data sources}
+
+This section documents which data is reported via the NMEA interface and what conditions apply.
+
+\subsection{GNSS data}
+
+Talker ID.
+
+\subsubsection{GNSS navigation solution}
+
+The GNSS solution data is reported at the rate defined by the configuration parameter \CfgRef{uavcan.pubp-fix},
+or at 10 hertz, whichever is lower.
+
+The following standard NMEA sentences are emitted at each output cycle:
+\begin{description}
+    \item[RMC] Recommended minimum navigation information.
+    \item[RMC] Global positioning system fix data.
+\end{description}
+
+\subsubsection{GNSS auxiliary data}
+
+The GNSS auxiliary data is reported at the half of the rate defined by the configuration parameter
+\CfgRef{uavcan.pubp-aux}, or at 5 hertz, whichever is lower.
+
+Zubax~GNSS~2 alternates between the following sentences,
+which results in the specified above update rate for each:
+\begin{description}
+    \item[GSA] GPS DOP and active satellites.
+    \item[GSV] Information about satellites in view.
+\end{description}
+
+\subsection{Magnetic field data}
+
+The GNSS solution data is reported at the rate defined by the configuration parameter \CfgRef{uavcan.pubp-mag},
+or at 10 hertz, whichever is lower.
+
+The following NMEA sentences are emitted at each output cycle:
+\begin{description}
+    \item[HDG] Raw magnetic heading; not calibrated, only valid if the board is mounted horizontally.
+\end{description}
+
+\section{NMEA sentences overview}
+
+\subsection{Standard sentences}
+
+\begin{ZubaxSimpleTable}{Output NMEA sentences}{|l l X|}
 NMEA sentence & Component & Purpose\\
 \texttt{GPRMS} & GNSS receiver & Recommended minimum navigation information.\\
 \texttt{GPGGA} & GNSS receiver & Global positioning system fix data.\\
@@ -941,11 +1036,11 @@ NMEA sentence & Component & Purpose\\
 \texttt{YXXDR} (type C) & Altimeter & Static air temperature (only if the sensor is enabled).
 \end{ZubaxSimpleTable}
 
-\section{Vendor-specific sentences}
+\subsection{Vendor-specific sentences}
 
 The NMEA specification dedicates the prefix {\$}P followed by the vendor ID for vendor-specific sentences. All Zubax products use the vendor-specific prefix ZUBAX. The first field of the sentence contains the sentence type identifier, which is a string containing upper case Latin letters, Arabic digits, and the minus symbol -.
 
-\subsection{Raw magnetic field strength}
+\subsubsection{Raw magnetic field strength}
 
 Vendor-specific sentence type ID: \textbf{MAG-FLD-XYZ}.
 
