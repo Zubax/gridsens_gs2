@@ -305,6 +305,53 @@ this speed in order to ensure compatibility with other Zubax products.
 
 The device features a Dronecode debug port interface available via the standard
 Dronecode Debug Mini connector (DCD-Mini)\footnote{\url{https://wiki.dronecode.org/workgroup/connectors/start}}.
+This port can be conveniently used with the \href{https://kb.zubax.com/x/iIAh}{Zubax Dronecode Probe},
+or any other UART-capable hardware with a compatible connector.
+
+The Dronecode debug port provides access to the UART and JTAG/SWD interfaces;
+the latter is not designed for production use and therefore it is not documented here.
+
+\subsubsection{UART interface}
+
+The UART interface available within this port operates with the following settings,
+which cannot be changed by the user:\footnote{
+Same UART settings are used by most of other Zubax products.}
+\begin{itemize}
+    \item Baud rate -- 115200 baud/second.
+    \item Word size -- 8 bit.
+    \item Parity -- none.
+    \item Stop bits -- 1 bit.
+\end{itemize}
+
+The following protocols are exposed via the UART interface:
+\begin{description}
+
+    \item[Debug and diagnostics output] Zubax~GNSS~2 prints human-readable debug and diagnostic messages
+    via the UART interface of the Dronecode port.
+    These can be used for troubleshooting purposes.
+
+    \item[NMEA 0183] Used to output measurements in the industry-standard NMEA 0183 protocol.
+    NMEA emission over the UART port is disabled by default;
+    in order to enable it, set the configuration parameter \CfgRef{nmea.uart+on} to a non-zero value.
+    More information about the NMEA protocol is provided in the section \ref{nmea_output}.
+
+\end{description}
+
+\subsubsection{Connector pinout}
+
+\begin{ZubaxTableWrapper}{Dronecode Debug Mini standard connector pinout}
+    \begin{ZubaxWrappedTable}{|l X X X[2]|}
+        Pin no. & Type            & Name                & Comment\\
+        1       & Power           & TPWR                & +5 V power supply input\\
+        2       & Output          & UART\_TX            & Collect the NMEA and diagnostic output here\\
+        3       & Input           & UART\_RX            & Pulled down with a resistor\\
+        4       & Input/Output    & SWDIO               & Not for production use\\
+        5       & Input           & SWDCLK              & Not for production use\\
+        6       & Ground          & GND                 & Power \& signal ground\\
+    \end{ZubaxWrappedTable}
+\end{ZubaxTableWrapper}
+
+\subsubsection{Electrical characteristics}
 
 \begin{ZubaxSimpleTable}{Dronecode debug port characteristics}{|c X|c c c|c|}
 	Symbol  & Parameter                                 & Min  & Typ  & Max  & Unit \\
@@ -962,38 +1009,6 @@ Prints the list of available commands
 Available in firmware v4.0+.
 
 Reboots the board into the bootloader.
-
-\chapter{DroneCode port}
-
-DroneCode port provides access to JTAG/SWD and UART interfaces. This port allows to update firmware and provides access to the UART interface that is used to log events, report problems, and output measurements in NMEA format. Hardware revisions v2.1 and newer can also be powered via this port.
-
-DroneCode port can be accessed using \href{https://kb.zubax.com/display/MAINKB/Dronecode+Probe+documentation}{Zubax DroneCode Probe}.
-
-If outputting NMEA over UART is not of interest, this port will not be needed during normal use of the device.
-
-\section{NMEA output over UART}
-
-For general information about NMEA output interface, refer to the corresponding section above. Note that NMEA output over UART is disabled by default; refer to the description of configuration parameters to see how to enable it.
-
-The following connector pinout can be used to read NMEA over UART:
-
-\begin{ZubaxSimpleTable}{DroneCode Mini debug connector pinout}{| c | c | c | X |}
-	Pin & Type  & Name                & Comment \\
-	1   & Power & +5VDC               & Power supply (hardware v2.1 and newer). On hardware v2.0 this pin must be left unconnected.\\
-	2 	& OUT	& UART{\_}TX			& NMEA output\\
-	3 & N/C & & \\
-	4 & N/C & & \\
-	5 & N/C & & \\
-	6 & GND & GND & Ground \\
-\end{ZubaxSimpleTable}
-
-UART parameters are fixed and provided below:
-\begin{itemize}
-\item Baud rate: 115200
-\item Byte size: 8
-\item Parity: None
-\item Stop bits: 1
-\end{itemize}
 
 \chapter{Identification information}
 
