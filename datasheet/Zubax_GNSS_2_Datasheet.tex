@@ -240,7 +240,39 @@ Zubax~GNSS~2 features three communication interfaces. Each is described in detai
 This interface provides full access to all features of Zubax~GNSS~2, including the output of measurements,
 reconfiguration, time synchronization, firmware update, etc.
 
-The connector type is UAVCAN Micro connector (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}.
+Zubax~GNSS~2 is equipped with a doubly-redundant CAN bus interface, which can be used in the non-redundant mode
+as well.
+Each of the interfaces is equipped with two standard
+UAVCAN Micro connectors (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}
+electrically parallel to each other,
+which facilitates easy integration of the device into the end application without the need to use T-connectors.
+
+\subsubsection{Device interconnection}
+
+Zubax~GNSS~2 can be used with doubly-redundant and non-redundant CAN buses.
+In the latter case, only CAN1 can be used, and CAN2 must be left unconnected.
+The figure \ref{can_daisy_chain} shows the possible device interconnection schemes.
+
+\begin{figure}[hbt]
+    \center
+	\includegraphics[width=1\textwidth]{can_daisy_chain}
+	\caption{CAN bus interconnection diagram for non-redundant and a doubly-redundant interfaces.
+	\label{can_daisy_chain}}
+\end{figure}
+
+\subsubsection{Connector pinout}
+
+\begin{ZubaxTableWrapper}{UAVCAN Micro (JST GH) standard connector pinout}
+    \begin{ZubaxWrappedTable}{|l X X[2]|}
+        Pin no. & Type            & Function\\
+        1       & Power           & +5 V power supply input and pass-trough\\
+        2       & Input/output    & CAN High\\
+        3       & Input/output    & CAN Low\\
+        4       & Ground          & Power \& signal ground\\
+    \end{ZubaxWrappedTable}
+\end{ZubaxTableWrapper}
+
+\subsubsection{Physical characteristics}
 
 \begin{ZubaxTableWrapper}{Characteristics of CAN bus interfaces}
 	\begin{ZubaxWrappedTable}{|c X|c c c|c|}
@@ -250,7 +282,7 @@ The connector type is UAVCAN Micro connector (JST GH)\footnote{\url{https://kb.z
 		        & Negative-going input threshold voltage    & 500  & 600  &      & mV \\
 		        & Differential output voltage, dominant     & 1.5  & 2.0  & 3.0  & V \\
 		        & Differential output voltage, recessive    & -120 & 0    & 12   & mV \\
-		        & Inter-connector current\tnote{1}          & -1   &      & 1    & A \\
+		        & Inter-connector current pass-through\tnote{1}& -1&      & 1    & A \\
 		        & Connector resistance during device lifetime &    & 30   & 50   & $\text{m}\Omega$ \\
 	\end{ZubaxWrappedTable}
 	\begin{tablenotes}
@@ -488,19 +520,6 @@ and so on.
 This section documents the UAVCAN interface that is available during the normal operation of the device,
 omitting the logic specific to the firmware update mode, which is documented separately in the chapter
 \ref{sec:bootloader}.
-
-\section{Device interconnection}
-
-Zubax~GNSS~2 can be used with doubly-redundant and non-redundant CAN buses.
-In the latter case, only CAN1 can be used, and CAN2 must be left unconnected.
-The figure \ref{can_daisy_chain} shows the possible device interconnection schemes.
-
-\begin{figure}[hbt]
-    \center
-	\includegraphics[width=1\textwidth]{can_daisy_chain}
-	\caption{CAN bus interconnection diagram for non-redundant and a doubly-redundant interfaces.
-	\label{can_daisy_chain}}
-\end{figure}
 
 \section{Basic functions}
 
