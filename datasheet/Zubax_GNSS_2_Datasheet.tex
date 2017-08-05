@@ -19,7 +19,7 @@
 
 \section*{Overview}
 
-Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
+Zubax~GNSS~2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
 It includes a state-of-the-art multi-system GPS/\allowbreak{}GLONASS receiver,
 a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
 
@@ -76,13 +76,13 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
 
 \chapter{Overview}
 
-Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
+Zubax~GNSS~2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
 It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
-Zubax GNSS 2 supports a variety of standard protocols, which ensures compatibility with third party software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
+Zubax~GNSS~2 supports a variety of standard protocols, which ensures compatibility with third party software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
 
 \section{Accessories}
 
-Zubax GNSS 2 can be used with the following accessories:
+Zubax~GNSS~2 can be used with the following accessories:
 
 \begin{itemize}
     \item Plastic enclosure described in the section \ref{sec:enclosure}.
@@ -94,7 +94,7 @@ Please contact your supplier for ordering information.
 
 \subsection{Enclosure}\label{sec:enclosure}
 
-Zubax GNSS 2 is intended for integration into the end system in the form of the bare PCB,
+Zubax~GNSS~2 is intended for integration into the end system in the form of the bare PCB,
 as this facilitates lower weight and tighter arrangement of components
 in the end device, all of which are desirable properties in the target application domains.
 
@@ -119,7 +119,7 @@ the 3D printable models suitable for in-house manufacturing.
 
 \section{Quality assurance}
 
-Every manufactured Zubax GNSS 2 undergoes an automated testing procedure that validates that
+Every manufactured Zubax~GNSS~2 undergoes an automated testing procedure that validates that
 the device is functioning as designed.
 The test log for every manufactured device is available on the web at
 \url{https://device.zubax.com/device_info}.
@@ -228,7 +228,7 @@ otherwise false failures may be detected.
 
 \section{Communication interfaces}
 
-Zubax GNSS 2 features three communication interfaces. Each is described in detail in the subsequent parts of this document.
+Zubax~GNSS~2 features three communication interfaces. Each is described in detail in the subsequent parts of this document.
 \begin {itemize}
 \item Doubly redundant UAVCAN interface with two connectors for each interface.
 \item USB port.
@@ -237,7 +237,7 @@ Zubax GNSS 2 features three communication interfaces. Each is described in detai
 
 \subsection{CAN bus interface}
 
-This interface provides full access to all features of Zubax GNSS 2, including the output of measurements,
+This interface provides full access to all features of Zubax~GNSS~2, including the output of measurements,
 reconfiguration, time synchronization, firmware update, etc.
 
 The connector type is UAVCAN Micro connector (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}.
@@ -260,16 +260,46 @@ The connector type is UAVCAN Micro connector (JST GH)\footnote{\url{https://kb.z
 
 \subsection{USB interface}
 
-The device implements a full-speed USB 2.0 port with the standard CDC ACM interface.
-The device features driverless compatibility with all major operating systems (Windows, GNU/Linux, Mac).
+The device implements a full-speed USB 2.0 port with the standard CDC ACM interface
+(also known as ``virtual serial port'').
+The device features driverless compatibility with all major operating systems
+(Windows, GNU/Linux, Mac OS).\footnote{Get more knowledge and helpful tips at \url{https://kb.zubax.com}.}
 
-This interface can be used for NMEA output, configuration, firmware update,
-and general-purpose CLI\footnote{Command line interface.} access.
+The physical connector type is USB micro B (which is the most common device-side USB connector type).
 
-The connector type is USB micro B (which is the most common USB connector type).
+\subsubsection{Protocol selection}
 
-Note that the virtual serial port interface is sensitive to the baud rate configuration.
-More details are provided in the section \ref{usb_protocol_selection}.
+The following protocols are exposed via the USB interface:
+\begin{description}
+
+    \item[NMEA 0183] Used to output measurements in the industry-standard NMEA 0183 protocol.
+    This protocol is enabled only if the virtual serial port is opened with a baud rate value in the
+    range from 4800 to 57600 baud/second, inclusive.
+    More information about the NMEA protocol is provided in the section \ref{nmea_output}.
+
+    \item[CLI] The command-line interface provides access to the device's management and diagnostic
+    features. This protocol is always enabled; however, it is not expected to be practically useful
+    while used in parallel with other protocols, such as NMEA.
+    More information about the CLI is provided in the section \ref{command-line_interface}.
+
+\end{description}
+
+Observe that unlike many other implementations of virtual serial ports,
+this implementation is sensitive to the baud rate setting,
+because it is used by the device to detect whether the NMEA output should be enabled.
+The rationale behind this logic is to facilitate compatibility with third party software products.
+
+Many legacy GNSS receivers equipped with physical UART interfaces emit NMEA data at very low
+baud rates, typically between 4800 and 57600 baud/second.
+This formed a widely used convention that when a client application needs to establish a connection
+with an NMEA provider, it would first try a low speed, usually starting from 4800 or 9600
+baud/second.
+This triggers Zubax~GNSS~2 to enable the desired NMEA output immediately,
+ensuring quick and reliable auto-configuration.
+
+Conversely, most other products by Zubax expose physical UART interfaces at the default baud rate
+value of 115200 baud/second, hence the NMEA output is disabled automatically when the port is opened at
+this speed in order to ensure compatibility with other Zubax products.
 
 \subsection{Dronecode debug port interface}
 
@@ -311,7 +341,7 @@ The power supply characteristics documented in the following table are invariant
 
 \chapter{Continuous self-diagnostics}\label{sec:self-diagnostics}
 
-Zubax GNSS 2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
+Zubax~GNSS~2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
 Results of the continuous self-testing are mapped to three health codes: OK, Warning, and Error.
 The table below documents how the device uses health codes to report its status.
 
@@ -383,13 +413,13 @@ state of the LED indicators.
 
 This section is valid for all hardware manufactured since 2017.
 
-During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the chapter \ref{sec:bootloader}.
+During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax~GNSS~2 uses its LED indicators in a different way, as described in the chapter \ref{sec:bootloader}.
 
 \subsection{Hardware version 2.0 and 2.1}
 
 This section is valid for the hardware manufactured until 2016, inclusive.
 
-During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax GNSS 2 uses its LED indicators in a different way, as described in the table below.
+During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax~GNSS~2 uses its LED indicators in a different way, as described in the table below.
 
 \begin{ZubaxSimpleTable}{LED indication at bootup for hardware v2.0 and 2.1}{| X | c | c | c|}
 Status & INFO & CAN1 & CAN2 \\
@@ -403,7 +433,7 @@ Update in progress & Solid & Solid & \\
 For the background information about the UAVCAN interface please refer to the Zubax Knowledge Base
 at \url{https://kb.zubax.com/x/F4Ah} and the official UAVCAN website at \url{http://uavcan.org}.
 
-The UAVCAN interface enables access to all features of Zubax GNSS 2.
+The UAVCAN interface enables access to all features of Zubax~GNSS~2.
 This interface provides access to the GNSS solutions, magnetic field and barometric pressure measurements,
 precise time (via the time synchronization master), device configuration parameters, firmware upgrade feature,
 and so on.
@@ -414,7 +444,7 @@ omitting the logic specific to the firmware update mode, which is documented sep
 
 \section{Device interconnection}
 
-Zubax GNSS 2 can be used with doubly-redundant and non-redundant CAN buses.
+Zubax~GNSS~2 can be used with doubly-redundant and non-redundant CAN buses.
 In the latter case, only CAN1 can be used, and CAN2 must be left unconnected.
 The figure \ref{can_daisy_chain} shows the possible device interconnection schemes.
 
@@ -481,11 +511,11 @@ No special cases apply.
 
 \section{Initialization}
 
-Zubax GNSS 2 is a full plug-and-play UAVCAN node that requires no mandatory initial configuration prior to use.
+Zubax~GNSS~2 is a full plug-and-play UAVCAN node that requires no mandatory initial configuration prior to use.
 
 \subsection{CAN bus bit rate detection}
 
-Once started, Zubax GNSS 2 will automatically detect the bit rate of the CAN bus it is connected to
+Once started, Zubax~GNSS~2 will automatically detect the bit rate of the CAN bus it is connected to
 (if connected to any at all), and remember the detected bit rate until the next boot up.
 There is no detection timeout, which means that the device can be connected to a CAN bus at
 any moment after powering up, and it will configure itself immediately.
@@ -494,19 +524,19 @@ It is not possible to specify the bit rate manually.\footnote{This feature was r
 Earlier versions of the firmware used to provide the configuration parameter
 \CfgRef{uavcan.bit+rate}, which could be used to assign the bit rate manually.}
 
-Zubax GNSS 2 requires up to approximately 4 seconds to perform the bit rate detection on a properly
+Zubax~GNSS~2 requires up to approximately 4 seconds to perform the bit rate detection on a properly
 functioning CAN bus.
 If the bus is exhibiting erroneous behavior, the device may need a longer time to complete the bit rate
 detection procedure.
 
-The following bit rates can be detected by Zubax GNSS 2 automatically:
+The following bit rates can be detected by Zubax~GNSS~2 automatically:
 \begin{itemize}
 \item 1 Mbit/s
 \item 500 kbit/s
 \item 250 kbit/s
 \item 125 kbit/s
 \end{itemize}
-Zubax GNSS 2 cannot be interfaced with a CAN bus that operates at a different bit rate.
+Zubax~GNSS~2 cannot be interfaced with a CAN bus that operates at a different bit rate.
 
 \subsection{Node ID allocation}
 
@@ -522,7 +552,7 @@ no other functions of the UAVCAN interface will work.
 
 \section{Broadcasting  of GNSS data}
 
-Zubax GNSS 2 broadcasts the GNSS data using the messages
+Zubax~GNSS~2 broadcasts the GNSS data using the messages
 \verb|uavcan.equipment.gnss.Fix2| and \verb|uavcan.equipment.gnss.Auxiliary|.
 
 The broadcasting period of \verb|uavcan.equipment.gnss.Fix2| is defined by the configuration
@@ -533,7 +563,7 @@ The broadcasting period of \verb|uavcan.equipment.gnss.Auxiliary| is defined by 
 parameter \CfgRef{uavcan.pubp-aux}, in microseconds, and its transfer priority is defined by the
 parameter \CfgRef{uavcan.prio-aux}.
 
-For the reasons of compatibility, Zubax GNSS 2 also supports the deprecated UAVCAN message
+For the reasons of compatibility, Zubax~GNSS~2 also supports the deprecated UAVCAN message
 \verb|uavcan.equipment.gnss.Fix|, which is broadcasted with the same period and
 synchronously with \verb|Fix2|, at the priority level one lower than
 defined by the parameter \CfgRef{uavcan.prio-fix}.
@@ -549,7 +579,7 @@ More information about the standard UAVCAN data structures can be obtained from 
 
 \begin{description}
     \item[\texttt{timestamp}] The network-synchronized timestamp of the GNSS solution.
-    Zubax GNSS 2 performs automatic compensation of the inner delays.
+    Zubax~GNSS~2 performs automatic compensation of the inner delays.
     The expected precision of the timestamp is under 10 microseconds.
 
     \item[\texttt{gnss\_timestamp}] The timestamp of the GNSS solution in the UTC time domain.
@@ -663,7 +693,7 @@ parameter \CfgRef{uavcan.prio-pres}.
 
 The parameter \CfgRef{uavcan.pubp-pres} can be set to zero, which disables broadcasting of all
 air data related messages.
-While the air data broadcasting is disabled, Zubax GNSS 2 does not monitor the health of the
+While the air data broadcasting is disabled, Zubax~GNSS~2 does not monitor the health of the
 air data sensor.
 When enabled, the broadcasting interval cannot be less than 25~000 microseconds.
 
@@ -685,7 +715,7 @@ parameter \CfgRef{uavcan.pubp-pres}, in microseconds.
 If the parameter is set to zero, broadacsting of all air data measurements will be disabled.
 However, firmware version 3.x and older sets the broadcasting period directly to the value
 of \CfgRef{uavcan.pubp-pres}.
-All Zubax GNSS 2 manufactured in 2017 and later ship with the firmware v4.0 or newer.
+All Zubax~GNSS~2 manufactured in 2017 and later ship with the firmware v4.0 or newer.
 
 The field \verb|static_temperature| contains the latest temperature measurement, in kelvin.
 
@@ -699,7 +729,7 @@ that can be used to maintain the same time base distributed across all devices i
 with the resolution of up to one
 microsecond.\footnote{Refer to \url{http://uavcan.org} for the detailed information.}
 
-Zubax GNSS 2 can operate as a time synchronization master, but this feature is disabled by default.
+Zubax~GNSS~2 can operate as a time synchronization master, but this feature is disabled by default.
 In order to enable it, the configuration parameter \CfgRef{uavcan.pubp-time} needs be set to a
 positive value, which specifies the broadcasting period of the time synchronization message
 \verb|uavcan.protocol.GlobalTimeSync|.
@@ -711,7 +741,7 @@ Note that it is not recommended to assign a lower priority than the default beca
 the performance of the time synchronization feature.
 
 When the time synchronization feature is disabled,
-Zubax GNSS 2 will not emit any time synchronization messages,
+Zubax~GNSS~2 will not emit any time synchronization messages,
 but it will always keep its own internal clock synchronized with the network
 as long as there is an active time synchronization master.
 
@@ -726,7 +756,7 @@ The standard UAVCAN configuration parameter management interface is supported
 by means of the service data types defined in the namespace \verb|uavcan.protocol.param|.
 
 Note that the save action available via the service \verb|uavcan.protocol.param.ExecuteOpcode|
-is supported, but is redundant, because Zubax GNSS 2 commits all the configuration parameters
+is supported, but is redundant, because Zubax~GNSS~2 commits all the configuration parameters
 to the non-volatile configuration storage memory automatically after modification.
 
 When obtaining the list of all available configuration parameters using the field \verb|index|
@@ -747,7 +777,7 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 \section{Data type summary}
 
 {\small
-\begin{ZubaxSimpleTable}{UAVCAN broadcast messages}{|l|l|l|X|}
+\begin{ZubaxSimpleTable}{Broadcasted UAVCAN messages}{|l|l|l|X|}
     Data type name                                        & Period     & Transfer priority & Note \\
 
     \texttt{uavcan.protocol.NodeStatus}                   & \CfgRefX{uavcan.pubp-stat}
@@ -796,7 +826,7 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 }
 
 {\small
-\begin{ZubaxSimpleTable}{UAVCAN subscribed messages}{|l|X|}
+\begin{ZubaxSimpleTable}{Subscribed UAVCAN messages}{|l|X|}
     Data type name                                         & Note \\
     \texttt{uavcan.protocol.dynamic\_node\_id.Allocation}  & Only during the initialization or while
                                                              in the bootloader. \\
@@ -807,7 +837,7 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 }
 
 {\small
-\begin{ZubaxSimpleTable}{UAVCAN provided services}{|l|X|}
+\begin{ZubaxSimpleTable}{Provided UAVCAN services}{|l|X|}
     Data type name                                         & Note \\
     \texttt{uavcan.protocol.GetNodeInfo}                   & Section \ref{sec:uavcan_node_identification}.\\
     \texttt{uavcan.protocol.GetDataTypeInfo}               & Provided by Libuavcan. \\
@@ -824,23 +854,11 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 % END OF THE UAVCAN CHAPTER
 %
 
-\chapter{USB interface}
+\chapter{NMEA output}\label{nmea_output}
 
-The USB interface allows to use Zubax GNSS 2 as a standalone USB GNSS receiver (also known as ''GPS mouse'') interfaced via the standard NMEA 0183 protocol; also it provides access to configuration parameters.
+Zubax~GNSS~2 reports sensor data using the following standard NMEA sentences.
 
-\section{Protocol selection}\label{usb_protocol_selection}
-
-Zubax GNSS 2 will automatically enable NMEA output via USB if the virtual serial port is opened with any baud rate within the range 4800 to 57600 baud, inclusive. If the port is open with any other baud rate, e.g. 115200, NMEA output will not be enabled, and only the command line interface will be available.
- 
-The baud rate range is chosen this way because all standard NMEA baud rates fall within this range, which allows to use Zubax GNSS 2 with GNSS software (e.g. GIS systems, navigation software, etc.) right out of the box without any preparatory configuration.
-
-\section{NMEA output}
-
-Zubax GNSS 2 reports sensor data using the following standard NMEA sentences. Please also refer to the list of configuration parameters below to see what can be adjusted if necessary.
-
-More information on NMEA can be found here: \href{http://www.catb.org/gpsd/NMEA.html}{http://www.catb.org/gpsd/NMEA.html}.
-
-Refer to the tutorials to see examples of using Zubax GNSS 2 with GIS software.
+More information on NMEA can be found here: \url{http://www.catb.org/gpsd/NMEA.html}.
 
 \begin{ZubaxSimpleTable}{Input Messages}{|l|c|X|}
 NMEA sentence & Component & Purpose\\
@@ -854,11 +872,11 @@ NMEA sentence & Component & Purpose\\
 \end{ZubaxSimpleTable}
 \clearpage
 
-\subsection{Vendor-specific sentences}
+\section{Vendor-specific sentences}
 
 The NMEA specification dedicates the prefix {\$}P followed by the vendor ID for vendor-specific sentences. All Zubax products use the vendor-specific prefix ZUBAX. The first field of the sentence contains the sentence type identifier, which is a string containing upper case Latin letters, Arabic digits, and the minus symbol -.
 
-\subsubsection{Raw magnetic field strength}
+\subsection{Raw magnetic field strength}
 
 Vendor-specific sentence type ID: \textbf{MAG-FLD-XYZ}.
 
@@ -877,7 +895,7 @@ Fields:
 
 Example: \verb|PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12|.
 
-\subsection{Sample output}
+\section{Sample output}
 
 \begin{minted}[linenos = false]{text}
 $GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*35
@@ -897,9 +915,9 @@ $YXXDR,P,0.98968,B*59
 \end{minted}
 \clearpage
 
-\section{Command-line interface}
+\chapter{Command-line interface}\label{command-line_interface}
 
-This section documents supported CLI commands.
+This chapter documents the supported CLI commands.
 
 \textbf{zubax{\_}id}
 
@@ -987,7 +1005,7 @@ This section documents the device properties that are reported in response to id
 
 \chapter{Configuration parameters}\label{sec:configuration_parameters}
 
-This chapter summarizes all configuration parameters available in Zubax GNSS 2.
+This chapter summarizes all configuration parameters available in Zubax~GNSS~2.
 
 The length of configuration parameter names does not exceed 16 characters,
 which ensures compatibility with MAVLink.
@@ -1018,7 +1036,7 @@ the stored configuration data may get damaged.
 The stored configuration is read from the non-volatile memory once upon boot-up.
 If the device detects that the stored configuration data has been damaged,
 it will automatically revert to the factory default configuration.
-Zubax GNSS 2 can always reliably detect damage of the stored configuration data,
+Zubax~GNSS~2 can always reliably detect damage of the stored configuration data,
 so it is guaranteed that an invalid configuration can never be loaded.
 
 \section{Effects of configuration parameter changes}
@@ -1034,7 +1052,7 @@ changes.
 Configuration parameters of different revisions of the firmware may be incompatible with each other.
 For instance, some configuration parameters may be added, removed, or their value intervals may be changed.
 
-Zubax GNSS 2 always checks whether the stored configuration data is compatible with the current
+Zubax~GNSS~2 always checks whether the stored configuration data is compatible with the current
 firmware revision.
 If it is detected that the stored configuration cannot be applied to the current version of the firmware,
 the device will automatically revert to the factory default configuration.
@@ -1152,7 +1170,7 @@ standard NMEA 0183 protocol.}
 
 Instructions below are only applicable to Zubax GNSS v2.2 and newer. It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware.
 
-Zubax GNSS 2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
+Zubax~GNSS~2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
 
 \begin{figure}[!hbt]
 	\centerline{\includegraphics[width=1.1\textwidth]{bootloader_state_machine}}
@@ -1168,7 +1186,7 @@ State ID & State name & Comment \\
 4 & ReadyToBoot & The application is about to boot. This state is very transient and is left automatically as soon as possible.
 \end{ZubaxSimpleTable}
 \clearpage
-On Zubax GNSS 2, the boot delay is set to 5 seconds.
+On Zubax~GNSS~2, the boot delay is set to 5 seconds.
 The bootloader supports the following communication interfaces:
 
 \begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | l | X | X |}
@@ -1322,7 +1340,7 @@ This formula, combined with the low transfer priority, allows the bootloader to 
 
 \chapter{Mechanical characteristics}\label{sec:mechanical}
 
-The drawing below documents the basic mechanical characteristics of Zubax GNSS 2,
+The drawing below documents the basic mechanical characteristics of Zubax~GNSS~2,
 such as the placement of connectors and mounting holes.
 
 \begin{figure}[!hbt]
