@@ -374,13 +374,17 @@ The following protocols are exposed via the UART interface:
 \begin{ZubaxTableWrapper}{Dronecode Debug Mini standard connector pinout}
     \begin{ZubaxWrappedTable}{|l X X X[2]|}
         Pin no. & Type            & Name                & Comment\\
-        1       & Power           & TPWR                & +5 V power supply input\\
+        1       & Power           & TPWR                & +5 V power supply input\tnote{1}\\
         2       & Output          & UART\_TX            & Collect the NMEA and diagnostic output here\\
         3       & Input           & UART\_RX            & Pulled down with a resistor\\
         4       & Input/Output    & SWDIO               & Not for production use\\
         5       & Input           & SWDCLK              & Not for production use\\
         6       & Ground          & GND                 & Power \& signal ground\\
     \end{ZubaxWrappedTable}
+	\begin{tablenotes}
+	    \item[1] Available in hardware v2.1 (manufacturing year 2015) and newer.
+                 Older revisions of the hardware cannot be powered via the Dronecode debug port.
+	\end{tablenotes}
 \end{ZubaxTableWrapper}
 
 \subsubsection{Electrical characteristics}
@@ -404,7 +408,7 @@ The device can be powered via the following inputs:
 \item Both UAVCAN ports simultaneously
 (the power supply circuit prevents direct current flow between these power inputs).
 \item USB port.
-\item Dronecode port (hardware revisions v2.1 and newer).
+\item Dronecode port (hardware revisions v2.1 (year 2015) and newer).
 \end{itemize}
 
 It is allowed to power the device simultaneously via USB and UAVCAN, since the power supply circuits prevent back-powering via these interfaces.
