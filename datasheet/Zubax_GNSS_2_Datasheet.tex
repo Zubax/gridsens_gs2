@@ -9,6 +9,7 @@
 
 \usepackage{ConfigParamIndex}
 \usepackage{makecell}
+\usepackage{amsmath}
 
 \title{Zubax GNSS 2 Datasheet}
 
@@ -68,9 +69,8 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
 
 \tableofcontents
 \clearpage
-\listoffigures
-\BeginRightColumn
 \listoftables
+\listoffigures
 
 \mainmatter
 
@@ -1018,7 +1018,7 @@ def compute_nmea_checksum(s: str):
 The following block of text shows an excerpt of an NMEA data stream.
 Each line is terminated with the carriage return plus line feed sequence (\verb|\r\n|), which is not shown.
 
-\begin{minted}[linenos = false]{yaml}
+\begin{minted}[linenos = false]{text}
 $GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*35
 $GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,13.2,M,,*5E
 $GPGSV,4,1,15,08,52,283,17,10,80,126,26,14,27,155,34,15,15,039,08*74
@@ -1043,14 +1043,27 @@ The following conventions are used in the NMEA field descriptions:
 \begin{description}
     \item[a] ASCII character.
     \item[x] Single decimal digit.
-    \item[X] One or more decimal digits.
+    \item[N] One or more decimal digits. Plain \verb|N| represents an integer,
+             and \verb|N.N| represents a floating point number.
 \end{description}
 
+\clearpage
 \subsubsection{RMC}
 
-The RMC sentence contains the recommended minimum set of GNSS solution data.
+The RMC sentence contains some of the GNSS solution data.
 
-Format: \verb|$__RMC,xxxxxx.xx,a,xxxx.X,a,xxxxx.X,a,X.X,X.X,xxxxxx,X.X,a*|
+Format:
+
+$\texttt{\$\_\_RMC,}%
+\underbrace{\texttt{xxxxxx.xx,}}_{\text{UTC time}}%
+\underbrace{\texttt{a,}}_{\text{Status}}%
+\underbrace{\texttt{xxxx.N,a,}}_{\text{Latitude}}%
+\underbrace{\texttt{xxxxx.N,a,}}_{\text{Longitude}}%
+\underbrace{\texttt{N.N,}}_{\text{Speed}}%
+\underbrace{\texttt{N.N,}}_{\text{Track}}%
+\underbrace{\texttt{xxxxxx,}}_{\text{Date}}%
+\underbrace{\texttt{N.N,a}}_{\substack{\text{Magnetic} \\ \text{variation}}}%
+\texttt{\text{*}}$
 
 Example: \verb|$GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*35|
 
@@ -1058,81 +1071,143 @@ Example: \verb|$GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,
     \# & Format       & Purpose \\
     1  & xxxxxx.xx    & UTC time as \texttt{hhmmss} followed by dot, followed by hundredths of the second. \\
     2  & a            & Solution status: A - valid, V -- warning. \\
-    3  & xxxx.X       & Geographical latitude. The first two digits represent angular degrees,
+    3  & xxxx.N       & Geographical latitude. The first two digits represent angular degrees,
                         the following digits represent angular minutes with the fractional part. \\
     4  & a            & Related to the previous field. N -- north, S -- south. \\
-    5  & xxxxx.X      & Geographical longitude. The first three digits represent angular degrees,
+    5  & xxxxx.N      & Geographical longitude. The first three digits represent angular degrees,
                         the following digits represent angular minutes with the fractional part. \\
     6  & a            & Related to the previous field. E -- east, W -- west. \\
-    7  & X.X          & Speed over ground, knots. \\
-    8  & X.X          & Track angle relative to the true north, angular degrees. \\
+    7  & N.N          & Speed over ground, knots. \\
+    8  & N.N          & Track angle relative to the true north, angular degrees. \\
     9  & xxxxxx       & Date in the format \texttt{ddmmyy}. \\
-    10 & X.X          & Magnetic variation, angular degrees. This field is optional. \\
+    10 & N.N          & Magnetic variation, angular degrees. This field is optional. \\
     11 & a            & E -- east, W -- west, for the magnetic variation estimate.
                         This field is optional, unless the previous field is provided. \\
 \end{ZubaxSimpleTable}
 
+\clearpage
 \subsubsection{GGA}
 
 The GGA sentence contains some of the GNSS solution data.
 
-Format: \verb|$__GGA,xxxxxx.xx,xxxx.X,a,xxxxx.X,a,x,xx,X.X,X.X,a,X.X,a,X.X,xxxx*|
+Format:
+
+$\texttt{\$\_\_GGA,}%
+\underbrace{\texttt{xxxxxx.xx,}}_{\text{UTC time}}%
+\underbrace{\texttt{xxxx.N,a,}}_{\text{Latitude}}%
+\underbrace{\texttt{xxxxx.N,a,}}_{\text{Longitude}}%
+\underbrace{\texttt{x,}}_{\substack{\text{Fix} \\ \text{quality}}}%
+\underbrace{\texttt{xx,}}_{\substack{\text{Number} \\ \text{of used} \\ \text{sats}}}%
+\underbrace{\texttt{N.N,}}_{\text{HDOP}}%
+\underbrace{\texttt{N.N,a,}}_{\substack{\text{MSL} \\ \text{altitude}}}%
+\underbrace{\texttt{N.N,a,}}_{\substack{\text{Geoidal} \\ \text{separation}}}%
+\underbrace{\texttt{N.N,}}_{\substack{\text{Age of} \\ \text{differential}}}%
+\underbrace{\texttt{xxxx}}_{\substack{\text{Differential} \\ \text{reference} \\ \text{station ID}}}%
+\texttt{\text{*}}$
 
 Example: \verb|$GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,13.2,M,,*5E|
 
 \begin{ZubaxSimpleTable}{GGA sentence fields}{|l l X|}
     \# & Format       & Purpose \\
     1  & xxxxxx.xx    & UTC time as \texttt{hhmmss} followed by dot, followed by hundredths of the second. \\
-    2  & xxxx.X       & Geographical latitude. The first two digits represent angular degrees,
+    2  & xxxx.N       & Geographical latitude. The first two digits represent angular degrees,
                         the following digits represent angular minutes with the fractional part. \\
     3  & a            & Related to the previous field. N -- north, S -- south. \\
-    4  & xxxxx.X      & Geographical longitude. The first three digits represent angular degrees,
+    4  & xxxxx.N      & Geographical longitude. The first three digits represent angular degrees,
                         the following digits represent angular minutes with the fractional part. \\
     5  & a            & Related to the previous field. E -- east, W -- west. \\
     6  & x            & Fix quality indicator: 0 -- no fix, 1 -- valid fix, 2 -- differential fix. \\
     7  & xx           & Number of satellites which contributed to the latest navigation solution. \\
-    8  & X.X          & Horizontal dilution of precision (HDOP). \\
-    9  & X.X          & Altitude relative to the mean sea level (MSL altitude), meters. \\
+    8  & N.N          & Horizontal dilution of precision (HDOP). \\
+    9  & N.N          & Altitude relative to the mean sea level (MSL altitude), meters. \\
     10 & a            & Units of the previous field: M -- meters. \\
-    11 & X.X          & Geoidal separation, which is the difference between the WGS-84 earth ellipsoid and
+    11 & N.N          & Geoidal separation, which is the difference between the WGS-84 earth ellipsoid and
                         the mean sea level. Negative value means that the mean sea level is below the ellipsoid. \\
     12 & a            & Units of the previous field: M -- meters. \\
-    13 & X.X          & Age of the differential GNSS data.
+    13 & N.N          & Age of the differential GNSS data.
                         Empty field means that the differential data has never been available. \\
-    13 & xxxx         & Differential reference station identifier, 0000--1023.
+    14 & xxxx         & Differential reference station identifier, 0000--1023.
                         Empty field means that the differential data has never been available. \\
 \end{ZubaxSimpleTable}
 
+\clearpage
 \subsubsection{GSA}
 
+The GSA sentence contains information about the geometric dilution of precision and the identifiers
+of the satellites used by the receiver.
 
+Format:
 
-Format: \verb||
+$\texttt{\$\_\_GSA,}%
+\underbrace{\texttt{a,}}_{\substack{\text{Operating} \\ \text{mode}}}%
+\underbrace{\texttt{x,}}_{\substack{\text{Fix} \\ \text{mode}}}%
+\underbrace{\texttt{N,N,N,N,N,N,N,N,N,N,N,N,}}_{\substack{\text{IDs of any 12 satellites} \\%
+                                                          \text{used for computing the fix}}}%
+\underbrace{\texttt{N.N,}}_{\text{PDOP}}%
+\underbrace{\texttt{N.N,}}_{\text{HDOP}}%
+\underbrace{\texttt{N.N}}_{\text{VDOP}}%
+\texttt{\text{*}}$
 
-Example: \verb||
+Example: \verb|$GPGSA,A,3,08,10,14,18,21,22,27,01,02,23,24,12,2.24,1.44,1.71*04|
 
-\begin{ZubaxSimpleTable}{ sentence fields}{|l l X|}
+\begin{ZubaxSimpleTable}{GSA sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  &              &  \\
-    2  &              &  \\
-    3  &              &  \\
-    4  &              &  \\
-    5  &              &  \\
-    6  &              &  \\
-    7  &              &  \\
-    8  &              &  \\
-    9  &              &  \\
-    10 &              &  \\
-    11 &              &  \\
+    1  & a            & Operating mode: A -- the receiver is free to switch between 2D and 3D positioning
+                        automatically; M -- the receiver is forced to operate either in 2D or 3D mode. \\
+    2  & x            & Fix mode: 1 -- no fix, 2 -- 2D fix, 3 -- 3D fix. \\
+    3  & N            & ID of the 1st satellite used for computing the fix. This field may be empty. \\
+    4  & N            & As above, 2nd satellite. \\
+    5  & N            & As above, 3rd satellite. \\
+    6  & N            & As above, 4th satellite. \\
+    7  & N            & As above, 5th satellite. \\
+    8  & N            & As above, 6th satellite. \\
+    9  & N            & As above, 7th satellite. \\
+    10 & N            & As above, 8th satellite. \\
+    11 & N            & As above, 9th satellite. \\
+    12 & N            & As above, 10th satellite. \\
+    13 & N            & As above, 11th satellite. \\
+    14 & N            & As above, 12th satellite. \\
+    15 & N.N          & Positional dilution of precision (PDOP). \\
+    16 & N.N          & Horizontal dilution of precision (HDOP). \\
+    17 & N.N          & Vertical dilution of precision (VDOP). \\
 \end{ZubaxSimpleTable}
 
+\clearpage
 \subsubsection{GSV}
 
+The GSV sentence contains information about satellites that are being tracked by the receiver.
+Since all of the data may not fit into a single sentence,
+GSV sentences are reported in groups.
+Among other data,
+each sentence in the group carries the total number of sentences in the group,
+and its own number within the group starting from 1.
 
+Each sentence in the group may contain information about one, two, three, or four satellites.
 
-Format: \verb||
+Format:
 
-Example: \verb||
+$\texttt{\$\_\_GSV,}%
+\underbrace{\texttt{N,}}_{\substack{\text{Number} \\ \text{of} \\ \text{sentences} \\ \text{in the} \\ \text{group}}}%
+\underbrace{\texttt{N,}}_{\substack{\text{Number} \\ \text{of the} \\ \text{current} \\ \text{sentence}}}%
+\underbrace{\texttt{N,}}_{\substack{\text{Total} \\ \text{number} \\ \text{of} \\ \text{satellites}}}%
+\underbrace{%
+    \overbrace{\texttt{N,}}^{\text{ID}}%
+    \overbrace{\texttt{xx,}}^{\text{Elevation}}%
+    \overbrace{\texttt{xxx,}}^{\text{Azimuth}}%
+    \overbrace{\texttt{N,}}^{\text{SNR}}%
+}_{\substack{\text{First satellite} \\ \text{(required)}}}%
+\underbrace{\texttt{N,xx,xxx,N,}}_{\substack{\text{Second satellite} \\ \text{(optional)}}}%
+\underbrace{\texttt{N,xx,xxx,N,}}_{\substack{\text{Third satellite}  \\ \text{(optional)}}}%
+\underbrace{\texttt{N,xx,xxx,N}}_{\substack{\text{Fourth satellite}  \\ \text{(optional)}}}%
+\texttt{\text{*}}$
+
+Example:
+\begin{minted}[linenos = false]{text}
+$GPGSV,4,1,15,08,52,283,17,10,80,126,26,14,27,155,34,15,15,039,08*74
+$GPGSV,4,2,15,16,00,216,16,18,49,073,13,21,25,109,22,22,77,181,25*7F
+$GPGSV,4,3,15,27,59,219,15,32,03,232,16,01,74,188,27,02,19,214,17*76
+$GPGSV,4,4,15,08,47,047,22,23,29,145,21,24,80,177,18*4A
+\end{minted}
 
 \begin{ZubaxSimpleTable}{ sentence fields}{|l l X|}
     \# & Format       & Purpose \\
@@ -1149,6 +1224,7 @@ Example: \verb||
     11 &              &  \\
 \end{ZubaxSimpleTable}
 
+\clearpage
 \subsubsection{HDG}
 
 
@@ -1172,6 +1248,7 @@ Example: \verb||
     11 &              &  \\
 \end{ZubaxSimpleTable}
 
+\clearpage
 \subsubsection{XDR}
 
 
