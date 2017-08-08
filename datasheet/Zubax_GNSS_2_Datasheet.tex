@@ -1134,7 +1134,7 @@ Example: \verb|$GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,1
 \subsubsection{GSA}
 
 The GSA sentence contains information about the geometric dilution of precision and the identifiers
-of the satellites used by the receiver.
+of the satellites tracked by the GNSS receiver.
 
 Format:
 
@@ -1175,7 +1175,7 @@ Example: \verb|$GPGSA,A,3,08,10,14,18,21,22,27,01,02,23,24,12,2.24,1.44,1.71*04|
 \clearpage
 \subsubsection{GSV}
 
-The GSV sentence contains information about satellites that are being tracked by the receiver.
+The GSV sentence contains information about satellites that are being tracked by the GNSS receiver.
 Since all of the data may not fit into a single sentence,
 GSV sentences are reported in groups.
 Among other data,
@@ -1240,25 +1240,31 @@ $GPGSV,4,4,15,08,47,047,22,23,29,145,21,24,80,177,18*4A
 \clearpage
 \subsubsection{HDG}
 
+The HDG sentence carries information about magnetic heading, magnetic deviation, and magnetic variation.
+This sentence is typically emitted by magnetic compasses.
 
+Format:
 
-Format: \verb||
+$\texttt{\$\_\_HDG,}%
+\underbrace{\texttt{N.N,}}_{\substack{\text{Magnetic} \\ \text{heading}}}%
+\underbrace{\texttt{N.N,a,}}_{\substack{\text{Magnetic} \\ \text{deviation}}}%
+\underbrace{\texttt{N.N,a,}}_{\substack{\text{Magnetic} \\ \text{variation}}}%
+\texttt{\text{*}}$
 
-Example: \verb||
+Example: \verb|$HCHDG,266.2,,,,*42|
 
 \begin{ZubaxSimpleTable}{HDG sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  &              &  \\
-    2  &              &  \\
-    3  &              &  \\
-    4  &              &  \\
-    5  &              &  \\
-    6  &              &  \\
-    7  &              &  \\
-    8  &              &  \\
-    9  &              &  \\
-    10 &              &  \\
-    11 &              &  \\
+    1  & N.N          & Magnetic heading, angular degrees; 0\degree -- north, 90\degree -- east. \\
+    2  & N.N          & Absolute magnetic deviation (compass error induced by local magnetic fields), angular degrees.
+                        This field is optional. \\
+    3  & a            & Direction of the magnetic deviation reported in the previous field: 
+                        E -- east, W -- west. This field is required only if the previous field is provided. \\
+    4  & N.N          & Absolute magnetic variation (declination)
+                        (angle between magnetic north and true north at the current location), angular degrees.
+                        This field is optional. \\
+    5  & a            & Direction of the magnetic variation reported in the previous field: 
+                        E -- east, W -- west. This field is required only if the previous field is provided. \\
 \end{ZubaxSimpleTable}
 
 \clearpage
