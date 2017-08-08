@@ -1209,19 +1209,32 @@ $GPGSV,4,3,15,27,59,219,15,32,03,232,16,01,74,188,27,02,19,214,17*76
 $GPGSV,4,4,15,08,47,047,22,23,29,145,21,24,80,177,18*4A
 \end{minted}
 
-\begin{ZubaxSimpleTable}{ sentence fields}{|l l X|}
+\begin{ZubaxSimpleTable}{GSV sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  &              &  \\
-    2  &              &  \\
-    3  &              &  \\
-    4  &              &  \\
-    5  &              &  \\
-    6  &              &  \\
-    7  &              &  \\
-    8  &              &  \\
-    9  &              &  \\
-    10 &              &  \\
-    11 &              &  \\
+    1  & N            & The total number of sentences that will be reported in the current group. \\
+    2  & N            & The number of the current sentence in the group, starting from 1.
+                        This value cannot be greater than the one in the previous field. \\
+    3  & N            & Total number of satellites that are being tracked by the receiver. \\
+    \multicolumn{3}{|c|}{First satellite description block} \\
+    4  & N            & ID of the satellite described in this block. \\
+    5  & xx           & Elevation of the current satellite, angular degrees. \\
+    6  & xxx          & Azimuth of the current satellite, angular degrees. \\
+    7  & N            & Signal-to-noise (SNR) ratio of the signal from the current satellite. \\
+    \multicolumn{3}{|c|}{Second (optional) satellite description block} \\
+    8  & N            & Satellite ID. \\
+    9  & xx           & Satellite elevation. \\
+    10 & xxx          & Satellite azimuth. \\
+    11 & N            & Satellite SNR. \\
+    \multicolumn{3}{|c|}{Third (optional) satellite description block} \\
+    12 & N            & Satellite ID. \\
+    13 & xx           & Satellite elevation. \\
+    14 & xxx          & Satellite azimuth. \\
+    15 & N            & Satellite SNR. \\
+    \multicolumn{3}{|c|}{Last (optional) satellite description block} \\
+    16 & N            & Satellite ID. \\
+    17 & xx           & Satellite elevation. \\
+    18 & xxx          & Satellite azimuth. \\
+    19 & N            & Satellite SNR. \\
 \end{ZubaxSimpleTable}
 
 \clearpage
@@ -1233,7 +1246,7 @@ Format: \verb||
 
 Example: \verb||
 
-\begin{ZubaxSimpleTable}{ sentence fields}{|l l X|}
+\begin{ZubaxSimpleTable}{HDG sentence fields}{|l l X|}
     \# & Format       & Purpose \\
     1  &              &  \\
     2  &              &  \\
@@ -1257,7 +1270,7 @@ Format: \verb||
 
 Example: \verb||
 
-\begin{ZubaxSimpleTable}{ sentence fields}{|l l X|}
+\begin{ZubaxSimpleTable}{XDR sentence fields}{|l l X|}
     \# & Format       & Purpose \\
     1  &              &  \\
     2  &              &  \\
