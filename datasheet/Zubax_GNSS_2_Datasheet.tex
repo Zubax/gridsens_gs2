@@ -1041,13 +1041,15 @@ This section provides an overview of the standard NMEA sentences used by Zubax~G
 
 The following conventions are used in the NMEA field descriptions:
 \begin{description}
-    \item[a] ASCII character.
+    \item[a] ASCII alphanumeric character.
+    \item[T] An arbitrary sequence of ASCII alphanumeric characters.
     \item[x] Single decimal digit.
     \item[N] One or more decimal digits. Plain \verb|N| represents an integer,
              and \verb|N.N| represents a floating point number.
 \end{description}
 
 \clearpage
+
 \subsubsection{RMC}
 
 The RMC sentence contains some of the GNSS solution data.
@@ -1084,8 +1086,8 @@ Example: \verb|$GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,
     11 & a            & E -- east, W -- west, for the magnetic variation estimate.
                         This field is optional, unless the previous field is provided. \\
 \end{ZubaxSimpleTable}
-
 \clearpage
+
 \subsubsection{GGA}
 
 The GGA sentence contains some of the GNSS solution data.
@@ -1129,8 +1131,8 @@ Example: \verb|$GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,1
     14 & xxxx         & Differential reference station identifier, 0000--1023.
                         Empty field means that the differential data has never been available. \\
 \end{ZubaxSimpleTable}
-
 \clearpage
+
 \subsubsection{GSA}
 
 The GSA sentence contains information about the geometric dilution of precision and the identifiers
@@ -1171,8 +1173,8 @@ Example: \verb|$GPGSA,A,3,08,10,14,18,21,22,27,01,02,23,24,12,2.24,1.44,1.71*04|
     16 & N.N          & Horizontal dilution of precision (HDOP). \\
     17 & N.N          & Vertical dilution of precision (VDOP). \\
 \end{ZubaxSimpleTable}
-
 \clearpage
+
 \subsubsection{GSV}
 
 The GSV sentence contains information about satellites that are being tracked by the GNSS receiver.
@@ -1236,8 +1238,8 @@ $GPGSV,4,4,15,08,47,047,22,23,29,145,21,24,80,177,18*4A
     18 & xxx          & Satellite azimuth. \\
     19 & N            & Satellite SNR. \\
 \end{ZubaxSimpleTable}
-
 \clearpage
+
 \subsubsection{HDG}
 
 The HDG sentence carries information about magnetic heading, magnetic deviation, and magnetic variation.
@@ -1266,30 +1268,82 @@ Example: \verb|$HCHDG,266.2,,,,*42|
     5  & a            & Direction of the magnetic variation reported in the previous field: 
                         E -- east, W -- west. This field is required only if the previous field is provided. \\
 \end{ZubaxSimpleTable}
-
 \clearpage
+
 \subsubsection{XDR}
 
+The XDR sentence carries a set of generic transducer measurements.
+Every measurement in the set consists of four fields.
 
+Format:
 
-Format: \verb||
+$\texttt{\$\_\_XDR,}%
+\underbrace{%
+    \overbrace{\texttt{a,}}^{\text{Type}}%
+    \overbrace{\texttt{N.N,}}^{\text{Value}}%
+    \overbrace{\texttt{a,}}^{\text{Unit}}%
+    \overbrace{\texttt{T,}}^{\substack{\text{Name} \\ \text{(opt.)}}}%
+}_{\substack{\text{1st} \\ \text{measurement} \\ \text{(required)}}}%
+\underbrace{\texttt{a,N.N,a,T,}}_{\substack{\text{2nd} \\ \text{measurement} \\ \text{(optional)}}}%
+\underbrace{\texttt{a,N.N,a,T,}}_{\substack{\text{3rd} \\ \text{measurement} \\ \text{(optional)}}}%
+\underbrace{\texttt{a,N.N,a,T,}}_{\substack{\text{4th} \\ \text{measurement} \\ \text{(optional)}}}%
+\underbrace{\texttt{a,N.N,a,T,}}_{\substack{\text{5th} \\ \text{measurement} \\ \text{(optional)}}}%
+\underbrace{\texttt{a,N.N,a,T}}_{\substack{\text{6th} \\ \text{measurement} \\ \text{(optional)}}}%
+\texttt{\text{*}}$
 
-Example: \verb||
+There is also a reduced format that is often used by various vendors.
+The reduced format carries exactly one measurement, and the transducer name field is omitted:
+
+$\texttt{\$\_\_XDR,}%
+\underbrace{%
+    \overbrace{\texttt{a,}}^{\text{Type}}%
+    \overbrace{\texttt{N.N,}}^{\text{Value}}%
+    \overbrace{\texttt{a}}^{\text{Unit}}%
+}_{\substack{\text{1st} \\ \text{measurement} \\ \text{(required)}}}%
+\texttt{\text{*}}$
+
+Example:
+\begin{minted}[linenos = false]{text}
+$YXXDR,P,0.98966,B*57
+$YXXDR,C,29.9,C*7F
+\end{minted}
 
 \begin{ZubaxSimpleTable}{XDR sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  &              &  \\
-    2  &              &  \\
-    3  &              &  \\
-    4  &              &  \\
-    5  &              &  \\
-    6  &              &  \\
-    7  &              &  \\
-    8  &              &  \\
-    9  &              &  \\
-    10 &              &  \\
-    11 &              &  \\
+    \multicolumn{3}{|c|}{1st measurement or reduced format} \\
+    1  & a            & Transducer type code. Popular values: P -- pressure, C -- temperature. \\
+    2  & N.N          & The measured value. \\
+    3  & a            & Unit of measurement code.
+                        Popular values: B -- bar (pressure), C -- degree Celsius (temperature).
+                        In the case of the reduced format this is the last field of the sentence. \\
+    4  & T            & Name of the transducer. This field may be empty. \\
+    \multicolumn{3}{|c|}{2nd measurement (optional)} \\
+    5  & a            & Transducer type code. \\
+    6  & N.N          & The measured value. \\
+    7  & a            & Unit of measurement code. \\
+    8  & T            & Name of the transducer. \\
+    \multicolumn{3}{|c|}{3rd measurement (optional)} \\
+    9  & a            & Transducer type code. \\
+    10 & N.N          & The measured value. \\
+    11 & a            & Unit of measurement code. \\
+    12 & T            & Name of the transducer. \\
+    \multicolumn{3}{|c|}{4th measurement (optional)} \\
+    13 & a            & Transducer type code. \\
+    14 & N.N          & The measured value. \\
+    15 & a            & Unit of measurement code. \\
+    16 & T            & Name of the transducer. \\
+    \multicolumn{3}{|c|}{5th measurement (optional)} \\
+    17 & a            & Transducer type code. \\
+    18 & N.N          & The measured value. \\
+    19 & a            & Unit of measurement code. \\
+    20 & T            & Name of the transducer. \\
+    \multicolumn{3}{|c|}{6th measurement (optional)} \\
+    21 & a            & Transducer type code. \\
+    22 & N.N          & The measured value. \\
+    23 & a            & Unit of measurement code. \\
+    24 & T            & Name of the transducer. \\
 \end{ZubaxSimpleTable}
+\clearpage
 
 \section{Vendor-specific sentences defined by Zubax Robotics}
 
