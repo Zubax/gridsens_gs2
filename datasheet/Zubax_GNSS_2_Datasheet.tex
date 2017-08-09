@@ -205,6 +205,15 @@ The reported error variances for pressure and temperature estimates are defined 
 \CfgRef{pres.variance}, in $\text{pascal}^2$, and \CfgRef{temp.variance}, in $\text{kelvin}^2$,
 respectively.
 
+If the board is mounted in an open air environment, it is recommended to cover the sensor with a lid
+in order to prevent distortions of the atmospheric pressure measurements caused by the movement of air
+around the sensor.
+Please refer to your supplier for additional information.
+
+This sensor is also used for measuring the temperature of the air.
+Due to the heat dissipated by the board,
+the measured air temperature may be offset by up to +5 kelvin.
+
 \subsection{Three-axis digital compass with thermal compensation}
 
 The device employs the \textbf{STMicroelectronics LIS3MDL} digital three-axis compass with thermal compensation.
@@ -964,7 +973,7 @@ which use the special talker ID value ``\verb|P|''.
     GP        & GPS data. \\
     GL        & GLONASS data. Some software products do not recognize this talker ID. \\
     GN        & Fused GPS and GLONASS data. Some software products do not recognize this talker ID. \\
-    YX        & Transducer. The type of transducer is further specified in the first parameter. \\
+    YX        & Generic sensor. \\
     P         & Vendor-specific sentence prefix. \\
 \end{ZubaxSimpleTable}
 
@@ -1461,6 +1470,7 @@ $GPGSV,4,3,15,27,59,219,15,32,03,232,16,01,74,188,27,02,19,214,17*76
 $GPGSV,4,4,15,08,47,047,22,23,29,145,21,24,80,177,18*4A
 $GPGSA,A,3,08,10,14,18,21,22,27,01,02,23,24,12,2.24,1.44,1.71*04
 \end{minted}
+%%$$
 
 \subsection{Magnetic field data}
 
@@ -1492,6 +1502,32 @@ Example:
 \begin{minted}[linenos = false]{text}
 $HCHDG,266.0,,,,*40
 $PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12
+\end{minted}
+
+\subsection{Air data}
+
+Atmospheric pressure and temperature are reported with the talker ID ``\verb|YX|''
+(see the table \ref{nmea_talker_id_table}).
+
+The configuration parameter \CfgRef{uavcan.pubp-pres} defines the period at which atmospheric pressure measurements
+are reported.
+If the configured period is less than 100 milliseconds (10 hertz),
+the NMEA reporting period will be limited,
+which may lead to irregular data emission due to aliasing effects.
+
+Atmospheric temperature measurements are reported at a rate 10 times lower than that of the pressure.
+
+At every output cycle, the device emits two NMEA sentences ``\verb|XDR|'' in the reduced format
+(section \ref{sec:nmea_sentence_XDR}).
+For pressure measurements, the sensor type code field is set to ``\verb|P|'' (pressure),
+and the unit of measurement code is set to ``\verb|B|'' (bar).
+For temperature measurements, the sensor type code field is set to ``\verb|C|'' (temperature),
+and the unit of measurement code is set to ``\verb|C|'' (degrees Celsius).
+
+Example:
+\begin{minted}[linenos = false]{text}
+$YXXDR,P,0.98966,B*57
+$YXXDR,C,29.9,C*7F
 \end{minted}
 
 %
