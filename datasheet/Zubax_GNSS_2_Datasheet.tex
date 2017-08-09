@@ -308,7 +308,7 @@ The device features driverless compatibility with all major operating systems
 
 The physical connector type is USB micro B (which is the most common device-side USB connector type).
 
-\subsubsection{Protocol selection}
+\subsubsection{Protocol selection}\label{sec:usb_protocol_selection}
 
 The following protocols are exposed via the USB interface:
 \begin{description}
@@ -939,6 +939,10 @@ Zubax~GNSS~2 can be configured to emit sensor data using the industry-standard N
 over USB, UART, or both simultaneously.
 The device supports a number of standard NMEA sentences alongside a few vendor-specific sentences
 defined by Zubax Robotics.
+
+NMEA output over the UART interface can be enabled by setting the parameter \CfgRef{nmea.uart+on}.
+NMEA output over the USB virtual serial port can be enabled by accessing the virtual serial port
+at a specific baud rate, as described in the section \ref{sec:usb_protocol_selection}.
 
 \section{Brief overview of the NMEA 0183 protocol}
 
