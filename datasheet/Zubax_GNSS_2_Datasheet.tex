@@ -1042,10 +1042,11 @@ This section provides an overview of the standard NMEA sentences used by Zubax~G
 The following conventions are used in the NMEA field descriptions:
 \begin{description}
     \item[a] ASCII alphanumeric character.
-    \item[T] An arbitrary sequence of ASCII alphanumeric characters.
+    \item[T] An arbitrary sequence of ASCII alphanumeric characters which is interpreted as text.
     \item[x] Single decimal digit.
     \item[N] One or more decimal digits. Plain \verb|N| represents an integer,
              and \verb|N.N| represents a floating point number.
+    \item[?] An arbitrary sequence of ASCII characters which can be interpreted as text or as a number.
 \end{description}
 
 \clearpage
@@ -1347,8 +1348,62 @@ $YXXDR,C,29.9,C*7F
 
 \section{Vendor-specific sentences defined by Zubax Robotics}
 
-The vendor-specific sentences defined by Zubax Robotics use the prefix \verb|ZUBAX|.
-An example sentence would look as follows: \verb|$PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12|.
+The NMEA 0183 protocol designates a special talker ID ``\verb|P|'' for vendor-specific data
+followed by a vendor-defined sentence ID.
+
+All NMEA sentences defined by Zubax Robotics use the same sentence ID ``\verb|ZUBAX|''.
+The contents of the sentence is further specified by an ASCII string in the first field of the sentence,
+which is referred to as \emph{sub-ID}.
+
+Besides the field dedicated for sub-ID, there are six fields for the payload data.
+Some of the payload fields are marked as reserved,
+in which case their contents should be ignored when parsing the message,
+even if they are not empty.
+
+The resulting format is the following:
+
+$%
+\underbrace{\texttt{\$PZUBAX,}}_{\substack{\text{Talker ID}\\%
+                                           \text{with}\\%
+                                           \text{vendor-}\\%
+                                           \text{specific}\\%
+                                           \text{sentence}\\%
+                                           \text{ID}}}%
+\underbrace{\texttt{T,}}_{\substack{\text{Sentence} \\ \text{sub-ID}}}%
+\underbrace{\texttt{?,?,?,?,?,?}}_{\substack{\text{6 data fields}\\%
+                                             \text{(unused fields}\\%
+                                             \text{are kept}\\%
+                                             \text{empty)}}}%
+\texttt{\text{*}}$
+
+\subsubsection{Raw 3D magnetic field vector (MAG-FLD-XYZ)}
+
+This sentence carries a measured magnetic field vector.
+The vector is not compensated for any known magnetic field distortions,
+hence the word ``raw'' in the name of the message.
+
+The reported vector is defined in a local device-bound right-handed coordinate system.
+
+Format:
+
+$\texttt{\$PZUBAX,MAG-FLD-XYZ,}%
+\underbrace{\texttt{N.N,N.N,N.N,}}_{\substack{\text{Raw magnetic}\\%
+                                              \text{field vector}\\%
+                                              \text{(X, Y, Z)}}}%
+\underbrace{\texttt{a,}}_{\substack{\text{Unit}}}%
+\texttt{\text{,*}}$
+
+Example: \verb|PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12|.
+
+\begin{ZubaxSimpleTable}{Zubax MAG-FLD-XYZ sentence fields}{|l l X|}
+    \# & Format       & Purpose \\
+    1  & N.N          & Magnetic field strength along the X axis. \\
+    2  & N.N          & Magnetic field strength along the Y axis. \\
+    3  & N.N          & Magnetic field strength along the Z axis. \\
+    4  & a            & The unit of measurement for the preceding data. G -- gauss, T -- tesla. \\
+    5  &              & Reserved. \\
+    6  &              & Reserved. \\
+\end{ZubaxSimpleTable}
 
 \section{Data sources}
 
@@ -1391,43 +1446,9 @@ The following NMEA sentences are emitted at each output cycle:
     \item[HDG] Raw magnetic heading; not calibrated, only valid if the board is mounted horizontally.
 \end{description}
 
-\section{NMEA sentences overview}
-
-\subsection{Standard sentences}
-
-\begin{ZubaxSimpleTable}{Output NMEA sentences}{|l l X|}
-NMEA sentence & Component & Purpose\\
-\texttt{GPRMS} & GNSS receiver & Recommended minimum navigation information.\\
-\texttt{GPGGA} & GNSS receiver & Global positioning system fix data.\\
-\texttt{GPGSA} & GNSS receiver & GPS DOP and active satellites.\\
-\texttt{GPGSV} & GNSS receiver & Information about satellites in view.\\
-\texttt{HCHDG} &	 Compass		  & Raw magnetic heading; not calibrated, only valid if the board is mounted horizontally.\\
-\texttt{YXXDR} (type P) & Altimeter & Static barometric pressure (only if the sensor is enabled).\\
-\texttt{YXXDR} (type C) & Altimeter & Static air temperature (only if the sensor is enabled).
-\end{ZubaxSimpleTable}
-
-\subsection{Vendor-specific sentences}
-
-The NMEA specification dedicates the prefix {\$}P followed by the vendor ID for vendor-specific sentences. All Zubax products use the vendor-specific prefix ZUBAX. The first field of the sentence contains the sentence type identifier, which is a string containing upper case Latin letters, Arabic digits, and the minus symbol -.
-
-\subsubsection{Raw magnetic field strength}
-
-Vendor-specific sentence type ID: \textbf{MAG-FLD-XYZ}.
-
-Availability: firmware v4.0 and newer.
-
-Fields:
-
-\begin{enumerate}
-\item Magnetic field strength of the X axis.
-\item Magnetic field strength of the Y axis.
-\item Magnetic field strength of the Z axis.
-\item A single character \texttt{G} that indicates that the units of measurement are Gauss.
-\item Reserved.
-\item Reserved.
-\end{enumerate}
-
-Example: \verb|PZUBAX,MAG-FLD-XYZ,1.345,-1.345,0.345,G,,*12|.
+%
+% END OF THE NMEA CHAPTER
+%
 
 \chapter{Command-line interface}\label{command-line_interface}
 
