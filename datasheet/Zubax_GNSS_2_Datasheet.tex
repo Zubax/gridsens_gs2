@@ -1563,49 +1563,158 @@ Remote echo and remote line editing are supported.
 This section documents the CLI commands that can be of interest to the end user.
 Some commands that are not intended for use in production are intentionally omitted from this reference.
 
-\textbf{zubax{\_}id}
+\subsection{help}
 
-This is the standard Zubax identification command. It is supported by all devices that implement a command line interface. Please refer to the USB command line interface documentation page for more info.
+Prints the list of available commands.
 
-\textbf{cfg}
+\subsection{reboot}
 
-Allows to view or modify configuration parameters.
-Execute without arguments to get usage info. Supported arguments:
+Restarts the device unconditionally.
+
+\subsection{cfg}
+
+This command provides access to the configuration parameter storage.
+The configuration parameters and their non-volatile storage are described in more detail in the chapter
+\ref{sec:configuration_parameters}.
+
+Syntax:
 \begin{itemize}
-\item \textbf{list} - list all parameters, their values and ranges.
-\item \textbf{set <name> <value>} - change parameter value.
-\item \textbf{save} - save all parameters to the non-volatile memory (see the note).
-\item \textbf{erase} - reset all parameters to defaults.
+
+    \item \verb|cfg| - print usage info.
+
+    \item \verb|cfg list| - list all configuration parameters, their current values,
+          acceptable value intervals, and default values. See the section \ref{sec:cli_cfg_listing}.
+
+    \item \verb|cfg save| - save the current configuration into the non-volatile storage.
+          Firmware version v4.0 and newer save all configuration parameters automatically upon modification,
+          so this command has become redundant.
+
+    \item \verb|cfg erase| - erase the current configuration and reset the non-volatile memory to factory defaults.
+          A reboot is necessary for the changes to take effect.
+
+    \item \verb|cfg set <name> <value>| - assign the configuration parameter named \verb|<name>| the value
+          \verb|<value>|. For example: \verb|cfg set foo 42|.
+          With firmware v4.0 and newer the non-volatile storage will be updated automatically.
+          See the section \ref{sec:cli_cfg_set_confirmation}.
+
 \end{itemize}
 
-Starting from firmware v4.0, configuration parameters are saved automatically after modification. Thus, it is no longer necessary to execute \textbf{cfg save}.
+\subsubsection{Configuration listing format}\label{sec:cli_cfg_listing}
 
-\textbf{reset}
+The syntax \verb|cfg list| prints one parameter per line, where the line is formatted as follows:
 
-Restarts the device. Note that sensors will not be restarted.
+\verb|name = value [min, max] (default)|
 
-\textbf{gnssbridge}
+The number of whitespaces between tokens may vary.
 
-Activates the direct bridge connection between USB CLI and the GNSS receiver. This feature allows to receive GNSS information using native u-Blox M8 protocol.
+Floating point parameters are always reported with the point symbol (\verb|.|),
+which allows one to distinguish them from integer and boolean typed parameters.
+
+Boolean parameters are reported as integers, where 1 represents logical true and 0 represents logical false.
+They can be distinguished from integer parameters by their minimum and maximum values being 0 and 1,
+respectively.
+
+\subsubsection{Parameter set confirmation}\label{sec:cli_cfg_set_confirmation}
+
+Whenever a parameter is assigned a new value, the device verifies if the new value is within the
+acceptable limits.
+If it is, the new value is assigned. Otherwise, the old value is retained.
+Afterwards the device prints out the resulting value of the parameter in the following format:
+
+\verb|name = value|
+
+The number of whitespaces between tokens may vary.
+
+This response can be used to check whether the new value has been accepted by the device or not.
+
+\subsection{gnssbridge}
+
+This command activates a direct bridge connection between the USB virtual serial port and the on-board
+GNSS receiver module.
+The GNSS receiver module employs the proprietary u-Blox M8 binary protocol.
 
 Once the bridge is activated, the state of the device changes as follows until reboot:
 \begin{itemize}
-\item CLI becomes unavailable because it is being used to communicate with the GNSS receiver.
-\item The device stops publishing GNSS messages via UAVCAN.
-\item Status code changes to CRITICAL because GNSS sensor data are not available anymore.
+    \item CLI becomes unavailable.
+    \item The device stops publishing GNSS data via UAVCAN and other interfaces.
+    \item Status code changes to Error because GNSS sensor data become unavailable.
 \end{itemize}
 
-Aside from the above, the device continues to work virtually as usual, e.g., its UAVCAN stack operates normally, other sensors are working (if enabled), etc.
+The device will have to be rebooted or power cycled in order to return to the normal operating mode.
 
-\textbf{help}
+Care should be taken to not change the speed of the UART interface on the GNSS chip,
+because that would render it unaccessible until the device is power cycled.
 
-Prints the list of available commands
+\subsection{bootloader}
 
-\textbf{bootloader}
+This command reboots the device into the bootloader mode, described in the section \ref{sec:bootloader}.
+It can be used to initiate a firmware upgrade procedure over USB.
 
-Available in firmware v4.0+.
+This command is available in firmware v4.0 and newer.
 
-Reboots the board into the bootloader.
+% Note that we can't use the plain underscore, even if it is properly escaped, in section titles referenced
+% from the table of contents, because it breaks the table of contents.
+\subsection{zubax{\textunderscore}id}
+
+This command is available in all Zubax products that implement a command-line interface.
+It reports the complete information identifying this particular product:
+type, version information, make and model.
+The information is printed in a machine-readable yet human-friendly
+YAML\footnote{\url{https://en.wikipedia.org/wiki/YAML}} format.
+
+An example output is shown in the following listing.
+The meaning of each well-defined field is explained in the table \ref{zubax_id_fields_table}.
+Note that the ordering of the fields is not guaranteed to be constant;
+furthermore, additional fields may be added in future firmware revisions.
+
+\begin{minipage}{\textwidth} % A minipage is needed to avoid line breaks in the listing
+\begin{minted}[linenos = false]{yaml}
+product_id   : 'com.zubax.gnss'
+product_name : 'Zubax GNSS'
+sw_version   : '4.0'
+sw_vcs_commit: 266365646
+sw_build_date: Apr  9 2017
+hw_version   : '2.2'
+hw_unique_id : 'NP/TBUNXMDQ5RCJDAAAAAA=='
+hw_signature : 'sqKqz6bJCimo3/oy/x3sAbTkwRYA9LaubgUycJwKdxGVtqrqGBRfbQkllBhHaU5l+RIDRqKnxQVSzU7
+QIeGuScK3RDfrAT3ke42i+MlTh20+mr+TRV2T9YAu/2q6pq0rSYnbYRqncA1WyGhrGtlEav/K4svfL/jgwNxfE3d/YiI='
+hw_info_url  : 'http://device.zubax.com/device_info?uid=34FFD305435730343944224300000000'
+\end{minted}
+\end{minipage}
+
+\begin{ZubaxSimpleTable}{Zubax ID fields}{|l|X|}\label{zubax_id_fields_table}
+Field name              & Meaning \\
+
+\texttt{product\_id}    & Product type identifier string.
+                          The same string is reported via UAVCAN as the node name string. \\
+
+\texttt{product\_name}  & Human-readable product name. \\
+
+\texttt{sw\_version}    & Firmware version number in the form ``major.minor''. \\
+
+\texttt{sw\_vcs\_commit}& Firmware patch ID as the short git commit hash.
+                          The abbreviation VCS stands for ``version control system''.
+                          This number allows to pinpoint the exact revision of the firmware
+                          that is currently running. \\
+
+\texttt{sw\_build\_date}& Firmware build date in the form ``\texttt{mmm dd yyyy}''. \\
+
+\texttt{hw\_version}    & Hardware version number in the form ``major.minor''. \\
+
+\texttt{hw\_unique\_id} & The 128-bit unique ID of this specific hardware instance.
+                          The UID is represented either as a hexadecimal string, or as a Base64 encoded string.\\
+
+\texttt{hw\_signature}  & The certificate of authenticity (CoA) of this specific hardware instance
+                          encoded in a Base64 string. \\
+
+\texttt{hw\_info\_url}  & Link to the web page that contains the test report, origin information,
+                         traceability data, and other important information about this specific hardware
+                         instance provided by the vendor. \\
+\end{ZubaxSimpleTable}
+
+%
+% END OF THE CLI CHAPTER
+%
 
 \chapter{Identification information}
 
