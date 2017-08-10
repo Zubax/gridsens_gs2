@@ -522,6 +522,8 @@ Update in progress & Solid & Solid & \\
 
 \chapter{UAVCAN interface}
 
+\section{Overview}
+
 For the background information about the UAVCAN interface please refer to the Zubax Knowledge Base
 at \url{https://kb.zubax.com/x/F4Ah} and the official UAVCAN website at \url{http://uavcan.org}.
 
@@ -934,6 +936,8 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 %
 
 \chapter{NMEA interface}\label{nmea_output}
+
+\section{Overview}
 
 Zubax~GNSS~2 can be configured to emit sensor data using the industry-standard NMEA 0183 protocol
 over USB, UART, or both simultaneously.
@@ -1540,7 +1544,24 @@ $YXXDR,C,29.9,C*7F
 
 \chapter{Command-line interface}\label{command-line_interface}
 
-This chapter documents the supported CLI commands.
+\section{Overview}
+
+Zubax~GNSS~2 provides a plain-text command-line interface (CLI) over the USB virtual serial port.
+The CLI can be used as a user interface directly,
+or it can be used as a machine-to-machine interface,
+since its syntax is quite simple and easily parseable.
+
+Note that in order for the command-line interface to be usable,
+the NMEA output over the USB virtual serial port should be disabled, as explained in
+the section \ref{sec:usb_protocol_selection}.
+
+The CLI uses the CR-LF line ending sequence (\verb|\r\n|).
+Remote echo and remote line editing are supported.
+
+\section{CLI commands}
+
+This section documents the CLI commands that can be of interest to the end user.
+Some commands that are not intended for use in production are intentionally omitted from this reference.
 
 \textbf{zubax{\_}id}
 
