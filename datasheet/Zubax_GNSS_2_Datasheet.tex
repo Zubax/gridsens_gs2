@@ -10,6 +10,7 @@
 \usepackage{ConfigParamIndex}
 \usepackage{makecell}
 \usepackage{amsmath}
+\usepackage{textcomp}
 
 \title{Zubax GNSS 2 Datasheet}
 
@@ -1824,6 +1825,7 @@ The table uses the following abbreviations:
 \begin{description}
 \item[Def.] Short for ``default value''.
 \item[BCI] Short for ``broadcasting interval''.
+\item[{\textmu}s] Microsecond.
 \end{description}
 
 % name, unit, takes effect at, min, max, default, note
@@ -1836,7 +1838,7 @@ The table uses the following abbreviations:
 \newenvironment{CfgParamIndex}[1]{%
     \begin{ZubaxTableWrapper}{#1}
     \setlength\tabcolsep{2.5pt}
-    \begin{ZubaxWrappedTable}{@{} l l l | c c c | X @{}}
+    \begin{ZubaxWrappedTable}{@{} l c l | c c c | X @{}}
     Name & Unit & Pages & Min & Max & Def. & Description \\
 }{%
     \end{ZubaxWrappedTable}
@@ -1848,17 +1850,17 @@ The table uses the following abbreviations:
 \CfgParamIndexEntry{uavcan.node+id}{}{0}{127}{0}
 {Node ID of the local UAVCAN node. Zero enables dynamic allocation.}
 
-\CfgParamIndexEntry{uavcan.pubp-time}{microsecond}{0}{1 000 000}{0}{BCI of
+\CfgParamIndexEntry{uavcan.pubp-time}{{\textmu}s}{0}{1 000 000}{0}{BCI of
 \texttt{uavcan.protocol.GlobalTimeSync}. Zero disables the time synchronization master.}
 
 \CfgParamIndexEntry{uavcan.prio-time}{}{0}{31}{1}{Priority of \texttt{uavcan.protocol.GlobalTimeSync}.}
 
-\CfgParamIndexEntry{uavcan.pubp-stat}{microsecond}{2000}{1 000 000}{200 000}{BCI of
+\CfgParamIndexEntry{uavcan.pubp-stat}{{\textmu}s}{2000}{1 000 000}{200 000}{BCI of
 \texttt{uavcan.protocol.NodeStatus}.}
 
 \CfgParamIndexEntry{uavcan.prio-stat}{}{0}{31}{20}{Priority of \texttt{uavcan.protocol.NodeStatus}.}
 
-\CfgParamIndexEntry{uavcan.pubp-pres}{microsecond}{0}{1 000 000}{0}{BCI of
+\CfgParamIndexEntry{uavcan.pubp-pres}{{\textmu}s}{0}{1 000 000}{0}{BCI of
 \texttt{uavcan.equipment.air\_data.StaticPressure}, and one-fifth of the broadcasting interval of
 \texttt{uavcan.equipment.air\_data.StaticTemperature}.}
 
@@ -1866,16 +1868,16 @@ The table uses the following abbreviations:
 \texttt{uavcan.equipment.air\_data.StaticPressure} and
 \texttt{uavcan.equipment.air\_data.StaticTemperature}.}
 
-\CfgParamIndexEntry{uavcan.pubp-mag}{microsecond}{6666}{1 000 000}{10 000}{BCI of
+\CfgParamIndexEntry{uavcan.pubp-mag}{{\textmu}s}{6666}{1 000 000}{10 000}{BCI of
 \texttt{uavcan.equipment.ahrs.MagneticFieldStrength}.}
 
 \CfgParamIndexEntry{uavcan.prio-mag}{}{0}{31}{16}{\texttt{uavcan.equipment.ahrs.MagneticFieldStrength}
 priority.}
 
-\CfgParamIndexEntry{uavcan.pubp-fix}{microsecond}{66 666}{2 000 000}{100 000}{BCI of
+\CfgParamIndexEntry{uavcan.pubp-fix}{{\textmu}s}{66 666}{2 000 000}{100 000}{BCI of
 \texttt{uavcan.equipment.gnss.Fix2}.}
 
-\CfgParamIndexEntry{uavcan.pubp-aux}{microsecond}{100 000}{1 000 000}{1 000 000}{BCI of
+\CfgParamIndexEntry{uavcan.pubp-aux}{{\textmu}s}{100 000}{1 000 000}{1 000 000}{BCI of
 \texttt{uavcan.equipment.gnss.Auxiliary}.}
 
 \CfgParamIndexEntry{uavcan.prio-fix}{}{0}{31}{16}{Priority of
