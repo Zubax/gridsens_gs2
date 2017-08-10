@@ -256,6 +256,8 @@ UAVCAN Micro connectors (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}
 electrically parallel to each other,
 which facilitates easy integration of the device into the end application without the need to use T-connectors.
 
+The physical location of each connector is documented in the chapter \ref{sec:mechanical}.
+
 \subsubsection{Device interconnection}
 
 Zubax~GNSS~2 can be used with doubly-redundant and non-redundant CAN buses.
@@ -349,6 +351,8 @@ Dronecode Debug Mini connector (DCD-Mini)\footnote{\url{https://wiki.dronecode.o
 This port can be conveniently used with the \href{https://kb.zubax.com/x/iIAh}{Zubax Dronecode Probe},
 or any other UART-capable hardware with a compatible connector.
 
+The physical location of the connector is documented in the chapter \ref{sec:mechanical}.
+
 The Dronecode debug port provides access to the UART and JTAG/SWD interfaces;
 the latter is not designed for production use and therefore it is not documented here.
 
@@ -431,7 +435,42 @@ The power supply characteristics documented in the following table are invariant
 	 $I_\text{supply}$  & Supply current & 70  & 95      & 180 & mA   & Any power input\\
 \end{ZubaxSimpleTable}
 
-\chapter{On-line self-diagnostics}\label{sec:self-diagnostics}
+\section{Product identification}
+
+This section documents the device properties that are reported in response to identification requests,
+such as the UAVCAN service \verb|uavcan.protocol.GetNodeInfo| (section \ref{sec:uavcan_node_identification})
+or the CLI command \verb|zubax_id| (section \ref{sec:cli_command_zubax_id}).
+
+The product ID string and the UAVCAN node name are reported as \verb|com.zubax.gnss|.
+The prefix \verb|com.zubax.| is shared by many of the products designed by Zubax Robotics.
+
+\subsection{Hardware and firmware versions}
+
+The table \ref{table:product_revisions} summarizes the information about existing hardware revisions
+and compatible firmware versions.
+Note that all revisions of Zubax~GNSS~2 share the same major hardware version number~\textbf{2}.
+
+\begin{ZubaxSimpleTable}{Zubax~GNSS product revision summary}{|l l l|X|}\label{table:product_revisions}
+     Hardware                   & Year      & Firmware    & Notes                  \\
+     \textbf{Zubax GNSS 1.0}    & 2014      & v1.x, v2.x  & First release. No longer manufactured. \\
+     \textbf{Zubax GNSS 2.1}    & 2015      & v3.x        & Not backward-compatible with Zubax GNSS 1.0.
+                                                            No longer manufactured. \\
+     \textbf{Zubax GNSS 2.2}    & 2017      & v4.x        & Backward compatible with Zubax GNSS 2.1. \\
+\end{ZubaxSimpleTable}
+
+\chapter{Operating principles}
+
+\section{Overview}
+
+Zubax~GNSS~2 continuously reads measurements from active sensors and reports them via
+active communication interfaces.
+The GNSS receiver and the compass are always active,
+whereas the air pressure and temperature sensor is disabled by default.
+
+The device can report measurements via the CAN bus using the UAVCAN protocol (chapter \ref{sec:uavcan}) and
+USB or UART using the NMEA 0183 protocol (chapter \ref{nmea_output}).
+
+\section{On-line self-diagnostics}\label{sec:self-diagnostics}
 
 Zubax~GNSS~2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
 Results of the continuous self-testing are mapped to three health codes: OK, Warning, and Error.
@@ -439,13 +478,13 @@ The table below documents how the device uses health codes to report its status.
 
 \begin{ZubaxSimpleTable}{Self-diagnostic health codes}{|l|X|}
     Health        & Conditions    \\
-    OK            & Everything is OK; all enabled sensors are functioning properly.\\
+    OK            & The device is functioning properly.\\
     Warning       & See below. \\
     Error         & Sensor malfunction.
                     The device may stop sending the measurements obtained from the failed sensor. \\
 \end{ZubaxSimpleTable}
 
-Possible reasons for the health being Warning:
+Possible reasons for the Warning health state:
 
 \begin{itemize}
     \item GNSS fix quality is lower than the configured goal:
@@ -460,18 +499,18 @@ Possible reasons for the health being Warning:
     \item Magnetic field strength vector remained zero for more than 5 seconds (likely a sensor malfunction).
 \end{itemize}
 
-\chapter{LED indication}
+\section{LED indication}
 
 The physical locations of the LED indicators are documented in the chapter \ref{sec:mechanical}.
 
-\section{PPS LED indicator}
+\subsection{PPS LED indicator}
 
 This LED indicator blinks with the rate of 1 Hz if the GNSS receiver has a navigation fix.
 
-\section{Status LED indicator}
+\subsection{Status LED indicator}
 
 This LED indicator shows the health of the device derived from the on-line self-diagnostics as described
-in the chapter \ref{sec:self-diagnostics}.
+in the section \ref{sec:self-diagnostics}.
 
 \newcommand{\LEDX}{{\rule{0.4em}{0.8em}}}
 \newcommand{\LEDO}{{\rule{0.4em}{0.1em}}}
@@ -486,7 +525,7 @@ Error   & \LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO
         & 0.05/0.05 seconds \\
 \end{ZubaxSimpleTable}
 
-\section{CAN1 and CAN2 LED indicators}
+\subsection{CAN1 and CAN2 LED indicators}
 
 These LED indicators display the intensity of the CAN bus traffic per interface.
 
@@ -499,15 +538,15 @@ even if the device is actually attempting to transmit.
 Note that the CAN traffic filtered out by the hardware acceptance filters of the device will not affect the
 state of the LED indicators.
 
-\section{LED indication during firmware update and bootup}
+\subsection{LED indication during firmware update and bootup}
 
-\subsection{Hardware version 2.2 and newer}
+\subsubsection{Hardware version 2.2 and newer}
 
 This section is valid for all hardware manufactured since 2017.
 
 During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax~GNSS~2 uses its LED indicators in a different way, as described in the chapter \ref{sec:bootloader}.
 
-\subsection{Hardware version 2.0 and 2.1}
+\subsubsection{Hardware version 2.0 and 2.1}
 
 This section is valid for the hardware manufactured until 2016, inclusive.
 
@@ -520,7 +559,7 @@ Dynamic node ID allocation & Solid & &  \\
 Update in progress & Solid & Solid & \\
 \end{ZubaxSimpleTable}
 
-\chapter{UAVCAN interface}
+\chapter{UAVCAN interface}\label{sec:uavcan}
 
 \section{Overview}
 
@@ -935,7 +974,7 @@ The bootloader mode is documented in the chapter \ref{sec:bootloader}.
 % END OF THE UAVCAN CHAPTER
 %
 
-\chapter{NMEA interface}\label{nmea_output}
+\chapter{NMEA 0183 interface}\label{nmea_output}
 
 \section{Overview}
 
@@ -1654,7 +1693,7 @@ This command is available in firmware v4.0 and newer.
 
 % Note that we can't use the plain underscore, even if it is properly escaped, in section titles referenced
 % from the table of contents, because it breaks the table of contents.
-\subsection{zubax{\textunderscore}id}
+\subsection{zubax{\textunderscore}id}\label{sec:cli_command_zubax_id}
 
 This command is available in all Zubax products that implement a command-line interface.
 It reports the complete information identifying this particular product:
@@ -1715,14 +1754,6 @@ Field name              & Meaning \\
 %
 % END OF THE CLI CHAPTER
 %
-
-\chapter{Identification information}
-
-This section documents the device properties that are reported in response to identification requests: the CLI command \textbf{zubax{\_}id} and the UAVCAN service \texttt{uavcan.protocol.GetNodeInfo}.
-\begin{itemize}
-\item Product ID and UAVCAN node name: \textbf{com.zubax.gnss}.
-\item Hardware version: 2.x.
-\end{itemize}
 
 \chapter{Configuration parameters}\label{sec:configuration_parameters}
 
