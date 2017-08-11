@@ -14,6 +14,8 @@
 
 \title{Zubax GNSS 2 Datasheet}
 
+\hbadness=10000
+
 \begin{document}
 \frontmatter
 
@@ -47,7 +49,7 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
     \item High quality assurance:
     \begin{itemize}
         \item Every manufactured unit undergoes a strict testing procedure.
-        The testing log for each produced unit is available to the user via the website at\\
+        The testing log for each produced unit is available to the user via the website at
         \url{https://device.zubax.com/device_info}.
         \item Protection against unlicensed (counterfeit) production by means of a digital signature
         installed on every manufactured unit.
@@ -1707,7 +1709,7 @@ The meaning of each well-defined field is explained in the table \ref{zubax_id_f
 Note that the ordering of the fields is not guaranteed to be constant;
 furthermore, additional fields may be added in future firmware revisions.
 
-\begin{minipage}{\textwidth} % A minipage is needed to avoid line breaks in the listing
+\begin{minipage}{0.9\textwidth} % A minipage is needed to avoid line breaks in the listing
 \begin{minted}[linenos = false]{yaml}
 product_id   : 'com.zubax.gnss'
 product_name : 'Zubax GNSS'
