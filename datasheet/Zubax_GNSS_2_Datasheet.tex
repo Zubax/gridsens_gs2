@@ -129,10 +129,10 @@ The test log for every manufactured device is available on the web at
 This feature can be used to facilitate traceability of purchased devices and
 provide additional safety assurances.
 
-Besides testing, every manufactured device has a digital signature installed,
-that can be used as a strong protection against unlicensed or counterfeit manufacturing.
-Please contact Zubax Robotics
-to find out the specifics about digital signature verification.
+Besides testing, every manufactured device has a digital signature
+that can be used as a strong protection against unlicensed or counterfeit production.
+Please refer to the web resources provided by Zubax Robotics to learn more about the certificate of authenticity
+and how it can be used to verify the authenticity of products.
 
 \chapter{Characteristics}
 
@@ -313,6 +313,18 @@ The device features driverless compatibility with all major operating systems
 
 The physical connector type is USB micro B (which is the most common device-side USB connector type).
 
+\subsubsection{Identification}
+
+Zubax~GNSS~2 will report the following properties to the USB host:
+\begin{itemize}
+    \item Vendor ID -- 0x1D50
+    \item Product ID -- 0x60C7
+    \item Vendor string -- \verb|Zubax Robotics|
+    \item Device description string -- \verb|Zubax GNSS|
+    \item Device ID -- the 128-bit globally unique device ID (section \ref{sec:product_identification})
+                       as a hexadecimal string
+\end{itemize}
+
 \subsubsection{Protocol selection}\label{sec:usb_protocol_selection}
 
 The following protocols are exposed via the USB interface:
@@ -365,10 +377,10 @@ The UART interface available within this port operates with the following settin
 which cannot be changed by the user:\footnote{
 Same UART settings are used by most of other Zubax products.}
 \begin{itemize}
-    \item Baud rate -- 115200 baud/second.
-    \item Word size -- 8 bit.
-    \item Parity -- none.
-    \item Stop bits -- 1 bit.
+    \item Baud rate -- 115200
+    \item Word size -- 8 bit
+    \item Parity control -- none
+    \item Stop bits -- 1 bit
 \end{itemize}
 
 The following protocols are exposed via the UART interface:
@@ -438,14 +450,21 @@ The power supply characteristics documented in the following table are invariant
 	 $I_\text{supply}$  & Supply current & 70  & 95      & 180 & mA   & Any power input\\
 \end{ZubaxSimpleTable}
 
-\section{Product identification}
+\section{Product identification}\label{sec:product_identification}
 
 This section documents the device properties that are reported in response to identification requests,
 such as the UAVCAN service \verb|uavcan.protocol.GetNodeInfo| (section \ref{sec:uavcan_node_identification})
 or the CLI command \verb|zubax_id| (section \ref{sec:cli_command_zubax_id}).
 
-The product ID string and the UAVCAN node name are reported as \verb|com.zubax.gnss|.
-The prefix \verb|com.zubax.| is shared by many of the products designed by Zubax Robotics.
+The product ID string and the UAVCAN node name are reported as ``\verb|com.zubax.gnss|''.
+The prefix ``\verb|com.zubax.|'' is shared by many of the products designed by Zubax Robotics.
+
+Every manufactured device has a globally unique 128-bit ID (UID) that cannot be changed.
+
+Every manufactured device is equipped with a certificate of authenticity,
+which is a function of, among other things, the UID and the product ID of the device.
+Please refer to the web resources provided by Zubax Robotics to learn more about the certificate of authenticity
+and how it can be used to verify the authenticity of products.
 
 \subsection{Hardware and firmware versions}
 
@@ -1989,7 +2008,7 @@ at any moment.
 
     CAN bus  & Autoconfigured (plug-and-play node)     & UAVCAN firmware update protocol.
                                                        & Always available on CAN1.
-                                                         CAN2 is not used in the bootloader.\\
+                                                         CAN2 is not used by the bootloader.\\
 \end{ZubaxSimpleTable}
 
 \clearpage
@@ -2023,31 +2042,6 @@ The table \ref{table:bootloader_states} summarizes the states.
     
     4  & ReadyToBoot          & The application is about to boot.
                                 This state is very transient and is left automatically as soon as possible.\\
-\end{ZubaxSimpleTable}
-
-\clearpage
-\section{Error codes}
-
-The table \ref{table:bootloader_error_codes} provides definitions for the well defined error codes
-that can be reported by the bootloader.
-
-\begin{ZubaxSimpleTable}{Bootloader error codes}{| r | X |}\label{table:bootloader_error_codes}
-    Code  & Description \\
-        0 & Success.\\
-        1 & Unknown error.\\
-     9001 & Application ROM driver error: erase failed.\\
-     9002 & Application ROM driver error: write failed.\\
-    10001 & The current state of the bootloader does not permit the requested operation.\\
-    10002 & Application image is too large for the device. Download has been aborted.\\
-    10003 & Failed to write the next downloaded chunk of the application image into the ROM.\\
-    20001 & X/YMODEM interface write has timed out.\\
-    20002 & X/YMODEM retries exhausted.\\
-    20003 & X/YMODEM protocol error.\\
-    20004 & X/YMODEM transfer has been canceled by the remote.\\
-    20005 & X/YMODEM remote has refused to provide the file.\\
-    30001 & UAVCAN service request has timed out.\\
-    30002 & UAVCAN file downloading has been interrupted.\\
-    32767 & Unknown error.
 \end{ZubaxSimpleTable}
 
 \section{LED indication}
@@ -2088,21 +2082,101 @@ the redundant CAN interface (which is CAN2), since the bootloader makes no use o
     & Blinking 1 Hz, long pulses (500 ms)\\
 \end{ZubaxSimpleTable}
 
-\section{Serial interface description}
+\section{Error codes}
 
-Once started, the bootloader exposes a CLI via either DCD port or USB. The USB is always preferred if it is connected to the host; otherwise the CLI falls back to the UART interface of the DCD port.
+The table \ref{table:bootloader_error_codes} provides descriptions for the well defined error codes
+that can be reported by the bootloader.
 
-The CLI can be used to query the state of the bootloader, modify it, obtain the information about the running firmware, and upgrade it if necessary.
+\begin{ZubaxSimpleTable}{Bootloader error codes}{| r | X |}\label{table:bootloader_error_codes}
+    Code  & Description \\
+        0 & Success.\\
+        1 & Unknown error.\\
+     9001 & Application ROM driver error: erase failed.\\
+     9002 & Application ROM driver error: write failed.\\
+    10001 & The current state of the bootloader does not permit the requested operation.\\
+    10002 & Application image is too large for the device. Download has been aborted.\\
+    10003 & Failed to write the next downloaded chunk of the application image into the ROM.\\
+    20001 & X/YMODEM interface write has timed out.\\
+    20002 & X/YMODEM retries exhausted.\\
+    20003 & X/YMODEM protocol error.\\
+    20004 & X/YMODEM transfer has been canceled by the remote.\\
+    20005 & X/YMODEM remote has refused to provide the file.\\
+    30001 & UAVCAN service request has timed out.\\
+    30002 & UAVCAN file downloading has been interrupted.\\
+    32767 & Unknown error.
+\end{ZubaxSimpleTable}
 
-The CLI prompt is of the following format: \textbf{StateName>}, which features the human readable name of the current state of the bootloader, followed by the ASCII greater character (ASCII code 62), followed by a space. For example:  \textbf{BootDelay>}. Such prompt allows the user (or software) to easily identify the state of the bootloader.
+\section{USB and UART interfaces}
+
+This section is applicable to the serial interfaces exposed by the bootloader: USB and UART.
+
+\subsection{Interface selection}
+
+Once started, the bootloader launches a CLI\footnote{Command line interface.} instance on the UART port.
+If the bootloader detects that the USB interface became active (by virtue of being connected to a USB host),
+it disconnects the CLI from UART, rendering the latter silent and unresponsive,
+and connects the same CLI to USB virtual serial port.
+The CLI will remain available on the USB virtual serial port as long as the USB interface is active.
+Shall the USB port become disconnected, the bootloader will switch the CLI back to UART.
+The switching between USB and UART is fully automatic and happens on the fly.
+
+Note that the bootloader may continue to report diagnostic messages via UART even
+if the USB interface is currently used for communication.
+
+\subsection{USB interface properties}
+
+The USB interface will be detected by the host as CDC ACM (also known as virtual serial port).
+This is a standard USB class that is supported by vast majority of operating systems out of the box,
+no special drivers are required.
+
+When the bootloader is connected via USB, it will be detected with the following properties:
+\begin{itemize}
+    \item Vendor ID -- 0x1D50
+    \item Product ID -- 0x60C7
+    \item Vendor string -- \verb|Zubax Robotics|
+    \item Device description string -- \verb|Zubax GNSS Bootloader|
+    \item Device ID -- the 128-bit globally unique device ID (section \ref{sec:product_identification})
+                       as a hexadecimal string
+\end{itemize}
+
+\subsection{UART interface properties}
+
+The UART interface has the following properties that cannot be changed:
+\begin{itemize}
+    \item Baud rate -- 115200
+    \item Word size -- 8 bit
+    \item Parity control -- none
+    \item Stop bits -- 1
+\end{itemize}
+
+\subsection{CLI properties}
+
+The CLI uses the CR-LF line ending sequence (\verb|\r\n|).
+Remote echo and remote line editing are supported.
+
+The CLI prompt has the following format:
+
+\verb|StateName> |
+
+The prompt always contains a human readable name of the current state of the bootloader
+(see table \ref{table:bootloader_states}),
+followed by the ASCII greater character ``\verb|>|'' (ASCII code 62), followed by a whitespace character.
+For example:
+
+\verb|BootDelay> |
+
+Such prompt allows the user (or software) to easily identify the current state of the bootloader.
 
 \subsection{CLI commands}
 
-\textbf{reboot}
+This section documents the CLI commands that can be of interest to the end user.
+Some commands that are not intended for use in production are intentionally omitted from this reference.
 
-Restarts the bootloader.
+\subsubsection{reboot}
 
-\textbf{zubax{\_}id}
+Restarts the bootloader normally.
+
+\subsubsection{zubax\textunderscore{}id}
 
 This is the standard command supported by all products by Zubax Robotics that have a CLI. It takes no arguments, and outputs a YAML key-value dictionary containing the vital information about the device, the firmware it is running, unique ID, installed certificates of authenticity, version of the hardware, and possibly some other information. Aside from the standard fields, this command also provides at least the following fields in its output:
 
@@ -2114,11 +2188,11 @@ This is the standard command supported by all products by Zubax Robotics that ha
 
 If there is a valid firmware, its version information will also be provided via the standard fields \textbf{fw{\_}version} and  \textbf{fw{\_}vcs{\_}commit}. If the bootloader could not find a valid firmware, these fields will be omitted.
 
-\textbf{wait}
+\subsubsection{wait}
 
 Do not boot the application. If the current state is \textbf{BootDelay}, the state will be switched to \textbf{BootCancelled}. In all other states the command will have no effect.
 
-\textbf{download}
+\subsubsection{download}
 
 Start the serial receiver and prepare to receive the new firmware image as a flat binary via the serial link using either YMODEM, XMODEM, or XMODEM-1K. The bootloader will automatically detect which protocol to use. According to the YMODEM specification, if no transfer was initiated by the host within one minute, the command will exit with an error. Possible error codes are defined in the table above.
 
@@ -2131,7 +2205,7 @@ There are heaps of software products and scripts that support these file transfe
 sz -vv --ymodem --1k \$file > \$port < \$port
 \end{minted}
 
-\section{UAVCAN interface description}
+\section{CAN bus interface}
 
 The bootloader supports the UAVCAN firmware update protocol. Please refer to the UAVCAN specification for theory.
 
