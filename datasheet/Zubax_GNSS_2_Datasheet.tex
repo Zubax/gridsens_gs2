@@ -461,6 +461,17 @@ Note that all revisions of Zubax~GNSS~2 share the same major hardware version nu
      \textbf{Zubax GNSS 2.2}    & 2017      & v4.x        & Backward compatible with Zubax GNSS 2.1. \\
 \end{ZubaxSimpleTable}
 
+\section{Mechanical}\label{sec:mechanical}
+
+The figure \ref{drawing} documents the basic mechanical characteristics of Zubax~GNSS~2,
+such as the placement of connectors and mounting holes.
+
+\begin{figure}[!hbt]
+    \center
+	\includegraphics[width=1\textwidth]{GNSS2_drawing}
+	\caption{Zubax GNSS 2 drawing.\label{drawing}}
+\end{figure}
+
 \chapter{Operating principles}
 
 \section{Overview}
@@ -2174,17 +2185,5 @@ The interval at which the file read requests are issued while downloading the ap
 \end{equation}
 
 This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
-
-\chapter{Mechanical characteristics}\label{sec:mechanical}
-
-The drawing below documents the basic mechanical characteristics of Zubax~GNSS~2,
-such as the placement of connectors and mounting holes.
-
-\begin{figure}[!hbt]
-    \center
-	\includegraphics[width=1\textwidth]{GNSS2_drawing}
-	\caption{GNSS2 drawing.\label{drawing}}
-\end{figure}
-
 
 \end{document}
