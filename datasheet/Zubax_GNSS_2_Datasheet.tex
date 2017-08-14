@@ -473,6 +473,22 @@ whereas the air pressure and temperature sensor is disabled by default.
 The device can report measurements via the CAN bus using the UAVCAN protocol (chapter \ref{sec:uavcan}) and
 USB or UART using the NMEA 0183 protocol (chapter \ref{nmea_output}).
 
+\section{Start up and initialization}
+
+Immediately after powering on, the device starts the embedded bootloader (described in detail in the section
+\ref{sec:bootloader}).
+The bootloader awaits for external commands for a few seconds.
+If no commands requesting it to download a new firmware image or wait longer were received,
+and if a valid firmware was found in the ROM,
+the bootloader starts the firmware.
+If no valid firmware image is found in the ROM, the bootloader will wait for commands forever.
+
+While the bootloader is running, the board displays a distinct LED pattern,
+where the Status LED is glowing steadily.
+
+The bootloader and the firmware may report human-readable diagnostic messages
+via the UART port during initialization and while running.
+
 \section{On-line self-diagnostics}\label{sec:self-diagnostics}
 
 Zubax~GNSS~2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
@@ -1925,7 +1941,7 @@ standard NMEA 0183 protocol.}
 
 \end{CfgParamIndex}
 
-\chapter{Firmware update}\label{sec:bootloader}
+\chapter{Embedded bootloader}\label{sec:bootloader}
 
 Instructions below are only applicable to Zubax GNSS v2.2 and newer. It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware.
 
