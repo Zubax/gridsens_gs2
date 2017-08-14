@@ -1943,76 +1943,141 @@ standard NMEA 0183 protocol.}
 
 \chapter{Embedded bootloader}\label{sec:bootloader}
 
-Instructions below are only applicable to Zubax GNSS v2.2 and newer. It is recommended to use Zubax Toolbox or the UAVCAN GUI Tool for updating the firmware.
+\section{Introduction}
 
-Zubax~GNSS~2 employs the Zubax Embedded Bootloader for purposes of firmware update and integrity checking. The following state machine lies at the core of the bootloader.
+Zubax~GNSS~2\footnote{The embedded bootloader is available in Zubax~GNSS version 2.2 and newer.
+Older devices were equipped with a different bootloader which is no longer supported.
+If you need assistance with an older revision of hardware, please contact Zubax Robotics.}
+employs the Zubax Embedded Bootloader --
+an open source bootloader designed for deeply embedded systems
+that can upgrade firmware over CAN bus, USB, and serial port.
+The bootloader also offers advanced integrity checking capabilities.
+
+The bootloader starts immediately after the device is powered on.
+Having started, the bootloader checks if there is a valid application (i.e. firmware) image that can be executed.
+If there is one, the bootloader measures a 5 second timeout since the point of its initialization,
+and once the timeout has expired, the bootloader starts the application,
+unless an external entity has requested the bootloader to download a new application image.
+If there is no valid application image found, the bootloader will wait forever for commands.
+
+The bootloader supports two families of communication protocols: CAN-based and serial-based.
+The details are summarized in the table \ref{table:bootloader_interfaces}.
+
+All of the supported communication interfaces are active at all times,
+and it is possible to interact with the bootloader using any of the available interfaces
+at any moment.
+
+\begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | X | X | X[2] |}\label{table:bootloader_interfaces}
+    Interface& Parameters                              & Protocol     & Note\\
+
+    USB      & CDC ACM (virtual serial port)           & YMODEM, XMODEM, XMODEM-1K (auto~detect).
+                                                       & When USB is connected, the UART port is inactive.\\
+
+    UART     & 115200~baud, 8~bit, no~parity, 1~stop   & Same as USB.
+                                                       & Available only while USB is disconnected.\\
+
+    CAN bus  & Autoconfigured (plug-and-play node)     & UAVCAN firmware update protocol.
+                                                       & Always available on CAN1.
+                                                         CAN2 is not used in the bootloader.\\
+\end{ZubaxSimpleTable}
+
+\clearpage
+\section{State machine}
+
+The behavior of the bootloader if defined by a simple state machine documented on the figure
+\ref{bootloader_state_machine}.
+The table \ref{table:bootloader_states} summarizes the states.
 
 \begin{figure}[!hbt]
-	\centerline{\includegraphics[width=1.1\textwidth]{bootloader_state_machine}}
+	\centerline{\includegraphics[width=\textwidth]{bootloader_state_machine}}
 	\caption{Bootloader state machine.\label{bootloader_state_machine}}
 \end{figure}
 
-\begin{ZubaxSimpleTable}{Bootloader states}{|c | l | X|}
-State ID & State name & Comment \\
-0 & NoAppToBoot & There is no valid application to boot; the bootloader will be waiting for commands forever.\\
-1 & BootDelay & The bootloader will start the application in a few seconds, unless the boot is cancelled or a firmware update is requested.\\
-2 & BootCancelled & There is a valid application to boot, however, boot was cancelled by an external command.\\
-3 & AppUpgradeinProgress & Application is currently being upgraded. If interrupted, the bootloader will go into either \textbf{NoAppToBoot} or \textbf{BootCancelled}.\\
-4 & ReadyToBoot & The application is about to boot. This state is very transient and is left automatically as soon as possible.
+\begin{ZubaxSimpleTable}{Bootloader states}{|c | l | X|}\label{table:bootloader_states}
+    ID & Name                 & Description \\
+
+    0  & NoAppToBoot          & There is no valid application to boot;
+                                the bootloader will be waiting for commands forever.\\
+
+    1  & BootDelay            & The bootloader will start the application in a few seconds,
+                                unless booting is canceled or a firmware update is requested.\\
+
+    2  & BootCancelled        & There is a valid application to boot; however,
+                                booting was canceled by an external command.\\
+
+    3  & AppUpgradeinProgress & Application is currently being upgraded.
+                                If interrupted, the bootloader will switch into
+                                \textbf{NoAppToBoot} or \textbf{BootCancelled},
+                                depending on whether there is a valid image after the interruption.\\
+    
+    4  & ReadyToBoot          & The application is about to boot.
+                                This state is very transient and is left automatically as soon as possible.\\
 \end{ZubaxSimpleTable}
 
-On Zubax~GNSS~2, the boot delay is set to 5 seconds.
-The bootloader supports the following communication interfaces:
-
-\begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | l | X | X |}
-Intreface & Parameters & Protocol & Note\\
-USB & CDC ACM & YMODEM, XMODEM, XMODEM-1K (autodetect) & When connected, the DCD port is inactive\\
-DCD port (UART) & 115200-8N1(fixed) & Same as USB CDC ACM & Available only while USB is disconnected\\
-CAN1 bus & Autoconfigured & UAVCAN firmware update protocol & Always available on CAN1. CAN2 is not used in the bootloader.
-\end{ZubaxSimpleTable}
-
-As can be seen from the table, there are two families of protocols: serial and CAN based; both are reviewed below.
-
+\clearpage
 \section{Error codes}
 
-The table below provides definitions for the well defined error codes that can be reported by the bootloader.
+The table \ref{table:bootloader_error_codes} provides definitions for the well defined error codes
+that can be reported by the bootloader.
 
-\begin{ZubaxSimpleTable}{Error codes}{| l | X |}
-0 & Success.\\
-1 & Unknown error.\\
-9001 & Application ROM driver error: erase failed.\\
-9002 & Application ROM driver error: write failed.\\
-10001 & The current state of the bootloader does not permit the requested operation.\\
-10002 & Application image is too large for the device. Download has been aborted.\\
-10003 & Failed to write the next downloaded chunk of the application image into the ROM.\\
-20001 & X/YMODEM interface write has timed out.\\
-20002 & X/YMODEM retries exhausted.\\
-20003 & X/YMODEM protocol error.\\
-20004 & X/YMODEM transfer has been cancelled by the remote.\\
-20005 & X/YMODEM remote has refused to provide the file.\\
-30001 & UAVCAN service request has timed out.\\
-30002 & UAVCAN file downloading has been interrupted.\\
-32767 & Unknown error.
+\begin{ZubaxSimpleTable}{Bootloader error codes}{| r | X |}\label{table:bootloader_error_codes}
+    Code  & Description \\
+        0 & Success.\\
+        1 & Unknown error.\\
+     9001 & Application ROM driver error: erase failed.\\
+     9002 & Application ROM driver error: write failed.\\
+    10001 & The current state of the bootloader does not permit the requested operation.\\
+    10002 & Application image is too large for the device. Download has been aborted.\\
+    10003 & Failed to write the next downloaded chunk of the application image into the ROM.\\
+    20001 & X/YMODEM interface write has timed out.\\
+    20002 & X/YMODEM retries exhausted.\\
+    20003 & X/YMODEM protocol error.\\
+    20004 & X/YMODEM transfer has been canceled by the remote.\\
+    20005 & X/YMODEM remote has refused to provide the file.\\
+    30001 & UAVCAN service request has timed out.\\
+    30002 & UAVCAN file downloading has been interrupted.\\
+    32767 & Unknown error.
 \end{ZubaxSimpleTable}
 
 \section{LED indication}
 
-While the bootloader is running, the LED indicators behave as follows:
-\begin{itemize}
-\item The status LED is always on, which is the main indicator that the bootloader, rather than the firmware, is currently running
-\item The CAN1 LED behaves normally as a CAN bus activity and load indicator, blinking once for 25 milliseconds every time the CAN1 controller successfully transmits or receives a CAN frame.
-\item The CAN2 LED displays one of the blinking patterns shown below, depending on which state the bootloader is in. While the bootloader is running, the state of this LED has no relation to the state of the redundant CAN interface (which is CAN2), since the bootloader makes no use of it.
-\end{itemize}
+While the bootloader is running, the LED indicators behave as described in this section.
 
-\begin{ZubaxSimpleTable}{LED patterns during bootloader stage}{| l | X |}
-Bootloader state & LED blinking pattern (step 50 ms) \\
-NoAppToBoot  & 10 Hz (very quickly)\\
-BootDelay, ReadyToBoot  & Turned off\\
-BootCancelled &  1 Hz, short pulses (50 ms)\\
-AppUpgradeInProgress & 1 Hz, long pulses (500 ms)
+The status LED is always on, which is the main indicator that the bootloader,
+rather than the application (firmware), is currently running.
+
+The CAN1 LED behaves normally as a CAN bus activity and load indicator,
+blinking once for 25 milliseconds every time the CAN1 controller successfully
+transmits or receives a CAN frame.
+Solid glowing indicates that the current CAN bus load is higher than 40 frames per second.
+
+The CAN2 LED displays one of the blinking patterns shown in the table \ref{table:bootloader_can2_led_behavior},
+depending on which state the bootloader is in.
+While the bootloader is running, the state of this LED has no relation to the state of
+the redundant CAN interface (which is CAN2), since the bootloader makes no use of it.
+
+\begin{ZubaxSimpleTable}{Bootloader state indicated via the CAN2 LED indicator}{| l | l | X |}
+\label{table:bootloader_can2_led_behavior}
+    Bootloader state         & LED pattern (step 50 ms) & LED behavior \\
+
+    NoAppToBoot
+    & \LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO
+    & Blinking 10 Hz (very quickly) \\
+
+    BootDelay, ReadyToBoot
+    & \LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO
+    & Turned off\\
+
+    BootCancelled
+    & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO
+    & Blinking 1 Hz, short pulses (50 ms)\\
+
+    AppUpgradeInProgress
+    & \LEDX\LEDX\LEDX\LEDX\LEDX\LEDX\LEDX\LEDX\LEDX\LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO
+    & Blinking 1 Hz, long pulses (500 ms)\\
 \end{ZubaxSimpleTable}
 
-\section{Via USB/UART}
+\section{Serial interface description}
 
 Once started, the bootloader exposes a CLI via either DCD port or USB. The USB is always preferred if it is connected to the host; otherwise the CLI falls back to the UART interface of the DCD port.
 
@@ -2055,7 +2120,7 @@ There are heaps of software products and scripts that support these file transfe
 sz -vv --ymodem --1k \$file > \$port < \$port
 \end{minted}
 
-\section{Via CAN bus}
+\section{UAVCAN interface description}
 
 The bootloader supports the UAVCAN firmware update protocol. Please refer to the UAVCAN specification for theory.
 
