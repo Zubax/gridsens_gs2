@@ -524,7 +524,7 @@ Zubax~GNSS~2 continuously monitors its own status and sensor outputs for anomali
 Results of the continuous self-testing are mapped to three health codes: OK, Warning, and Error.
 The table below documents how the device uses health codes to report its status.
 
-\begin{ZubaxSimpleTable}{Self-diagnostic health codes}{|l|X|}
+\begin{ZubaxSimpleTable}{Self-diagnostic health codes}{|l X|}
     Health        & Conditions    \\
     OK            & The device is functioning properly.\\
     Warning       & See below. \\
@@ -563,7 +563,7 @@ in the section \ref{sec:self-diagnostics}.
 \newcommand{\LEDX}{{\rule{0.4em}{0.8em}}}
 \newcommand{\LEDO}{{\rule{0.4em}{0.1em}}}
 
-\begin{ZubaxSimpleTable}{Status LED indication}{|X|X|X|}
+\begin{ZubaxSimpleTable}{Status LED indication}{|X X X|}
 Health 	& Blinking pattern & On/Off duration [second] \\
 OK      & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO
         & 0.05/0.95 seconds \\
@@ -598,11 +598,11 @@ This section is valid for the hardware manufactured until 2016, inclusive.
 
 During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax~GNSS~2 uses its LED indicators in a different way, as described in the table below.
 
-\begin{ZubaxSimpleTable}{LED indication at bootup for hardware v2.0 and 2.1}{| X | c | c | c|}
-Status & INFO & CAN1 & CAN2 \\
-CAN bit rate detection &  & Solid & \\
-Dynamic node ID allocation & Solid & &  \\
-Update in progress & Solid & Solid & \\
+\begin{ZubaxSimpleTable}{LED indication at bootup for hardware v2.0 and 2.1}{| X | c c c|}
+Status                     & INFO  & CAN1  & CAN2 \\
+CAN bit rate detection     &       & Solid & \\
+Dynamic node ID allocation & Solid &       & \\
+Update in progress         & Solid & Solid & \\
 \end{ZubaxSimpleTable}
 
 \chapter{UAVCAN interface}\label{sec:uavcan}
@@ -630,7 +630,7 @@ The node health codes are mapped directly to the output of the self-diagnostic f
 documented in the chapter \ref{sec:self-diagnostics}.
 The operating mode codes are summarized below.
 
-\begin{ZubaxSimpleTable}{UAVCAN node mode code interpretation}{|l|X|}
+\begin{ZubaxSimpleTable}{UAVCAN node mode code interpretation}{|l X|}
 Node mode & Meaning  \\
 OPERATIONAL        & Operating normally. \\
 INITIALIZATION     & The firmware has just started and is not ready to begin normal operation yet. \\
@@ -958,7 +958,7 @@ The bootloader is documented in the section \ref{sec:bootloader}.
 \section{Data type summary}
 
 {\small
-\begin{ZubaxSimpleTable}{Broadcasted UAVCAN messages}{|l|l|l|X|}
+\begin{ZubaxSimpleTable}{Broadcasted UAVCAN messages}{|l l l X|}
     Data type name                                        & Period     & Transfer priority & Note \\
 
     \texttt{uavcan.protocol.NodeStatus}                   & \CfgRefX{uavcan.pubp-stat}
@@ -1007,7 +1007,7 @@ The bootloader is documented in the section \ref{sec:bootloader}.
 }
 
 {\small
-\begin{ZubaxSimpleTable}{Subscribed UAVCAN messages}{|l|X|}
+\begin{ZubaxSimpleTable}{Subscribed UAVCAN messages}{|l X|}
     Data type name                                         & Note \\
     \texttt{uavcan.protocol.dynamic\_node\_id.Allocation}  & Only during the initialization or while
                                                              in the bootloader. \\
@@ -1018,7 +1018,7 @@ The bootloader is documented in the section \ref{sec:bootloader}.
 }
 
 {\small
-\begin{ZubaxSimpleTable}{Provided UAVCAN services}{|l|X|}
+\begin{ZubaxSimpleTable}{Provided UAVCAN services}{|l X|}
     Data type name                                         & Note \\
     \texttt{uavcan.protocol.GetNodeInfo}                   & Section \ref{sec:uavcan_node_identification}.\\
     \texttt{uavcan.protocol.GetDataTypeInfo}               & Provided by Libuavcan. \\
@@ -1782,7 +1782,7 @@ hw_info_url  : 'http://device.zubax.com/device_info?uid=34FFD3054357303439442243
 \end{minted}
 \end{minipage}
 
-\begin{ZubaxSimpleTable}{Zubax ID fields}{|l|X|}\label{zubax_id_fields_table}
+\begin{ZubaxSimpleTable}{Zubax ID fields}{|l X|}\label{zubax_id_fields_table}
 Field name              & Meaning \\
 
 \texttt{product\_id}    & Product type identifier string.
@@ -2049,7 +2049,7 @@ The table \ref{table:bootloader_states} summarizes the states.
 	\caption{Bootloader state machine.\label{bootloader_state_machine}}
 \end{figure}
 
-\begin{ZubaxSimpleTable}{Bootloader states}{|c | l | X|}\label{table:bootloader_states}
+\begin{ZubaxSimpleTable}{Bootloader states}{|c l X|}\label{table:bootloader_states}
     ID & Name                 & Description \\
 
     0  & NoAppToBoot          & There is no valid application to boot;
@@ -2088,7 +2088,7 @@ depending on which state the bootloader is in.
 While the bootloader is running, the state of this LED has no relation to the state of
 the redundant CAN interface (which is CAN2), since the bootloader makes no use of it.
 
-\begin{ZubaxSimpleTable}{Bootloader state indicated via the CAN2 LED indicator}{| l | l | X |}
+\begin{ZubaxSimpleTable}{Bootloader state indicated via the CAN2 LED indicator}{|l l X|}
 \label{table:bootloader_can2_led_behavior}
     Bootloader state         & LED pattern (step 50 ms) & LED behavior \\
 
@@ -2114,7 +2114,7 @@ the redundant CAN interface (which is CAN2), since the bootloader makes no use o
 The table \ref{table:bootloader_error_codes} provides descriptions for the well defined error codes
 that can be reported by the bootloader.
 
-\begin{ZubaxSimpleTable}{Bootloader error codes}{| r | X |}\label{table:bootloader_error_codes}
+\begin{ZubaxSimpleTable}{Bootloader error codes}{|r X|}\label{table:bootloader_error_codes}
     Code  & Description \\
         0 & Success.\\
         1 & Unknown error.\\
@@ -2253,7 +2253,7 @@ The table \ref{table:bootloader_zubax_id_fields} summarizes the fields reported 
 Some extra fields may be reported as well,
 which are not documented here because they are not designed for production use.
 
-\begin{ZubaxSimpleTable}{Zubax ID fields}{|l|X|}\label{table:bootloader_zubax_id_fields}
+\begin{ZubaxSimpleTable}{Zubax ID fields}{|l X|}\label{table:bootloader_zubax_id_fields}
 Field name              & Meaning \\
 
 \texttt{product\_id}    & Product type identifier string.
@@ -2354,7 +2354,7 @@ The error codes are documented in the table \ref{table:bootloader_error_codes}.
 The message is broadcasted at a fixed interval of 1 second.
 Out-of-order messages may be emitted when the status of the bootloader changes.
 
-\begin{ZubaxSimpleTable}{Bootloader states and UAVCAN node status codes}{|l|X|X|}
+\begin{ZubaxSimpleTable}{Bootloader states and UAVCAN node status codes}{|l X X|}
 \label{table:bootloader_uavcan_status}
     Bootloader state       & UAVCAN node mode   & UAVCAN node health\\
     NoAppToBoot            & SOFTWARE{\_}UPDATE & ERROR \\
@@ -2499,7 +2499,7 @@ Some of the important logging points include the following:
 
 \subsection{Data type summary}
 
-\begin{ZubaxSimpleTable}{Broadcasted UAVCAN messages}{|l|l|l|X|}
+\begin{ZubaxSimpleTable}{Broadcasted UAVCAN messages}{|l l l X|}
     Data type name                                        & Period     & Transfer priority & Section \\
 
     \texttt{uavcan.protocol.NodeStatus}                   & 1 \& ad-hoc
@@ -2515,19 +2515,19 @@ Some of the important logging points include the following:
                                                           & \ref{sec:uavcan_bootloader_logging}\\
 \end{ZubaxSimpleTable}
 
-\begin{ZubaxSimpleTable}{Subscribed UAVCAN messages}{|l|X|}
+\begin{ZubaxSimpleTable}{Subscribed UAVCAN messages}{|l X|}
     Data type name                                        & Section \\
     \texttt{uavcan.protocol.dynamic\_node\_id.Allocation} & \ref{sec:bootloader_uavcan_node_id_allocation}\\
 \end{ZubaxSimpleTable}
 
-\begin{ZubaxSimpleTable}{UAVCAN service servers}{|l|X|}
+\begin{ZubaxSimpleTable}{UAVCAN service servers}{|l X|}
     Data type name                                        & Section \\
     \texttt{uavcan.protocol.GetNodeInfo}                  & \ref{sec:bootloader_uavcan_node_identification}\\
     \texttt{uavcan.protocol.RestartNode}                  & \ref{sec:bootloader_uavcan_node_restarting}\\
     \texttt{uavcan.protocol.file.BeginFirmwareUpdate}     & \ref{sec:bootloader_uavcan_begin_update_request} \\
 \end{ZubaxSimpleTable}
 
-\begin{ZubaxSimpleTable}{UAVCAN service clients}{|l|l|l|X|}
+\begin{ZubaxSimpleTable}{UAVCAN service clients}{|l l l X|}
     Data type name                     & Response timeout & Transfer priority & Section \\
     \texttt{uavcan.protocol.file.Read} & 1 second
                                        & 24 (low)
