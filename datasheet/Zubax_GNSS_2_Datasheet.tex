@@ -688,6 +688,12 @@ Once started, Zubax~GNSS~2 will automatically detect the bit rate of the CAN bus
 There is no detection timeout, which means that the device can be connected to a CAN bus at
 any moment after powering up, and it will configure itself immediately.
 
+Note that if the bootloader (section \ref{sec:bootloader}) was able to detect the bit rate of the CAN bus
+before starting the application,
+it will pass the detected value over to the application while booting it,
+in which case the application will immediately start using the supplied value rather than
+performing the bit rate detection again.
+
 It is not possible to specify the bit rate manually.\footnote{This feature was removed in the firmware v4.0.
 Earlier versions of the firmware used to provide the configuration parameter
 \CfgRef{uavcan.bit+rate}, which could be used to assign the bit rate manually.}
@@ -699,10 +705,10 @@ detection procedure.
 
 The following bit rates can be detected by Zubax~GNSS~2 automatically:
 \begin{itemize}
-\item 1 Mbit/s
-\item 500 kbit/s
-\item 250 kbit/s
-\item 125 kbit/s
+    \item 1 Mbit/s
+    \item 500 kbit/s
+    \item 250 kbit/s
+    \item 125 kbit/s
 \end{itemize}
 Zubax~GNSS~2 cannot be interfaced with a CAN bus that operates at a different bit rate.
 
@@ -713,6 +719,12 @@ defines the node ID of the local UAVCAN node.
 
 If this parameter is set to zero, which is the default, the device will request a dynamic UAVCAN node ID
 from the bus.
+
+Note that if the bootloader (section \ref{sec:bootloader}) was able to obtain a dynamic UAVCAN node ID
+from the bus before starting the application,
+it will pass the detected value over to the application while booting it,
+in which case the application will use the provided node ID
+\emph{regardless of the value configured in \CfgRef{uavcan.node+id}}.
 
 Until there is a valid node ID available for the local UAVCAN node (either specified
 statically via the configuration parameter, or provided dynamically),
@@ -936,11 +948,12 @@ may change the ordering of the configuration parameters.
 General information about the device configuration options is available in the chapter 
 \ref{sec:configuration_parameters}.
 
-\section{Firmware upgrade}
+\section{Firmware update}
 
 The service \verb|uavcan.protocol.file.BeginFirmwareUpdate| reboots the device into the bootloader
-mode.
-The bootloader mode is documented in the chapter \ref{sec:bootloader}.
+mode and provides the bootloader with the parameters supplied in the service request,
+thus initiating the process of firmware update.
+The bootloader is documented in the section \ref{sec:bootloader}.
 
 \section{Data type summary}
 
@@ -2304,23 +2317,121 @@ There are various GUI-based alternatives for Windows and Mac OS as well.
 
 \section{CAN bus interface}
 
-The bootloader supports the UAVCAN firmware update protocol. Please refer to the UAVCAN specification for theory.
+\subsection{Overview}
 
-The bootloader only utilizes the primary CAN interface, which is CAN1. The redundant interface CAN2 remains in the passive mode while the bootloader is running. It is therefore required that if there is only one interface in use, it must be CAN1.
+The CAN bus interface is available on the CAN1 port only.
+The CAN2 port is not used by the bootloader in any way.
+It is one of the reasons why only the CAN1 port must be used
+in deployments with non-redundant CAN buses.
 
-The following table describes the mapping from the bootloader states to the UAVCAN node status codes:
+The bootloader implements the UAVCAN firmware update protocol.
+A detailed specification of the UAVCAN protocol in general and the firmware update part of it is available
+on the official website at \url{http://uavcan.org}.
+
+\subsection{Node status reporting}
+
+The table \ref{table:bootloader_uavcan_status} describes the mapping from the bootloader states
+to UAVCAN node status codes, as reported via the standard message \verb|uavcan.protocol.NodeStatus|.
+
+The vendor specific status code field of the message contains the error code of
+the last attempt to upgrade the firmware.
+The error codes are documented in the table \ref{table:bootloader_error_codes}.
+
+The message is broadcasted at a fixed interval of 1 second.
 
 \begin{ZubaxSimpleTable}{Bootloader states and UAVCAN node status codes}{| X | X | X |}
-Bootloader state & UAVCAN node mode & UAVCAN node health\\
-NoAppToBoot & SOFTWARE{\_}UPDATE & ERROR\\
-BootDelay, ReadyToBoot & MAINTENANCE & OK\\
-BootCancelled & MAINTENANCE & WARNING\\
-AppUpgradeInProgress & SOFTWARE{\_}UPDATE & OK
+\label{table:bootloader_uavcan_status}
+    Bootloader state       & UAVCAN node mode   & UAVCAN node health\\
+    NoAppToBoot            & SOFTWARE{\_}UPDATE & ERROR \\
+    BootDelay, ReadyToBoot & MAINTENANCE        & OK \\
+    BootCancelled          & MAINTENANCE        & WARNING \\
+    AppUpgradeInProgress   & SOFTWARE{\_}UPDATE & OK \\
 \end{ZubaxSimpleTable}
 
-The vendor specific status code of the node status message contains the status code of the last attempt to upgrade the firmware. Please refer to the error code table provided above.
+\subsection{Node identification}
 
-\subsection{Supported messages}
+The service \verb|uavcan.protocol.GetNodeInfo| is responded to as follows.
+
+If the bootloader was able to detect a valid application (i.e. firmware) image on the device,
+all fields of the nested structure \verb|uavcan.protocol.SoftwareVersion|
+(which are \verb|major|, \verb|minor|, \verb|vcs_commit|, and \verb|image_crc|)
+will be populated with the information obtained from the application image.
+If no valid application image could be found, the fields will be zeroed.
+
+The fields \verb|uavcan.protocol.HardwareVersion| and \verb|name|
+are always populated as described in the section \ref{sec:uavcan_node_identification}.
+
+\subsection{Node restarting}
+
+The service \verb|uavcan.protocol.RestartNode|, if the provided magic number is correct,
+unconditionally reboots the device.
+If the provided magic number is incorrect, the device returns a response with the field \verb|ok|
+set to zero (false).
+
+\subsection{Node initialization}
+
+The bootloader is a full plug-and-play UAVCAN node that requires no initial configuration prior to
+use.\footnote{If that were not the case, the device would have been easy to brick
+by uploading an invalid firmware and then turning the power off.}
+
+\subsubsection{CAN bus bit rate detection}
+
+Once started, the bootloader will automatically detect the bit rate of the CAN bus it is connected to
+(if connected to any at all), and remember the detected bit rate for the rest of its work.
+There is no detection timeout, which means that the bootloader can be connected to a CAN bus at
+any moment while running, and it will configure itself immediately.
+
+If the bit rate has been detected successfully, its value will be passed over to the application
+during the booting, so that the application won't have to perform the bit rate detection again.
+
+Note that if the bootloader was started from the application,
+and at the time of it the application knew the bit rate of the CAN bus,
+the value will be supplied to the bootloader.
+In this case the bootloader will use the provided bit rate value and skip the detection procedure.
+
+The bootloader requires up to approximately 4 seconds to perform the bit rate detection on a properly
+functioning CAN bus.
+If the bus is exhibiting erroneous behavior, the bootloader may need a longer time to complete the bit rate
+detection procedure.
+The list of supported bit rates is provided below:
+\begin{itemize}
+    \item 1 Mbit/s
+    \item 500 kbit/s
+    \item 250 kbit/s
+    \item 125 kbit/s
+\end{itemize}
+
+\subsubsection{Node ID allocation}
+
+After the CAN bus bit rate is established, the bootloader will request a dynamic UAVCAN node ID from the bus.
+
+If the node ID has been obtained successfully, its value will be passed over to the application
+during the booting, so that the application will be able to re-use it.
+
+Note that if the bootloader was started from the application,
+and at the time of it the application's own UAVCAN node had a valid node ID,
+the value will be supplied to the bootloader.
+In this case the bootloader will use the provided node ID and skip the allocation procedure.
+
+Until there is a valid node ID available for the bootloader,
+no other functions of the UAVCAN interface will work.
+
+\subsection{Firmware update process}
+
+\subsubsection{Waiting for the update request}
+
+\subsubsection{Downloading the application image}
+
+The interval at which the file read requests are issued while downloading the application image is defined by the following formula (all units SI):
+
+\begin{equation}
+\text{last{\_}response{\_}latency} + 1 / (1 + \text{can{\_}bus{\_}bit{\_}rate} / 65536)
+\end{equation}
+
+This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
+
+\subsection{Data type summary}
+
 \begin{ZubaxSimpleTable}{Supported messages}{| l | l | l | l |}
 Data type & Direction & Period & Transfer priority \\
 \texttt{uavcan.protocol.NodeStatus} & Output & 1 Hz & 24(low) \\
@@ -2335,8 +2446,6 @@ Data type & Note\\
 \texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used only during initialization, if the application did not provide a specific node ID to use.
 \end{ZubaxSimpleTable}
 
-\subsection{Supported services}
-
 \begin{ZubaxSimpleTable}{Supported servers}{| l | X |}
 Data type & Note\\
 uavcan.protocol.GetNodeInfo & The nested structure  \textbf{uavcan.protocol.SoftwareVersion} is populated only if there is a valid application.\\
@@ -2348,13 +2457,5 @@ uavcan.protocol.file.BeginFirmwareUpdate & Initiates the firmware update process
 Data type & Response timeout & Transfer priority & Note \\
 uavcan.protocol.file.Read & 1 second & 24(low) & Used to download the application image file from the specified file server.
 \end{ZubaxSimpleTable}
-
-The interval at which the file read requests are issued while downloading the application image is defined by the following formula (all units SI):
-
-\begin{equation}
-\text{last{\_}response{\_}latency} + 1 / (1 + \text{can{\_}bus{\_}bit{\_}rate} / 65536)
-\end{equation}
-
-This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
 
 \end{document}
