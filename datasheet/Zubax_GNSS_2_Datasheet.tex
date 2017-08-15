@@ -686,6 +686,8 @@ Once started, Zubax~GNSS~2 will automatically detect the bit rate of the CAN bus
 There is no detection timeout, which means that the device can be connected to a CAN bus at
 any moment after powering up, and it will configure itself immediately.
 
+If both CAN interfaces are used, the bit rates of the CAN buses they are connected to must match.
+
 Note that if the bootloader (section \ref{sec:bootloader}) was able to detect the bit rate of the CAN bus
 before starting the application,
 it will pass the detected value over to the application while booting it,
