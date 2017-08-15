@@ -577,14 +577,12 @@ Error   & \LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO
 
 These LED indicators display the intensity of the CAN bus traffic per interface.
 
-Each blink indicates that a CAN frame was successfully transmitted or successfully received during
-the last few milliseconds.
-Under a high bus load, these LED indicators are expected to glow steadily.
+Each blink indicates that at least one CAN frame was successfully transmitted or successfully received
+during the last few milliseconds.
 If an interface is not connected to the bus, the corresponding LED indicator will be inactive (turned off),
 even if the device is actually attempting to transmit.
 
-Note that the CAN traffic filtered out by the hardware acceptance filters of the device will not affect the
-state of the LED indicators.
+Note that CAN traffic filtered out by the hardware acceptance filters will not be indicated.
 
 \subsection{LED indication during firmware update and bootup}
 
@@ -2000,8 +1998,9 @@ The bootloader starts immediately after the device is powered on.
 Having started, the bootloader checks if there is a valid application (i.e. firmware) image that can be executed.
 If there is one, the bootloader measures a 5 second timeout since the point of its initialization,
 and once the timeout has expired, the bootloader starts the application,
-unless an external entity has requested the bootloader to download a new application image.
-If there is no valid application image found, the bootloader will wait forever for commands.
+unless an external entity has requested it to download a new application image.
+If there is no valid application image found (i.e. nothing to boot),
+the bootloader will wait forever for commands.
 
 The bootloader supports two families of communication protocols: CAN-based and serial-based.
 The details are summarized in the table \ref{table:bootloader_interfaces}.
@@ -2009,6 +2008,18 @@ The details are summarized in the table \ref{table:bootloader_interfaces}.
 All of the supported communication interfaces are active at all times,
 and it is possible to interact with the bootloader using any of the available interfaces
 at any moment.
+
+The bootloader is fully fault-tolerant.
+If the update process fails at any point for any reason
+(e.g. communication failure, power supply failure, and so on),
+the device may end up with a damaged application image.
+The bootloader is able to recognize this condition and refuse to load the damaged application image.
+In order to recover from this state, the update process simply needs to be restarted.
+
+As an additional safety measure, the bootloader uses a hardware watchdog timer that
+allows it to abort applications that do not load properly.
+This minimizes the chances of permanently damaging the device\footnote{Bricking.}
+by uploading a dysfunctional firmware image.
 
 \begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | X | X | X[2] |}\label{table:bootloader_interfaces}
     Interface& Parameters                              & Protocol     & Note\\
@@ -2067,7 +2078,8 @@ rather than the application (firmware), is currently running.
 The CAN1 LED behaves normally as a CAN bus activity and load indicator,
 blinking once for 25 milliseconds every time the CAN1 controller successfully
 transmits or receives a CAN frame.
-Solid glowing indicates that the current CAN bus load is higher than 40 frames per second.
+Note that CAN frames that are filtered out by the hardware CAN acceptance filters
+are not indicated by this LED.
 
 The CAN2 LED displays one of the blinking patterns shown in the table \ref{table:bootloader_can2_led_behavior},
 depending on which state the bootloader is in.
@@ -2338,6 +2350,7 @@ the last attempt to upgrade the firmware.
 The error codes are documented in the table \ref{table:bootloader_error_codes}.
 
 The message is broadcasted at a fixed interval of 1 second.
+Out-of-order messages may be emitted when the status of the bootloader changes.
 
 \begin{ZubaxSimpleTable}{Bootloader states and UAVCAN node status codes}{| X | X | X |}
 \label{table:bootloader_uavcan_status}
@@ -2420,15 +2433,68 @@ no other functions of the UAVCAN interface will work.
 
 \subsubsection{Waiting for the update request}
 
+In order to be able to begin downloading the new application image over UAVCAN,
+the bootloader needs to know the following two parameters:
+\begin{itemize}
+    \item The UAVCAN node ID of the remote node that contains the application image file
+          that should be downloaded.
+
+    \item The file system path to the application image file within the remote node.
+\end{itemize}
+
+The above listed parameters can be supplied to the bootloader in two ways:
+\begin{itemize}
+    \item By calling the standard UAVCAN service \verb|uavcan.protocol.file.BeginFirmwareUpdate|
+          while the bootloader is running.
+          The request payload of that service contains the necessary data.
+          
+    \item By the application. This is the case when the application receives the above request
+          and passes the parameters from it directly to the bootloader when rebooting into it.
+          In this case the bootloader skips this step and proceeds straight to the next one.
+\end{itemize}
+
 \subsubsection{Downloading the application image}
 
-The interval at which the file read requests are issued while downloading the application image is defined by the following formula (all units SI):
+At this stage, the bootloader has all of the information required to begin the actual update process.
+
+The standard service \verb|uavcan.protocol.file.Read| is emitted in a loop in order to transfer
+the contents of the new application image to the device.
+The transfer priority is set to 24 (low).
+The service response timeout is set to 1 second (the default recommended by the UAVCAN specification).
+
+In order to avoid congestion of the CAN bus while the file transfer is in progress,
+the bootloader inserts a delay after completion of each file read service invocation.
+The delay is a function of the CAN bus bit rate, and it is defined as follows (all units are SI):
 
 \begin{equation}
-\text{last{\_}response{\_}latency} + 1 / (1 + \text{can{\_}bus{\_}bit{\_}rate} / 65536)
+\frac{1}{1 + \frac{\text{can{\_}bus{\_}bit{\_}rate}}{65536}}
 \end{equation}
 
-This formula, combined with the low transfer priority, allows the bootloader to avoid congestion of the CAN bus while downloading the firmware image.
+Some of the practical values are listed below for reference:
+\begin{description}
+    \item[1 Mbit/s] -- 62 ms
+    \item[500 kbit/s] -- 116 ms
+    \item[250 kbit/s] -- 208 ms
+    \item[125 kbit/s] -- 344 ms
+\end{description}
+
+While the file transfer is in progress,
+the bootloader will be reporting its progress several times per minute
+by emitting human-readable log messages,
+as described in the section \ref{sec:uavcan_bootloader_logging}.
+
+A log message will also be emitted at the end of the process in order to indicate whether it was successful,
+and if not, what was the reason of the failure.
+
+\subsection{Logging}\label{sec:uavcan_bootloader_logging}
+
+The bootloader aperiodically broadcasts human-readable log messages using the standard UAVCAN type
+\verb|uavcan.protocol.debug.LogMessage| at the lowest transfer priority level.
+Some of the important logging points include the following:
+\begin{itemize}
+    \item File transfer progress report.
+    \item Update completion -- whether successful or not, reason for the failure, if applicable.
+\end{itemize}
 
 \subsection{Data type summary}
 
