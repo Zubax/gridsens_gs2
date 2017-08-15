@@ -71,9 +71,8 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
 \end{titlepage}
 
 \tableofcontents
-\clearpage
-\listoftables
 \listoffigures
+\listoftables
 
 \mainmatter
 
@@ -1789,7 +1788,8 @@ Field name              & Meaning \\
 
 \texttt{hw\_version}    & Hardware version number in the form ``major.minor''. \\
 
-\texttt{hw\_unique\_id} & The 128-bit unique ID of this specific hardware instance.
+\texttt{hw\_unique\_id} & The 128-bit unique ID of this specific hardware instance
+                          (section \ref{sec:product_identification}).
                           The UID is represented either as a hexadecimal string, or as a Base64 encoded string.\\
 
 \texttt{hw\_signature}  & The certificate of authenticity (CoA) of this specific hardware instance
@@ -2176,34 +2176,131 @@ Some commands that are not intended for use in production are intentionally omit
 
 Restarts the bootloader normally.
 
-\subsubsection{zubax\textunderscore{}id}
-
-This is the standard command supported by all products by Zubax Robotics that have a CLI. It takes no arguments, and outputs a YAML key-value dictionary containing the vital information about the device, the firmware it is running, unique ID, installed certificates of authenticity, version of the hardware, and possibly some other information. Aside from the standard fields, this command also provides at least the following fields in its output:
-
-\begin{itemize}
-\item \textbf{bl{\_}version} - bootloader version, major and minor.
-\item \textbf{bl{\_}vcs{\_}commit} - build identifier of the bootloader.
-\item \textbf{mode} - set to the string \textbf{bootloader} to indicate that the bootloader is running.
-\end{itemize}
-
-If there is a valid firmware, its version information will also be provided via the standard fields \textbf{fw{\_}version} and  \textbf{fw{\_}vcs{\_}commit}. If the bootloader could not find a valid firmware, these fields will be omitted.
-
 \subsubsection{wait}
 
-Do not boot the application. If the current state is \textbf{BootDelay}, the state will be switched to \textbf{BootCancelled}. In all other states the command will have no effect.
+Instructs the bootloader to not boot the application automatically.
+
+If the current state is \verb|BootDelay|, the state will be switched to \verb|BootCancelled|.
+In all other states the command will have no effect.
 
 \subsubsection{download}
 
-Start the serial receiver and prepare to receive the new firmware image as a flat binary via the serial link using either YMODEM, XMODEM, or XMODEM-1K. The bootloader will automatically detect which protocol to use. According to the YMODEM specification, if no transfer was initiated by the host within one minute, the command will exit with an error. Possible error codes are defined in the table above.
+Instructs the bootloader to start an YMODEM/XMODEM/XMODEM-1K receiver on the current serial link
+and await for the remote host to begin transmission of the new firmware binary image file.
 
-Note that while this command is running, the CLI will be unavailable, since the same serial link will be temporarily occupied by the file transfer protocol.
+The bootloader will automatically detect which file transfer protocol to use.
 
-If the YMODEM protocol is used, the file name field in the transfer header packet will be ignored.
+According to the YMODEM specification, if no transfer was initiated by the host within one minute,
+the command will exit with an error.
+Possible error codes are defined in the table \ref{table:bootloader_error_codes}.
 
-There are heaps of software products and scripts that support these file transfer protocols. For instance, the popular program \textbf{sz} (available on most Linux distributions) can be used as follows:
+Note that while this command is running, the CLI will be unavailable,
+because the same serial link will be temporarily occupied by the file transfer protocol.
+Automatic switching between USB and UART is not available while the command is running.
+
+See the section \ref{sec:bootloader_ymodem_implementation} for the detailed information about the implementation.
+
+\subsubsection{zubax\textunderscore{}id}
+
+This is a standard command documented in the section \ref{sec:cli_command_zubax_id}.
+Its implementation in the bootloader, however, has a number of additional features.
+
+The firmware version information provided in the output is specific to the application image that is
+installed on the device.
+If the bootloader could not detect any application image on the device,
+the firmware version fields will be omitted from the
+output.\footnote{Version 1.0 of the bootloader used to employ a different convention where the application
+version fields were using a different prefix: \texttt{fw\_} rather than \texttt{sw\_}.}
+
+The version of the bootloader itself is reported via the following set of dedicated fields:
+\begin{itemize}
+    \item \verb|bl_version| -- bootloader version, major and minor, formatted as \verb|<major>.<minor>|
+    \item \verb|bl_vcs_commit| -- bootloader version control system commit identifier as an integer number.
+    \item \verb|bl_build_date| -- the build date of the bootloader.
+\end{itemize}
+
+An additional field named ``\verb|mode|'' is set to the string ``\verb|bootloader|''
+to indicate that the bootloader is running rather than the application.
+
+The table \ref{table:bootloader_zubax_id_fields} summarizes the fields reported by the bootloader.
+Some extra fields may be reported as well,
+which are not documented here because they are not designed for production use.
+
+\begin{ZubaxSimpleTable}{Zubax ID fields}{|l|X|}\label{table:bootloader_zubax_id_fields}
+Field name              & Meaning \\
+
+\texttt{product\_id}    & Product type identifier string.
+                          The same string is reported via UAVCAN as the node name string. \\
+
+\texttt{product\_name}  & Human-readable product name. \\
+
+\texttt{mode}           & Set to the string ``\texttt{bootloader}'' to indicate that the bootloader is running. \\
+
+\texttt{sw\_version}    & Application version number in the form ``major.minor''.
+                          Omitted if the application could not be found. \\
+
+\texttt{sw\_vcs\_commit}& Application version control system commit identifier.
+                          Omitted if the application could not be found. \\
+
+\texttt{hw\_version}    & Hardware version number in the form ``major.minor''. \\
+
+\texttt{hw\_unique\_id} & The 128-bit unique ID of this specific hardware instance
+                          (section \ref{sec:product_identification}).\\
+
+\texttt{hw\_signature}  & The certificate of authenticity (CoA) of this specific hardware instance
+                          encoded in a Base64 string.
+                          \textbf{If this data is missing, please inform Zubax Robotics as soon as possible.} \\
+
+\texttt{bl\_version}    & Bootloader version number in the form ``major.minor''. \\
+
+\texttt{bl\_vcs\_commit}& Bootloader version control system commit identifier. \\
+\end{ZubaxSimpleTable}
+
+\subsection{YMODEM/XMODEM/XMODEM-1K implementation details}\label{sec:bootloader_ymodem_implementation}
+
+YMODEM, XMODEM, and XMODEM-1K are simple and popular file transfer protocols designed by
+Ward Christensen and Chuck Forsberg.
+You can learn more about these protocols in the Zubax Knowledge Base at \url{https://kb.zubax.com/x/ZwAz}.
+This section elaborates on the noteworthy implementation details specific to this application.
+
+The \verb|download| command starts a multi-protocol receiver.
+The receiver enters a loop where it emits the NAK character to the host,
+prompting it to begin transmission of the firmware image file.
+The receiver will emit NAK every 5 seconds until the host begins the transmission,
+until the transfer initialization times out,
+or until the host cancels the transmission, whichever happens first.
+The transfer initialization timeout is set to 1 minute.
+
+The receiver always uses the NAK character to initiate transfers rather than ``\verb|C|'',
+which instructs the remote host to use the plain 8-bit checksum for data integrity protection
+rather than CRC-16.
+The data integrity guarantees offered by the plain 8-bit checksum algorithm are deemed sufficient,
+because the data links are considered reliable enough,
+and the firmware image itself is always protected by a strong CRC function.
+
+Being compatible with three different protocols, the receiver supports the following options:
+\begin{itemize}
+    \item The host is free to send the zero block with file metadata, as defined by YMODEM.
+          The receiver will collect the file size from the metadata packet and ignore the rest.
+    
+    \item The host is free to use either 256-byte or 1024-byte sized blocks, the receiver supports both.
+          The former are defined by YMODEM and XMODEM, the latter are defined by YMODEM and XMODEM-1K.
+\end{itemize}
+
+Note that if the size of the firmware image file has not been provided,
+the written image will be padded up to the size of the last data block.
+This is acceptable, because the trailing bytes after the firmware image are
+not used by any part of the system, and as such their contents can be arbitrary.
+It is recommended, however, to fill the padding bytes with 0xFF,
+in order to match the initial state of flash memory.
+
+There is a large number of software products and scripts that support these file transfer protocols.
+For instance, the popular program \verb|sz| (available on most GNU/Linux distributions) can be used as follows
+(where \verb|$file| is the name of the firmware file, and \verb|$port| is the name of the serial port):
 \begin{minted}[linenos = false]{bash}
 sz -vv --ymodem --1k \$file > \$port < \$port
 \end{minted}
+There are various GUI-based alternatives for Windows and Mac OS as well.
 
 \section{CAN bus interface}
 
