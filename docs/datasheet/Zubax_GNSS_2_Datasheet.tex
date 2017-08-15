@@ -2469,9 +2469,7 @@ the bootloader inserts a delay after completion of each file read service invoca
 The delay is a function of the CAN bus bit rate, and it is defined as follows
 (the bit rate unit is bit/second):
 
-\begin{equation}
-\frac{1}{1 + {\text{can{\_}bus{\_}bit{\_}rate}}/{65536}}
-\end{equation}
+$$\frac{1}{1 + {\text{can{\_}bus{\_}bit{\_}rate}}/{65536}}$$
 
 Some of the practical values are listed below for reference:
 \begin{description}
