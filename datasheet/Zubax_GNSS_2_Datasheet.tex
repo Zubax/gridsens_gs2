@@ -2340,7 +2340,7 @@ The bootloader implements the UAVCAN firmware update protocol.
 A detailed specification of the UAVCAN protocol in general and the firmware update part of it is available
 on the official website at \url{http://uavcan.org}.
 
-\subsection{Node status reporting}
+\subsection{Node status reporting}\label{sec:bootloader_uavcan_node_status}
 
 The table \ref{table:bootloader_uavcan_status} describes the mapping from the bootloader states
 to UAVCAN node status codes, as reported via the standard message \verb|uavcan.protocol.NodeStatus|.
@@ -2361,7 +2361,7 @@ Out-of-order messages may be emitted when the status of the bootloader changes.
     AppUpgradeInProgress   & SOFTWARE{\_}UPDATE & OK \\
 \end{ZubaxSimpleTable}
 
-\subsection{Node identification}
+\subsection{Node identification}\label{sec:bootloader_uavcan_node_identification}
 
 The service \verb|uavcan.protocol.GetNodeInfo| is responded to as follows.
 
@@ -2374,7 +2374,7 @@ If no valid application image could be found, the fields will be zeroed.
 The fields \verb|uavcan.protocol.HardwareVersion| and \verb|name|
 are always populated as described in the section \ref{sec:uavcan_node_identification}.
 
-\subsection{Node restarting}
+\subsection{Node restarting}\label{sec:bootloader_uavcan_node_restarting}
 
 The service \verb|uavcan.protocol.RestartNode|, if the provided magic number is correct,
 unconditionally reboots the device.
@@ -2414,7 +2414,7 @@ The list of supported bit rates is provided below:
     \item 125 kbit/s
 \end{itemize}
 
-\subsubsection{Node ID allocation}
+\subsubsection{Node ID allocation}\label{sec:bootloader_uavcan_node_id_allocation}
 
 After the CAN bus bit rate is established, the bootloader will request a dynamic UAVCAN node ID from the bus.
 
@@ -2431,7 +2431,7 @@ no other functions of the UAVCAN interface will work.
 
 \subsection{Firmware update process}
 
-\subsubsection{Waiting for the update request}
+\subsubsection{Waiting for the update request}\label{sec:bootloader_uavcan_begin_update_request}
 
 In order to be able to begin downloading the new application image over UAVCAN,
 the bootloader needs to know the following two parameters:
@@ -2453,7 +2453,7 @@ The above listed parameters can be supplied to the bootloader in two ways:
           In this case the bootloader skips this step and proceeds straight to the next one.
 \end{itemize}
 
-\subsubsection{Downloading the application image}
+\subsubsection{Downloading the application image}\label{sec:bootloader_uavcan_file_transfer}
 
 At this stage, the bootloader has all of the information required to begin the actual update process.
 
@@ -2464,10 +2464,11 @@ The service response timeout is set to 1 second (the default recommended by the 
 
 In order to avoid congestion of the CAN bus while the file transfer is in progress,
 the bootloader inserts a delay after completion of each file read service invocation.
-The delay is a function of the CAN bus bit rate, and it is defined as follows (all units are SI):
+The delay is a function of the CAN bus bit rate, and it is defined as follows
+(the bit rate unit is bit/second):
 
 \begin{equation}
-\frac{1}{1 + \frac{\text{can{\_}bus{\_}bit{\_}rate}}{65536}}
+\frac{1}{1 + {\text{can{\_}bus{\_}bit{\_}rate}}/{65536}}
 \end{equation}
 
 Some of the practical values are listed below for reference:
@@ -2498,30 +2499,39 @@ Some of the important logging points include the following:
 
 \subsection{Data type summary}
 
-\begin{ZubaxSimpleTable}{Supported messages}{| l | l | l | l |}
-Data type & Direction & Period & Transfer priority \\
-\texttt{uavcan.protocol.NodeStatus} & Output & 1 Hz & 24(low) \\
-\texttt{uavcan.protocol.debug.LogMessage} & Output & Aperiodic & 31(lowest) \\
-\texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Input/Output & Aperiodic & 24 (low)
+\begin{ZubaxSimpleTable}{Broadcasted UAVCAN messages}{|l|l|l|X|}
+    Data type name                                        & Period     & Transfer priority & Section \\
+
+    \texttt{uavcan.protocol.NodeStatus}                   & 1 \& ad-hoc
+                                                          & 24 (low)
+                                                          & \ref{sec:bootloader_uavcan_node_status}\\
+
+    \texttt{uavcan.protocol.dynamic\_node\_id.Allocation} & Aperiodic
+                                                          & 30 (low)
+                                                          & \ref{sec:bootloader_uavcan_node_id_allocation}\\
+
+    \texttt{uavcan.protocol.debug.LogMessage}             & Aperiodic
+                                                          & 31 (lowest)
+                                                          & \ref{sec:uavcan_bootloader_logging}\\
 \end{ZubaxSimpleTable}
 
-\begin{ZubaxSimpleTable}{Supported messages annotation}{| l | X |}
-Data type & Note\\
-\texttt{uavcan.protocol.NodeStatus} & Refer to the bootloader state mapping table.\\
-\texttt{uavcan.protocol.debug.LogMessage} & Used to report the application upgrade progress and status in a human readable form.\\
-\texttt{uavcan.protocol.dynamic{\_}node{\_}id.Allocation} & Used only during initialization, if the application did not provide a specific node ID to use.
+\begin{ZubaxSimpleTable}{Subscribed UAVCAN messages}{|l|X|}
+    Data type name                                        & Section \\
+    \texttt{uavcan.protocol.dynamic\_node\_id.Allocation} & \ref{sec:bootloader_uavcan_node_id_allocation}\\
 \end{ZubaxSimpleTable}
 
-\begin{ZubaxSimpleTable}{Supported servers}{| l | X |}
-Data type & Note\\
-uavcan.protocol.GetNodeInfo & The nested structure  \textbf{uavcan.protocol.SoftwareVersion} is populated only if there is a valid application.\\
-uavcan.protocol.RestartNode & Restarts the bootloader.\\
-uavcan.protocol.file.BeginFirmwareUpdate & Initiates the firmware update process, unless it was initiated earlier before the application has rebooted into the bootloader.
+\begin{ZubaxSimpleTable}{UAVCAN service servers}{|l|X|}
+    Data type name                                        & Section \\
+    \texttt{uavcan.protocol.GetNodeInfo}                  & \ref{sec:bootloader_uavcan_node_identification}\\
+    \texttt{uavcan.protocol.RestartNode}                  & \ref{sec:bootloader_uavcan_node_restarting}\\
+    \texttt{uavcan.protocol.file.BeginFirmwareUpdate}     & \ref{sec:bootloader_uavcan_begin_update_request} \\
 \end{ZubaxSimpleTable}
 
-\begin{ZubaxSimpleTable}{Supported clients}{| l | l | l | X |}
-Data type & Response timeout & Transfer priority & Note \\
-uavcan.protocol.file.Read & 1 second & 24(low) & Used to download the application image file from the specified file server.
+\begin{ZubaxSimpleTable}{UAVCAN service clients}{|l|l|l|X|}
+    Data type name                     & Response timeout & Transfer priority & Section \\
+    \texttt{uavcan.protocol.file.Read} & 1 second
+                                       & 24 (low)
+                                       & \ref{sec:bootloader_uavcan_file_transfer} \\
 \end{ZubaxSimpleTable}
 
 \end{document}
