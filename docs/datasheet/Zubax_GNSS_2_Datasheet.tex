@@ -42,7 +42,7 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
     \item High precision 3-axis digital compass STMicroelectronics LIS3MDL with thermal compensation.
 	\item Supported interfaces:
     \begin{itemize}
-        \item CAN, with optional double redundancy.
+        \item CAN, with optional dual redundancy.
         \item UART.
         \item USB port, no drivers needed.
     \end{itemize}
@@ -79,8 +79,11 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
 \chapter{Overview}
 
 Zubax~GNSS~2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
-It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
-Zubax~GNSS~2 supports a variety of standard protocols, which ensures compatibility with third party software and hardware: UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
+It includes a state-of-the-art multi-system GPS/GLONASS receiver,
+a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
+Zubax~GNSS~2 supports a variety of standard protocols,
+which ensures compatibility with third party software and hardware:
+UAVCAN (over CAN bus), NMEA 0183 (over USB and UART), and the u-Blox M8 binary protocol.
 
 \section{Accessories}
 
@@ -88,8 +91,9 @@ Zubax~GNSS~2 can be used with the following accessories:
 
 \begin{itemize}
     \item Plastic enclosure described in the section \ref{sec:enclosure}.
-    \item UAVCAN cabling and related items. Refer to \url{https://kb.zubax.com/x/EoAh} for more information.
-    \item Zubax Dronecode probe. Refer to \url{https://kb.zubax.com/x/iIAh} for more information.
+    \item UAVCAN cabling and related items.
+    \item Standard USB cables.
+    \item Cables compatible with the Dronecode Autopilot Connector Standard.
 \end{itemize}
 
 Please contact your supplier for ordering information.
@@ -98,9 +102,11 @@ Please contact your supplier for ordering information.
 
 Zubax~GNSS~2 is intended for integration into the end system in the form of the bare PCB,
 as this facilitates lower weight and tighter arrangement of components
-in the end device, all of which are desirable properties in the target application domains.
+in the end device, all of which are desirable properties in the targeted application domains.
 
-Shall it be desired to provide additional mechanical protection for the device or to install it away from possible sources of electromagnetic interference, the plastic components pictured on the figure \ref{enclosure} can be used.
+Shall it be desired to provide additional mechanical protection for the device
+or to install it away from possible sources of electromagnetic interference,
+the plastic components pictured on the figure \ref{enclosure} can be used.
 Please contact your supplier for the ordering information;
 alternatively, visit \url{https://github.com/Zubax/zubax_gnss} to download
 the 3D printable models suitable for in-house manufacturing.
@@ -128,23 +134,24 @@ The test log for every manufactured device is available on the web at
 This feature can be used to facilitate traceability of purchased devices and
 provide additional safety assurances.
 
-Besides testing, every manufactured device has a digital signature
-that can be used as a strong protection against unlicensed or counterfeit production.
-Please refer to the web resources provided by Zubax Robotics to learn more about the certificate of authenticity
-and how it can be used to verify the authenticity of products.
+Every manufactured device has a strong digital signature stored in its non-volatile memory
+which proves the origins of the product and eliminates the risk of sourcing unlicensed or
+counterfeit hardware.
+This signature is referred to as Certificate of Authenticity (CoA).
+Please refer to the \href{https://kb.zubax.com}{Zubax Knowledge Base} to learn more about
+the certificate of authenticity and how it can be used to trace the origins of your hardware.
 
 \chapter{Characteristics}
 
 \section{Absolute maximum ratings}
 
-Subjecting the device to stresses beyond those specified in this section may cause
-permanent damage to the device.
-Proper operation of the device within the ranges specified in this section is not implied.
+Stresses that exceed the limits specified in this section may cause permanent damage to the device.
+Proper operation of the device within the limits specified in this section is not implied.
 
 \begin{ZubaxSimpleTable}{Absolute maximum ratings}{|c X|c c|c|}
     Symbol            & Parameter                & Min  & Max & Unit \\
 	$V_\text{supply}$ & Supply voltage           & -0.3 & 6   & V \\
-	$T_\text{oper}$   & Operating temperature    & -40  & 105 & \degree{}C \\
+	$T_\text{oper}$   & Operating temperature    & -40  & 85  & \degree{}C \\
 	                  & UART input voltage 		 & -0.3 & 6   & V\\
 	                  & CAN H/L input voltage    & -4   & 16  & V\\
 \end{ZubaxSimpleTable}
@@ -152,7 +159,7 @@ Proper operation of the device within the ranges specified in this section is no
 \section{Environmental conditions}\label{environmental_conditions}
 
 The GNSS hot start feature is not expected to work reliably below -20\degree{}C
-due to poor performance of the supercapacitor-based backup power source at low temperatures.
+due to degraded performance of the supercapacitor-based backup power source at low temperatures.
 However, this should not have any adverse side effects on the general performance of
 the unit except that the time-to-first-fix (TTFF) may be higher than normal.
 
@@ -162,7 +169,8 @@ Other components are unlikely to be affected.
 \begin{ZubaxTableWrapper}{Environmental conditions}
     \begin{ZubaxWrappedTable}{|c X|l c|c|c|}
         Symbol            & Parameter                     &  Min & Max & Unit \\
-        $T_\text{oper}$   & Operating temperature         & -40  & 100 & \degree{}C \\
+        $T_\text{oper}$   & Operating temperature         & -40  & 85  & \degree{}C \\
+        $T_\text{stor}$   & Storage temperature           & -20  & 60  & \degree{}C \\
         $B$               & Magnetic field strength       &      & 9   & Gauss \\
         $\phi_\text{oper}$& Operating humidity\tnote{1}   & 0    & 100 & \%RH\\
         $h_\text{oper}$   & Operating altitude above mean sea level (MSL) &     & 10  & km\\
@@ -188,13 +196,14 @@ Please contact Zubax Robotics for additional reliability and safety information.
 The device employs the \textbf{u-Blox MAX-M8Q} GNSS receiver module.
 Please refer to the specifications provided by u-Blox to gain additional information about the module.
 
-The internal delay (lag) of the GNSS receiver is approximately 200 milliseconds.
+The cumulative delay (lag) of GNSS data is approximately 200 milliseconds,
+not including the latency of the output interface.
 
 The period of GNSS solution reporting is defined by the configuration parameters
 \CfgRef{uavcan.pubp-fix} and \CfgRef{uavcan.pubp-aux}, in microseconds.
 
 The parameters \CfgRef{gnss.warn+dimens} and \CfgRef{gnss.warn+sats} can be used to reflect the quality of
-the GNSS solution in the device health code.
+the GNSS solution in the device health code (section \ref{sec:self-diagnostics}).
 
 \subsection{Digital barometric altimeter}
 
@@ -208,7 +217,7 @@ The reported error variances for pressure and temperature estimates are defined 
 respectively.
 
 If the board is mounted in an open air environment, it is recommended to cover the sensor with a lid
-in order to prevent distortions of the atmospheric pressure measurements caused by the movement of air
+in order to avoid distortions of the atmospheric pressure measurements caused by the movement of air
 around the sensor.
 Please refer to your supplier for additional information.
 
@@ -234,14 +243,14 @@ This feature can be used to work-around magnetic field scaling issues in some co
 
 The parameter \CfgRef{mag.pwron+slftst} can be used to control whether the magnetic field sensor should be
 subjected to a self-test when the device is powered on.\footnote{Available for hardware v2.2 and newer.}
-This feature must be disabled if the device is expected to be powered on while non-stationary,
+This feature should be disabled if the device is expected to be powered on while non-stationary,
 otherwise false failures may be detected.
 
 \section{Communication interfaces}
 
 Zubax~GNSS~2 features three communication interfaces. Each is described in detail in the subsequent parts of this document.
 \begin {itemize}
-\item Doubly redundant UAVCAN interface with two connectors for each interface.
+\item Doubly redundant UAVCAN interface with two connectors per interface.
 \item USB port.
 \item Dronecode port.
 \end{itemize}
@@ -258,7 +267,7 @@ UAVCAN Micro connectors (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}
 electrically parallel to each other,
 which facilitates easy integration of the device into the end application without the need to use T-connectors.
 
-The physical location of each connector is documented in the chapter \ref{sec:mechanical}.
+The physical location of each connector is documented in the section \ref{sec:mechanical}.
 
 \subsubsection{Device interconnection}
 
@@ -290,7 +299,7 @@ The figure \ref{can_daisy_chain} shows the possible device interconnection schem
 \begin{ZubaxTableWrapper}{Characteristics of CAN bus interfaces}
 	\begin{ZubaxWrappedTable}{|c X|c c c|c|}
 		Symbol  & Parameter                                 & Min  & Typ  & Max  & Unit \\
-		        & Bit rate                                  & 20   &      & 1000 & Kbps \\
+		        & Bit rate                                  &      &      & 1000 & Kbps \\
 		        & Positive-going input threshold voltage    &      & 750  & 900  & mV \\
 		        & Negative-going input threshold voltage    & 500  & 600  &      & mV \\
 		        & Differential output voltage, dominant     & 1.5  & 2.0  & 3.0  & V \\
@@ -332,7 +341,7 @@ The following protocols are exposed via the USB interface:
     \item[NMEA 0183] Used to output measurements in the industry-standard NMEA 0183 protocol.
     This protocol is enabled only if the virtual serial port is opened with a baud rate value in the
     range from 4800 to 57600 baud/second, inclusive.
-    More information about the NMEA protocol is provided in the section \ref{nmea_output}.
+    More information about the NMEA protocol is provided in the chapter \ref{nmea_output}.
 
     \item[CLI] The command-line interface provides access to the device's management and diagnostic
     features. This protocol is always enabled; however, it is not expected to be practically useful
@@ -343,7 +352,7 @@ The following protocols are exposed via the USB interface:
 
 Observe that unlike many other implementations of virtual serial ports,
 this implementation is sensitive to the baud rate setting,
-because it is used by the device to detect whether the NMEA output should be enabled.
+because it is used by the device to decide whether the NMEA output should be enabled.
 The rationale behind this logic is to facilitate compatibility with third party software products.
 
 Many legacy GNSS receivers equipped with physical UART interfaces emit NMEA data at very low
@@ -365,7 +374,7 @@ Dronecode Debug Mini connector (DCD-Mini)\footnote{\url{https://wiki.dronecode.o
 This port can be conveniently used with the \href{https://kb.zubax.com/x/iIAh}{Zubax Dronecode Probe},
 or any other UART-capable hardware with a compatible connector.
 
-The physical location of the connector is documented in the chapter \ref{sec:mechanical}.
+The physical location of the connector is documented in the section \ref{sec:mechanical}.
 
 The Dronecode debug port provides access to the UART and JTAG/SWD interfaces;
 the latter is not designed for production use and therefore it is not documented here.
@@ -392,7 +401,7 @@ The following protocols are exposed via the UART interface:
     \item[NMEA 0183] Used to output measurements in the industry-standard NMEA 0183 protocol.
     NMEA emission over the UART port is disabled by default;
     in order to enable it, set the configuration parameter \CfgRef{nmea.uart+on} to a non-zero value.
-    More information about the NMEA protocol is provided in the section \ref{nmea_output}.
+    More information about the NMEA protocol is provided in the chapter \ref{nmea_output}.
 
 \end{description}
 
