@@ -866,9 +866,9 @@ The field \verb|magnetic_field_ga| contains the latest magnetic field measuremen
 
 The parameter \CfgRef{mag.scaling+coef} can be used to rescale the magnetic field measurements.
 Normally, the rescaling feature need not be used.
-However, certain equipment may mistakenly reject the measurements if the estimated
-magnetic field strength exceeds a certain limit. In that case, setting this parameter to a value
-less than 1 may help to alleviate the problem.
+However, certain equipment may mistakenly reject measurements if the measured
+magnetic field strength magnitude exceeds a certain limit.
+In that case, setting this parameter to a value less than 1 may help to alleviate the problem.
 The parameter is dimensionless.
 
 The error covariance matrix \verb|magnetic_field_covariance| is reported as a compressed scalar matrix,
@@ -938,7 +938,7 @@ the performance of the time synchronization feature.
 When the time synchronization feature is disabled,
 Zubax~GNSS~2 will not emit any time synchronization messages,
 but it will always keep its own internal clock synchronized with the network
-as long as there is an active time synchronization master.
+as long as there is at least one functioning time synchronization master available.
 
 The accuracy of the time base provided by the time synchronization master is defined by the
 operating conditions of the GNSS receiver.
@@ -984,12 +984,13 @@ The bootloader is documented in the section \ref{sec:bootloader}.
                                                           & \CfgRefX{uavcan.prio-time}
                                                           & Disabled by default. \\
 
-    \texttt{uavcan.equipment.gnss.Fix}                    & \CfgRefX{uavcan.pubp-fix}
+    \texttt{uavcan.equipment.gnss.Fix2}                   & \CfgRefX{uavcan.pubp-fix}
                                                           & \CfgRefX{uavcan.prio-fix}
                                                           & \\
 
-    \texttt{uavcan.equipment.gnss.Fix2}                   & \CfgRefX{uavcan.pubp-fix}
-                                                          & \CfgRefX{uavcan.prio-fix}
+    \texttt{uavcan.equipment.gnss.Fix}                    & \CfgRefX{uavcan.pubp-fix}
+                                                          & \makecell[lt]{One lower than\\
+                                                                          \CfgRefX{uavcan.prio-fix}}
                                                           & Can be disabled via \CfgRefX{gnss.old+fix+msg}. \\
 
     \texttt{uavcan.equipment.gnss.Auxiliary}              & \CfgRefX{uavcan.pubp-aux}
