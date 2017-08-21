@@ -516,9 +516,9 @@ Immediately after powering on, the device starts the embedded bootloader (descri
 \ref{sec:bootloader}).
 The bootloader awaits for external commands for a few seconds.
 If no commands requesting it to download a new firmware image or wait longer were received,
-and if a valid firmware was found in the ROM,
-the bootloader starts the firmware.
-If no valid firmware image is found in the ROM, the bootloader will wait for commands forever.
+and if a valid application (i.e. firmware) was found in the ROM,
+the bootloader starts the application.
+If no valid application is found in the ROM, the bootloader will wait for commands forever.
 
 While the bootloader is running, the board displays a distinct LED pattern,
 as described in the section~\ref{sec:led_indication_during_bootloader_phase}.
@@ -626,9 +626,9 @@ Update in progress         & Solid & Solid & \\
 For the background information about the UAVCAN interface please refer to the Zubax Knowledge Base
 at \url{https://kb.zubax.com/x/F4Ah} and the official UAVCAN website at \url{http://uavcan.org}.
 
-The UAVCAN interface enables access to all features of Zubax~GNSS~2.
-This interface provides access to the GNSS solutions, magnetic field and barometric pressure measurements,
-precise time (via the time synchronization master), device configuration parameters, firmware upgrade feature,
+The UAVCAN interface enables access to all features of Zubax~GNSS~2:
+GNSS solution output, magnetic field and barometric pressure measurement output,
+precise time synchronization, device configuration parameters, firmware upgrade feature,
 and so on.
 
 This section documents the UAVCAN interface that is available during the normal operation of the device,
@@ -773,14 +773,13 @@ More information about the standard UAVCAN data structures can be obtained from 
 
 \begin{description}
     \item[\texttt{timestamp}] The network-synchronized timestamp of the GNSS solution.
-    Zubax~GNSS~2 performs automatic compensation of the inner delays.
-    The expected precision of the timestamp is under 10 microseconds.
+    Zubax~GNSS~2 performs automatic compensation of its intrinsic delays.
 
     \item[\texttt{gnss\_timestamp}] The timestamp of the GNSS solution in the UTC time domain.
     This timestamp is not affected by the network-wide synchronized time.
 
     \item[\texttt{num\_leap\_seconds}] The current number of leap seconds is always populated,
-    except if the GNSS received has not obtained this information from the satellite network yet.
+    except if the GNSS receiver has not obtained this information from the satellite network yet.
     This data can be used to perform conversions between different time systems.
 
     \item[\texttt{longitude\_deg\_1e8}, \texttt{latitude\_deg\_1e8}] Estimated latitude and longitude
@@ -806,15 +805,17 @@ More information about the standard UAVCAN data structures can be obtained from 
         \item Longitude error variance, in $\text{meters}^2$.
         \item Latitude error variance, in $\text{meters}^2$.
         \item Altitude error variance, in $\text{meters}^2$.
-        \item Longitudinal velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
-        \item Lateral velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+        \item Longitudinal (north--south) velocity error variance,
+              in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+        \item Lateral (east--west) velocity error variance,
+              in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
         \item Vertical velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
     \end{enumerate}
     
     \item[\texttt{pdop}] 3D geometric dilution of precision (PDOP).
     
     \item[\texttt{ecef\_position\_velocity}] Navigation solution in the
-    ECEF\footnote{Earth-centered, earth-fixed coordinate frame.}
+    ECEF\footnote{Earth-centered, earth-fixed coordinate frame.} frame.
     The contents of this nested data structure are documented below.
 \end{description}
 
@@ -848,8 +849,8 @@ More information about the standard UAVCAN data structures can be obtained from 
 The fields for GDOP, HDOP, PDOP\footnote{Also reported via the fix message.}, TDOP, VDOP, NDOP, EDOP
 are all populated.
 
-The field \verb|sats_visible| displays the total number of satellites that are being tracked by the received.
-A fraction of them is used to compute the navigation solution.
+The field \verb|sats_visible| displays the total number of satellites that are being tracked by the receiver.
+Some of them are used to compute the navigation solution.
 
 The field \verb|sats_used| mirrors the homonymous field from the fix message.
 
