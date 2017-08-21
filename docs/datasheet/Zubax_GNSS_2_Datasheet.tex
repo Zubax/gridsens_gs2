@@ -508,7 +508,7 @@ The GNSS receiver and the compass are always active,
 whereas the air pressure and temperature sensor is disabled by default.
 
 The device can report measurements via the CAN bus using the UAVCAN protocol (chapter \ref{sec:uavcan}) and
-USB or UART using the NMEA 0183 protocol (chapter \ref{nmea_output}).
+via USB or UART using the NMEA 0183 protocol (chapter \ref{nmea_output}).
 
 \section{Start up and initialization}
 
@@ -521,7 +521,7 @@ the bootloader starts the firmware.
 If no valid firmware image is found in the ROM, the bootloader will wait for commands forever.
 
 While the bootloader is running, the board displays a distinct LED pattern,
-where the Status LED is glowing steadily.
+as described in the section~\ref{sec:led_indication_during_bootloader_phase}.
 
 The bootloader and the firmware may report human-readable diagnostic messages
 via the UART port during initialization and while running.
@@ -529,10 +529,11 @@ via the UART port during initialization and while running.
 \section{On-line self-diagnostics}\label{sec:self-diagnostics}
 
 Zubax~GNSS~2 continuously monitors its own status and sensor outputs for anomalies and malfunctions.
-Results of the continuous self-testing are mapped to three health codes: OK, Warning, and Error.
-The table below documents how the device uses health codes to report its status.
+Results of the continuous self-testing are reduced to the three health codes: OK, Warning, and Error.
+The table \ref{table:self-diagnostic_status_codes} documents how the device uses
+the health codes to report its status.
 
-\begin{ZubaxSimpleTable}{Self-diagnostic health codes}{|l X|}
+\begin{ZubaxSimpleTable}{Self-diagnostic health codes}{|l X|}\label{table:self-diagnostic_status_codes}
     Health        & Conditions    \\
     OK            & The device is functioning properly.\\
     Warning       & See below. \\
@@ -557,7 +558,7 @@ Possible reasons for the Warning health state:
 
 \section{LED indication}
 
-The physical locations of the LED indicators are documented in the chapter \ref{sec:mechanical}.
+The physical locations of the LED indicators are documented in the section \ref{sec:mechanical}.
 
 \subsection{PPS LED indicator}
 
@@ -565,17 +566,17 @@ This LED indicator blinks with the rate of 1 Hz if the GNSS receiver has a navig
 
 \subsection{Status LED indicator}
 
-This LED indicator shows the health of the device derived from the on-line self-diagnostics as described
-in the section \ref{sec:self-diagnostics}.
+This LED indicator shows the health of the device derived from the on-line self-diagnostics
+(section~\ref{sec:self-diagnostics}).
 
 \newcommand{\LEDX}{{\rule{0.4em}{0.8em}}}
 \newcommand{\LEDO}{{\rule{0.4em}{0.1em}}}
 
 \begin{ZubaxSimpleTable}{Status LED indication}{|X X X|}
-Health 	& Blinking pattern & On/Off duration [second] \\
+Health 	& Blinking pattern (span 1 second) & On/off duration [second] \\
 OK      & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO\LEDO
         & 0.05/0.95 seconds \\
-Warning & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO
+Warning & \LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO\LEDO\LEDO\LEDO\LEDO\LEDX\LEDO
         & 0.05/0.25 seconds \\
 Error   & \LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO\LEDX\LEDO
         & 0.05/0.05 seconds \\
@@ -590,23 +591,28 @@ during the last few milliseconds.
 If an interface is not connected to the bus, the corresponding LED indicator will be inactive (turned off),
 even if the device is actually attempting to transmit.
 
-Note that CAN traffic filtered out by the hardware acceptance filters will not be indicated.
+Note that CAN traffic filtered out by the hardware CAN frame acceptance filters will not be indicated.
 
-\subsection{LED indication during firmware update and bootup}
+\subsection{LED indication during firmware update and bootup}\label{sec:led_indication_during_bootloader_phase}
 
 \subsubsection{Hardware version 2.2 and newer}
 
 This section is valid for all hardware manufactured since 2017.
 
-During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax~GNSS~2 uses its LED indicators in a different way, as described in the chapter \ref{sec:bootloader}.
+During the first few seconds after power-on or after restart, and also in the process of firmware update,
+Zubax~GNSS~2 uses its LED indicators in a different way, as described in the section \ref{sec:bootloader}.
 
 \subsubsection{Hardware version 2.0 and 2.1}
 
 This section is valid for the hardware manufactured until 2016, inclusive.
 
-During the first few seconds after power-on or after restart, and also in the process of firmware update, Zubax~GNSS~2 uses its LED indicators in a different way, as described in the table below.
+During the first few seconds after power-on or after restart, and also in the process of firmware update,
+Zubax~GNSS~2 uses its LED indicators in a different way, as described in the
+table~\ref{table:led_old_bootloader}.
+All states not documented here indicate errors.
 
 \begin{ZubaxSimpleTable}{LED indication at bootup for hardware v2.0 and 2.1}{| X | c c c|}
+\label{table:led_old_bootloader}
 Status                     & INFO  & CAN1  & CAN2 \\
 CAN bit rate detection     &       & Solid & \\
 Dynamic node ID allocation & Solid &       & \\
@@ -626,7 +632,7 @@ precise time (via the time synchronization master), device configuration paramet
 and so on.
 
 This section documents the UAVCAN interface that is available during the normal operation of the device,
-omitting the logic specific to the firmware update mode, which is documented separately in the chapter
+omitting the logic specific to the firmware update mode, which is documented separately in the section
 \ref{sec:bootloader}.
 
 \section{Basic functions}
@@ -635,15 +641,15 @@ omitting the logic specific to the firmware update mode, which is documented sep
 
 The standard node status message \verb|uavcan.protocol.NodeStatus| is broadcasted at 1 hertz.
 The node health codes are mapped directly to the output of the self-diagnostic feature
-documented in the chapter \ref{sec:self-diagnostics}.
+documented in the section \ref{sec:self-diagnostics}.
 The operating mode codes are summarized below.
 
 \begin{ZubaxSimpleTable}{UAVCAN node mode code interpretation}{|l X|}
 Node mode & Meaning  \\
 OPERATIONAL        & Operating normally. \\
 INITIALIZATION     & The firmware has just started and is not ready to begin normal operation yet. \\
-MAINTENANCE        & See the chapter \ref{sec:bootloader} about the bootloader. \\
-SOFTWARE\_{}UPDATE & See the chapter \ref{sec:bootloader} about the bootloader. \\
+MAINTENANCE        & See the section \ref{sec:bootloader} about the bootloader. \\
+SOFTWARE\_{}UPDATE & See the section \ref{sec:bootloader} about the bootloader. \\
 OFFLINE            & Not applicable. \\
 \end{ZubaxSimpleTable}
 
@@ -953,7 +959,7 @@ parameters is undefined, but it is guaranteed to be consistent within the same f
 Updating the firmware to different versions or even different builds of the same version
 may change the ordering of the configuration parameters.
 
-General information about the device configuration options is available in the chapter 
+General information about the device configuration options is available in the section 
 \ref{sec:configuration_parameters}.
 
 \section{Firmware update}
@@ -1682,7 +1688,7 @@ Restarts the device unconditionally.
 \subsection{cfg}
 
 This command provides access to the configuration parameter storage.
-The configuration parameters and their non-volatile storage are described in more detail in the chapter
+The configuration parameters and their non-volatile storage are described in more detail in the section
 \ref{sec:configuration_parameters}.
 
 Syntax:
