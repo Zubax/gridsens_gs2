@@ -1205,7 +1205,7 @@ Example: \verb|$GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,
 
 \begin{ZubaxSimpleTable}{RMC sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  & xxxxxx.xx    & UTC time as \texttt{hhmmss} followed by dot, followed by hundredths of the second. \\
+    1  & xxxxxx.xx    & UTC time as \texttt{hhmmss} followed by a dot, followed by hundredths of the second. \\
     2  & a            & Solution status: A - valid, V -- warning. \\
     3  & xxxx.N       & Geographical latitude. The first two digits represent angular degrees,
                         the following digits represent angular minutes with the fractional part. \\
@@ -1245,7 +1245,7 @@ Example: \verb|$GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,1
 
 \begin{ZubaxSimpleTable}{GGA sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  & xxxxxx.xx    & UTC time as \texttt{hhmmss} followed by dot, followed by hundredths of the second. \\
+    1  & xxxxxx.xx    & UTC time as \texttt{hhmmss} followed by a dot, followed by hundredths of the second. \\
     2  & xxxx.N       & Geographical latitude. The first two digits represent angular degrees,
                         the following digits represent angular minutes with the fractional part. \\
     3  & a            & Related to the previous field. N -- north, S -- south. \\
@@ -1257,7 +1257,7 @@ Example: \verb|$GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,1
     8  & N.N          & Horizontal dilution of precision (HDOP). \\
     9  & N.N          & Altitude relative to the mean sea level (MSL altitude), meters. \\
     10 & a            & Units of the previous field: M -- meters. \\
-    11 & N.N          & Geoidal separation, which is the difference between the WGS-84 earth ellipsoid and
+    11 & N.N          & Geoidal separation, which is the difference between the WGS84 earth ellipsoid and
                         the mean sea level. Negative value means that the mean sea level is below the ellipsoid. \\
     12 & a            & Units of the previous field: M -- meters. \\
     13 & N.N          & Age of the differential GNSS data.
@@ -1270,7 +1270,7 @@ Example: \verb|$GPGGA,072626.30,0036.27144,N,00042.93538,E,1,14,1.44,239.382,M,1
 \subsubsection{GSA}\label{sec:nmea_sentence_GSA}
 
 The GSA sentence contains information about the geometric dilution of precision and the identifiers
-of the satellites tracked by the GNSS receiver.
+of at most 12 of the satellites tracked by the GNSS receiver.
 
 Format:
 
@@ -1391,7 +1391,7 @@ Example: \verb|$HCHDG,266.2,,,,*42|
 
 \begin{ZubaxSimpleTable}{HDG sentence fields}{|l l X|}
     \# & Format       & Purpose \\
-    1  & N.N          & Magnetic heading, angular degrees; 0\degree -- north, 90\degree -- east. \\
+    1  & N.N          & Magnetic heading, angular degrees; 0\degree{} -- north, 90\degree{} -- east. \\
     2  & N.N          & Absolute magnetic deviation (compass error induced by local magnetic fields), angular degrees.
                         This field is optional. \\
     3  & a            & Direction of the magnetic deviation reported in the previous field: 
@@ -1542,7 +1542,7 @@ This section documents what data is reported via the NMEA interface and what con
 
 \subsection{GNSS data}
 
-The GNSS data are reported with the talker ID set to ``\verb|GP|''.
+The GNSS data are reported with the talker ID set to ``\verb|GP|'' (see the table \ref{nmea_talker_id_table}).
 
 The ``\verb|GN|'' talker ID would have suited the application better,
 because Zubax GNSS employs multiple satellite positioning systems concurrently rather than relying solely on GPS; 
@@ -1612,7 +1612,7 @@ Note that magnetic heading estimates may be valid only if all of the following p
           of the planet.
 \end{itemize}
 If the listed requirements cannot be met, it is recommended to use the raw magnetic field vector measurements instead,
-and perform manual compensation for the external effects.
+and perform external compensation for the distortions.
 
 The following NMEA sentences are emitted at each output cycle:
 \begin{itemize}
