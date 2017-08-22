@@ -1663,11 +1663,11 @@ $YXXDR,C,29.9,C*7F
 \section{Overview}
 
 Zubax~GNSS~2 provides a plain-text command-line interface (CLI) over the USB virtual serial port.
-The CLI can be used as a user interface directly,
-or it can be used as a machine-to-machine interface,
-since its syntax is quite simple and easily parseable.
+The CLI can be used as a user interface directly;
+also it can be used as a machine-to-machine interface,
+since its syntax is quite simple and the output is easy to parse.
 
-Note that in order for the command-line interface to be usable,
+Note that in order for the command-line interface to be usable over USB,
 the NMEA output over the USB virtual serial port should be disabled, as explained in
 the section \ref{sec:usb_protocol_selection}.
 
@@ -1677,7 +1677,7 @@ Remote echo and remote line editing are supported.
 \section{CLI commands}
 
 This section documents the CLI commands that can be of interest to the end user.
-Some commands that are not intended for use in production are intentionally omitted from this reference.
+The commands that are not intended for use in production are intentionally omitted from this reference.
 
 \subsection{help}
 
@@ -1696,19 +1696,19 @@ The configuration parameters and their non-volatile storage are described in mor
 Syntax:
 \begin{itemize}
 
-    \item \verb|cfg| - print usage info.
+    \item \verb|cfg| -- Print usage info.
 
-    \item \verb|cfg list| - list all configuration parameters, their current values,
+    \item \verb|cfg list| -- List all configuration parameters, their current values,
           acceptable value intervals, and default values. See the section \ref{sec:cli_cfg_listing}.
 
-    \item \verb|cfg save| - save the current configuration into the non-volatile storage.
+    \item \verb|cfg save| -- Save the current configuration into the non-volatile storage.
           Firmware version v4.0 and newer save all configuration parameters automatically upon modification,
           so this command has become redundant.
 
-    \item \verb|cfg erase| - erase the current configuration and reset the non-volatile memory to factory defaults.
+    \item \verb|cfg erase| -- Erase the current configuration and reset the non-volatile memory to factory defaults.
           A reboot is necessary for the changes to take effect.
 
-    \item \verb|cfg set <name> <value>| - assign the configuration parameter named \verb|<name>| the value
+    \item \verb|cfg set <name> <value>| -- Assign the configuration parameter named \verb|<name>| the value
           \verb|<value>|. For example: \verb|cfg set foo 42|.
           With firmware v4.0 and newer the non-volatile storage will be updated automatically.
           See the section \ref{sec:cli_cfg_set_confirmation}.
@@ -1723,10 +1723,10 @@ The syntax \verb|cfg list| prints one parameter per line, where the line is form
 
 The number of whitespaces between tokens may vary.
 
-Floating point parameters are always reported with the point symbol (\verb|.|),
+Floating point parameters are always reported with the explicit point symbol (\verb|.|),
 which allows one to distinguish them from integer and boolean typed parameters.
 
-Boolean parameters are reported as integers, where 1 represents logical true and 0 represents logical false.
+Boolean parameters are reported as integers, where 1 represents the logical true and 0 represents the logical false.
 They can be distinguished from integer parameters by their minimum and maximum values being 0 and 1,
 respectively.
 
@@ -1808,7 +1808,7 @@ Field name              & Meaning \\
 
 \texttt{sw\_version}    & Firmware version number in the form ``major.minor''. \\
 
-\texttt{sw\_vcs\_commit}& Firmware patch ID as the short git commit hash.
+\texttt{sw\_vcs\_commit}& Firmware version short commit identifier (e.g. short git commit hash).
                           The abbreviation VCS stands for ``version control system''.
                           This number allows to pinpoint the exact revision of the firmware
                           that is currently running. \\
@@ -1823,13 +1823,13 @@ Field name              & Meaning \\
 
 \texttt{hw\_signature}  & The certificate of authenticity (CoA) of this specific hardware instance
                           encoded in a Base64 string.
-                          \textbf{If this data is missing, please inform Zubax Robotics as soon as possible.} \\
+                          If this data is missing, please inform Zubax Robotics as soon as possible. \\
 
 \texttt{hw\_info\_url}  & Link to the web page that contains the test report, origin information,
                          traceability data, and other important information about this specific hardware
                          instance provided by the vendor.
-                         \textbf{If this data is missing, or if the linked web page is unreachable, please inform
-                         Zubax Robotics as soon as possible.} \\
+                         If this data is missing, or if the linked web page is unreachable, please inform
+                         Zubax Robotics as soon as possible. \\
 \end{ZubaxSimpleTable}
 
 %
