@@ -1006,7 +1006,7 @@ The bootloader is documented in the section \ref{sec:bootloader}.
                                                           & \\
 
     \texttt{uavcan.equipment.air\_data.StaticTemperature} & \makecell[lt]{\CfgRefX{uavcan.pubp-pres}\\
-                                                                          divided by 5}
+                                                                          multiplied by 5}
                                                           & \CfgRefX{uavcan.prio-pres}
                                                           & On firmware v3.x and earlier, the publication
                                                             period is fixed to \CfgRefX{uavcan.pubp-pres}. \\
@@ -1841,7 +1841,7 @@ Field name              & Meaning \\
 This chapter summarizes all configuration parameters available in Zubax~GNSS~2.
 
 The length of configuration parameter names does not exceed 16 characters,
-which ensures compatibility with MAVLink.
+which ensures compatibility with the MAVLink parameter transfer protocol.
 
 \section{Non-volatile configuration storage}
 
@@ -1863,7 +1863,7 @@ the output sensor feed may suffer temporary disturbances:
 The sensor feeds will stabilize within one second after the last modification of the
 non-volatile memory has taken place.
 
-If the device is turned off while the configuration storage was being updated,
+If the device is turned off while the configuration storage is being updated,
 the stored configuration data may get damaged.
 
 The stored configuration is read from the non-volatile memory once upon boot-up.
@@ -1877,12 +1877,12 @@ so it is guaranteed that an invalid configuration can never be loaded.
 Unless specifically stated otherwise, changes to any configuration parameter will not take effect until
 the device is rebooted or power cycled.
 
-It is guaranteed that a power cycle or a reboot is a sufficient measure to apply all configuration parameter
-changes.
+It is guaranteed that a power cycle or a reboot is a sufficient measure for all new configuration parameter
+values to take effect.
 
 \section{Firmware upgrade considerations}
 
-Configuration parameters of different revisions of the firmware may be incompatible with each other.
+The configuration parameter sets of different firmware revisions may be incompatible with each other.
 For instance, some configuration parameters may be added, removed, or their value intervals may be changed.
 
 Zubax~GNSS~2 always checks whether the stored configuration data is compatible with the current
@@ -1896,7 +1896,7 @@ Keep these considerations in mind when upgrading the firmware.
 
 The minimum, maximum, and default values provided in the table are shown for exemplary purposes only,
 and they are \emph{not expected to be valid} for all firmware revisions that this document applies to.
-Intervals and default values may change in newer firmware or hardware revisions.
+Intervals and default values may change in newer revisions of the firmware or the hardware.
 
 The table uses the following abbreviations:
 \begin{description}
@@ -1982,10 +1982,11 @@ It is recommended to disable this feature to reduce the CAN bus traffic.}
 {Magnetic field strength error variance.}
 
 \CfgParamIndexEntry{mag.scaling+coef}{}{0.1}{2}{1}{Scaling coefficient of the measured magnetic field vector.
-Used to work-around issues in some commercial UAV autopilots.}
+Can be used to work-around certain issues in some commercial UAV autopilots.}
 
-\CfgParamIndexEntry{mag.pwron+slftst}{}{0}{1}{1}{Self-test the magnetic field sensor (compass) when powering on.
-This feature must be disabled if the device is expected to be powered on while non-stationary,
+\CfgParamIndexEntry{mag.pwron+slftst}{}{0}{1}{1}{Run a self-test of the magnetic field sensor (compass) when
+powering on.
+This feature should be disabled if the device is expected to be powered on while non-stationary,
 otherwise false failures may be detected.}
 
 \CfgParamIndexEntry{nmea.uart+on}{}{0}{1}{0}{Report all measurements via the UART port using the
