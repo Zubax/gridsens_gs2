@@ -247,7 +247,8 @@ otherwise false failures may be detected.
 
 \section{Communication interfaces}
 
-Zubax~GNSS~2 features three communication interfaces. Each is described in detail in the subsequent parts of this document.
+Zubax~GNSS~2 features three communication interfaces.
+Each is described in detail in the subsequent parts of this document.
 \begin {itemize}
 \item Doubly redundant UAVCAN interface with two connectors per interface.
 \item USB port.
@@ -628,7 +629,7 @@ at \url{https://kb.zubax.com/x/F4Ah} and the official UAVCAN website at \url{htt
 
 The UAVCAN interface enables access to all features of Zubax~GNSS~2:
 GNSS solution output, magnetic field and barometric pressure measurement output,
-precise time synchronization, device configuration parameters, firmware upgrade feature,
+precise time synchronization, device configuration parameters, firmware update feature,
 and so on.
 
 This section documents the UAVCAN interface that is available during the normal operation of the device,
@@ -1764,7 +1765,7 @@ because that would render it unaccessible until the device is power cycled.
 \subsection{bootloader}
 
 This command reboots the device into the bootloader mode, described in the section \ref{sec:bootloader}.
-It can be used to initiate a firmware upgrade procedure over USB.
+It can be used to initiate a firmware update procedure over USB.
 
 This command is available in firmware v4.0 and newer.
 
@@ -1880,7 +1881,7 @@ the device is rebooted or power cycled.
 It is guaranteed that a power cycle or a reboot is a sufficient measure for all new configuration parameter
 values to take effect.
 
-\section{Firmware upgrade considerations}
+\section{Firmware update considerations}
 
 The configuration parameter sets of different firmware revisions may be incompatible with each other.
 For instance, some configuration parameters may be added, removed, or their value intervals may be changed.
@@ -1890,7 +1891,7 @@ firmware revision.
 If it is detected that the stored configuration cannot be applied to the current version of the firmware,
 the device will automatically revert to the factory default configuration.
 
-Keep these considerations in mind when upgrading the firmware.
+Keep these considerations in mind when updating the firmware.
 
 \section{Configuration parameter index}
 
@@ -2009,16 +2010,16 @@ Zubax~GNSS~2\footnote{The embedded bootloader is available in Zubax~GNSS version
 Older devices were equipped with a different bootloader which is no longer supported.
 If you need assistance with an older revision of hardware, please contact Zubax Robotics.}
 employs the Zubax Embedded Bootloader --
-an open source bootloader designed for deeply embedded systems
-that can upgrade firmware over CAN bus, USB, and serial port.
+a highly robust open source bootloader designed for deeply embedded systems
+that can update firmware over CAN bus, USB, and serial port.
 The bootloader also offers advanced integrity checking capabilities.
 
-The bootloader starts immediately after the device is powered on.
-Having started, the bootloader checks if there is a valid application (i.e. firmware) image that can be executed.
+The bootloader starts immediately after the device has been powered on.
+Having started, the bootloader checks if there is a valid application (i.e. firmware) that can be executed.
 If there is one, the bootloader measures a 5 second timeout since the point of its initialization,
 and once the timeout has expired, the bootloader starts the application,
-unless an external entity has requested it to download a new application image.
-If there is no valid application image found (i.e. nothing to boot),
+unless an external entity has requested it to download a new application image or to wait longer.
+If there is no valid application found (i.e. nothing to boot),
 the bootloader will wait forever for commands.
 
 The bootloader supports two families of communication protocols: CAN-based and serial-based.
@@ -2026,36 +2027,37 @@ The details are summarized in the table \ref{table:bootloader_interfaces}.
 
 All of the supported communication interfaces are active at all times,
 and it is possible to interact with the bootloader using any of the available interfaces
-at any moment.
+at any moment, unless interface-specific documentation states otherwise.
 
 The bootloader is fully fault-tolerant.
 If the update process fails at any point for any reason
 (e.g. communication failure, power supply failure, and so on),
-the device may end up with a damaged application image.
-The bootloader is able to recognize this condition and refuse to load the damaged application image.
+the device may end up with a damaged application.
+The bootloader is able to recognize this condition and refuse to start the invalid application.
 In order to recover from this state, the update process simply needs to be restarted.
 
 As an additional safety measure, the bootloader uses a hardware watchdog timer that
-allows it to abort applications that do not load properly.
-This minimizes the chances of permanently damaging the device\footnote{Bricking.}
-by uploading a dysfunctional firmware image.
+allows it to abort applications that do not start properly.
+This minimizes the chances of permanently incapacitating the device\footnote{Bricking.}
+by uploading a dysfunctional application image.
 
-\begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | X | X | X[2] |}\label{table:bootloader_interfaces}
+\begin{ZubaxSimpleTable}{Bootloader communication interfaces}{| l | X | X[2] | X[2] |}
+\label{table:bootloader_interfaces}
     Interface& Parameters                              & Protocol     & Note\\
 
-    USB      & CDC ACM (virtual serial port)           & YMODEM, XMODEM, XMODEM-1K (auto~detect).
-                                                       & When USB is connected, the UART port is inactive.\\
+    USB      & CDC ACM (virtual serial port)           & YMODEM, XMODEM, XMODEM-1K (autodetect)
+                                                       & When USB is connected, the UART interface is inactive.\\
 
-    UART     & 115200~baud, 8~bit, no~parity, 1~stop   & Same as USB.
+    UART     & 115200-8N1                              & Same as USB
                                                        & Available only while USB is disconnected.\\
 
-    CAN bus  & Autoconfigured (plug-and-play node)     & UAVCAN firmware update protocol.
+    CAN bus  & Autoconfigured (plug-and-play)          & UAVCAN firmware update protocol
                                                        & Always available on CAN1.
                                                          CAN2 is not used by the bootloader.\\
 \end{ZubaxSimpleTable}
 
 \clearpage
-\section{State machine}
+\section{State machine}\label{sec:bootloader_state_machine}
 
 The behavior of the bootloader if defined by a simple state machine documented on the figure
 \ref{bootloader_state_machine}.
@@ -2073,17 +2075,17 @@ The table \ref{table:bootloader_states} summarizes the states.
                                 the bootloader will be waiting for commands forever.\\
 
     1  & BootDelay            & The bootloader will start the application in a few seconds,
-                                unless booting is canceled or a firmware update is requested.\\
+                                unless booting is canceled or an application update is requested.\\
 
     2  & BootCancelled        & There is a valid application to boot; however,
                                 booting was canceled by an external command.\\
 
-    3  & AppUpgradeinProgress & Application is currently being upgraded.
+    3  & AppUpgradeinProgress & The application is currently being updated.
                                 If interrupted, the bootloader will switch into
                                 \textbf{NoAppToBoot} or \textbf{BootCancelled},
                                 depending on whether there is a valid image after the interruption.\\
     
-    4  & ReadyToBoot          & The application is about to boot.
+    4  & ReadyToBoot          & The application is about to be booted.
                                 This state is very transient and is left automatically as soon as possible.\\
 \end{ZubaxSimpleTable}
 
@@ -2159,7 +2161,7 @@ This section is applicable to the serial interfaces exposed by the bootloader: U
 Once started, the bootloader launches a CLI\footnote{Command line interface.} instance on the UART port.
 If the bootloader detects that the USB interface became active (by virtue of being connected to a USB host),
 it disconnects the CLI from UART, rendering the latter silent and unresponsive,
-and connects the same CLI to USB virtual serial port.
+and connects the same CLI instance to the USB virtual serial port.
 The CLI will remain available on the USB virtual serial port as long as the USB interface is active.
 Shall the USB port become disconnected, the bootloader will switch the CLI back to UART.
 The switching between USB and UART is fully automatic and happens on the fly.
@@ -2173,7 +2175,7 @@ The USB interface will be detected by the host as CDC ACM (also known as virtual
 This is a standard USB class that is supported by vast majority of operating systems out of the box,
 no special drivers are required.
 
-When the bootloader is connected via USB, it will be detected with the following properties:
+The bootloader reports the following properties to the USB host:
 \begin{itemize}
     \item Vendor ID -- 0x1D50
     \item Product ID -- 0x60C7
@@ -2230,7 +2232,7 @@ In all other states the command will have no effect.
 \subsubsection{download}
 
 Instructs the bootloader to start an YMODEM/XMODEM/XMODEM-1K receiver on the current serial link
-and await for the remote host to begin transmission of the new firmware binary image file.
+and await for the remote host to begin transmission of the new application image file.
 
 The bootloader will automatically detect which file transfer protocol to use.
 
@@ -2249,10 +2251,10 @@ See the section \ref{sec:bootloader_ymodem_implementation} for the detailed info
 This is a standard command documented in the section \ref{sec:cli_command_zubax_id}.
 Its implementation in the bootloader, however, has a number of additional features.
 
-The firmware version information provided in the output is specific to the application image that is
-installed on the device.
-If the bootloader could not detect any application image on the device,
-the firmware version fields will be omitted from the
+The software version information provided in the output is obtained from the application that is
+currently installed on the device.
+If the bootloader could not find any installed application,
+the software version fields will be omitted from the
 output.\footnote{Version 1.0 of the bootloader used to employ a different convention where the application
 version fields were using a different prefix: \texttt{fw\_} rather than \texttt{sw\_}.}
 
@@ -2264,7 +2266,7 @@ The version of the bootloader itself is reported via the following set of dedica
 \end{itemize}
 
 An additional field named ``\verb|mode|'' is set to the string ``\verb|bootloader|''
-to indicate that the bootloader is running rather than the application.
+to indicate that the bootloader is currently running rather than the application.
 
 The table \ref{table:bootloader_zubax_id_fields} summarizes the fields reported by the bootloader.
 Some extra fields may be reported as well,
@@ -2293,7 +2295,7 @@ Field name              & Meaning \\
 
 \texttt{hw\_signature}  & The certificate of authenticity (CoA) of this specific hardware instance
                           encoded in a Base64 string.
-                          \textbf{If this data is missing, please inform Zubax Robotics as soon as possible.} \\
+                          If this data is missing, please inform Zubax Robotics as soon as possible. \\
 
 \texttt{bl\_version}    & Bootloader version number in the form ``major.minor''. \\
 
@@ -2308,39 +2310,39 @@ You can learn more about these protocols in the Zubax Knowledge Base at \url{htt
 This section elaborates on the noteworthy implementation details specific to this application.
 
 The \verb|download| command starts a multi-protocol receiver.
-The receiver enters a loop where it emits the NAK character to the host,
-prompting it to begin transmission of the firmware image file.
+The receiver enters a loop where it emits the ASCII NAK character to the host,
+prompting it to begin transmission of the application image file.
 The receiver will emit NAK every 5 seconds until the host begins the transmission,
 until the transfer initialization times out,
 or until the host cancels the transmission, whichever happens first.
 The transfer initialization timeout is set to 1 minute.
 
 The receiver always uses the NAK character to initiate transfers rather than ``\verb|C|'',
-which instructs the remote host to use the plain 8-bit checksum for data integrity protection
+which instructs the remote host to use the plain 8-bit checksum for data integrity checking
 rather than CRC-16.
 The data integrity guarantees offered by the plain 8-bit checksum algorithm are deemed sufficient,
 because the data links are considered reliable enough,
-and the firmware image itself is always protected by a strong CRC function.
+and the application image itself is always protected by a strong CRC function.
 
 Being compatible with three different protocols, the receiver supports the following options:
 \begin{itemize}
-    \item The host is free to send the zero block with file metadata, as defined by YMODEM.
-          The receiver will collect the file size from the metadata packet and ignore the rest.
+    \item The host is free to send the zero block with the file metadata, as defined by YMODEM.
+          The receiver will collect the file size information from the metadata packet and ignore the rest.
     
     \item The host is free to use either 256-byte or 1024-byte sized blocks, the receiver supports both.
           The former are defined by YMODEM and XMODEM, the latter are defined by YMODEM and XMODEM-1K.
 \end{itemize}
 
-Note that if the size of the firmware image file has not been provided,
+Note that if the size of the application image file has not been provided,
 the written image will be padded up to the size of the last data block.
-This is acceptable, because the trailing bytes after the firmware image are
+This is acceptable, because the trailing bytes after the application image are
 not used by any part of the system, and as such their contents can be arbitrary.
 It is recommended, however, to fill the padding bytes with 0xFF,
-in order to match the initial state of flash memory.
+in order to match the initial state of the ROM.
 
 There is a large number of software products and scripts that support these file transfer protocols.
 For instance, the popular program \verb|sz| (available on most GNU/Linux distributions) can be used as follows
-(where \verb|$file| is the name of the firmware file, and \verb|$port| is the name of the serial port):
+(where \verb|$file| is the name of the application image file, and \verb|$port| is the name of the serial port):
 \begin{minted}[linenos = false]{bash}
 sz -vv --ymodem --1k \$file > \$port < \$port
 \end{minted}
@@ -2350,8 +2352,9 @@ There are various GUI-based alternatives for Windows and Mac OS as well.
 
 \subsection{Overview}
 
-The CAN bus interface is available on the CAN1 port only.
-The CAN2 port is not used by the bootloader in any way.
+The CAN bus interface of the bootloader is available on the CAN1 port only.
+The CAN2 port is not used by the bootloader in any way,
+and while the bootloader is running, the respective CAN controller is disabled.
 It is one of the reasons why only the CAN1 port must be used
 in deployments with non-redundant CAN buses.
 
@@ -2363,10 +2366,12 @@ on the official website at \url{http://uavcan.org}.
 
 The table \ref{table:bootloader_uavcan_status} describes the mapping from the bootloader states
 to UAVCAN node status codes, as reported via the standard message \verb|uavcan.protocol.NodeStatus|.
+The bootloader state machine is documented in the section \ref{sec:bootloader_state_machine}.
 
 The vendor specific status code field of the message contains the error code of
-the last attempt to upgrade the firmware.
-The error codes are documented in the table \ref{table:bootloader_error_codes}.
+the last attempt to update the application.
+All error codes are documented in the table \ref{table:bootloader_error_codes}.
+The initial (default) error code that is reported before the first update attempt has taken place is 0 (Success).
 
 The message is broadcasted at a fixed interval of 1 second.
 Out-of-order messages may be emitted when the status of the bootloader changes.
@@ -2384,20 +2389,20 @@ Out-of-order messages may be emitted when the status of the bootloader changes.
 
 The service \verb|uavcan.protocol.GetNodeInfo| is responded to as follows.
 
-If the bootloader was able to detect a valid application (i.e. firmware) image on the device,
+If the bootloader was able to detect a valid application (i.e. firmware) installed on the device,
 all fields of the nested structure \verb|uavcan.protocol.SoftwareVersion|
 (which are \verb|major|, \verb|minor|, \verb|vcs_commit|, and \verb|image_crc|)
-will be populated with the information obtained from the application image.
-If no valid application image could be found, the fields will be zeroed.
+will be populated with the information obtained from the installed application.
+If no valid application could be found, the fields will be zeroed.
 
-The fields \verb|uavcan.protocol.HardwareVersion| and \verb|name|
+The nested structure \verb|uavcan.protocol.HardwareVersion| and the field \verb|name|
 are always populated as described in the section \ref{sec:uavcan_node_identification}.
 
 \subsection{Node restarting}\label{sec:bootloader_uavcan_node_restarting}
 
 The service \verb|uavcan.protocol.RestartNode|, if the provided magic number is correct,
 unconditionally reboots the device.
-If the provided magic number is incorrect, the device returns a response with the field \verb|ok|
+If the provided magic number is incorrect, the bootloader returns a response with the field \verb|ok|
 set to zero (false).
 
 \subsection{Node initialization}
@@ -2416,8 +2421,8 @@ any moment while running, and it will configure itself immediately.
 If the bit rate has been detected successfully, its value will be passed over to the application
 during the booting, so that the application won't have to perform the bit rate detection again.
 
-Note that if the bootloader was started from the application,
-and at the time of it the application knew the bit rate of the CAN bus,
+Note that when the bootloader is started from the application,
+and the application knows the bit rate of the CAN bus,
 the value will be supplied to the bootloader.
 In this case the bootloader will use the provided bit rate value and skip the detection procedure.
 
@@ -2440,15 +2445,15 @@ After the CAN bus bit rate is established, the bootloader will request a dynamic
 If the node ID has been obtained successfully, its value will be passed over to the application
 during the booting, so that the application will be able to re-use it.
 
-Note that if the bootloader was started from the application,
-and at the time of it the application's own UAVCAN node had a valid node ID,
+Note that when the bootloader is started from the application,
+and the application's own UAVCAN node has a valid node ID,
 the value will be supplied to the bootloader.
 In this case the bootloader will use the provided node ID and skip the allocation procedure.
 
 Until there is a valid node ID available for the bootloader,
 no other functions of the UAVCAN interface will work.
 
-\subsection{Firmware update process}
+\subsection{Application update process}
 
 \subsubsection{Waiting for the update request}\label{sec:bootloader_uavcan_begin_update_request}
 
@@ -2458,7 +2463,7 @@ the bootloader needs to know the following two parameters:
     \item The UAVCAN node ID of the remote node that contains the application image file
           that should be downloaded.
 
-    \item The file system path to the application image file within the remote node.
+    \item The file system path to the application image file on the remote node.
 \end{itemize}
 
 The above listed parameters can be supplied to the bootloader in two ways:
@@ -2474,7 +2479,7 @@ The above listed parameters can be supplied to the bootloader in two ways:
 
 \subsubsection{Downloading the application image}\label{sec:bootloader_uavcan_file_transfer}
 
-At this stage, the bootloader has all of the information required to begin the actual update process.
+At this stage, the bootloader has all of the information that is required to begin the actual update process.
 
 The standard service \verb|uavcan.protocol.file.Read| is emitted in a loop in order to transfer
 the contents of the new application image to the device.
@@ -2500,7 +2505,6 @@ While the file transfer is in progress,
 the bootloader will be reporting its progress several times per minute
 by emitting human-readable log messages,
 as described in the section \ref{sec:uavcan_bootloader_logging}.
-
 A log message will also be emitted at the end of the process in order to indicate whether it was successful,
 and if not, what was the reason of the failure.
 
@@ -2511,7 +2515,7 @@ The bootloader aperiodically broadcasts human-readable log messages using the st
 Some of the important logging points include the following:
 \begin{itemize}
     \item File transfer progress report.
-    \item Update completion -- whether successful or not, reason for the failure, if applicable.
+    \item Update completion -- whether successful or not, reason of the failure, if applicable.
 \end{itemize}
 
 \subsection{Data type summary}
