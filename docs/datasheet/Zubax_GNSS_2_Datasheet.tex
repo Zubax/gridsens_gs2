@@ -171,11 +171,11 @@ Other components are unlikely to be affected.
         $T_\text{oper}$   & Operating temperature         & -40  & 85  & \degree{}C \\
         $T_\text{stor}$   & Storage temperature           & -20  & 60  & \degree{}C \\
         $B$               & Magnetic field strength       &      & 9   & Gauss \\
-        $\phi_\text{oper}$& Operating humidity\tnote{1}   & 0    & 100 & \%RH\\
+        $\phi_\text{oper}$& Operating humidity\tnote{a}   & 0    & 100 & \%RH\\
         $h_\text{oper}$   & Operating altitude above mean sea level (MSL) &     & 10  & km\\
     \end{ZubaxWrappedTable}
     \begin{tablenotes}
-        \item[1] Condensation not permitted.
+        \item[a] Condensation not permitted.
     \end{tablenotes}
 \end{ZubaxTableWrapper}
 
@@ -250,9 +250,9 @@ otherwise false failures may be detected.
 Zubax~GNSS~2 features three communication interfaces.
 Each is described in detail in the subsequent parts of this document.
 \begin {itemize}
-\item Doubly redundant UAVCAN interface with two connectors per interface.
-\item USB port.
-\item Dronecode port.
+    \item Doubly redundant UAVCAN interface with two connectors per interface (ISO 11898-2 CAN 2.0).
+    \item USB 2.0 port.
+    \item Dronecode port.
 \end{itemize}
 
 \subsection{CAN bus interface}
@@ -260,12 +260,15 @@ Each is described in detail in the subsequent parts of this document.
 This interface provides full access to all features of Zubax~GNSS~2, including the output of measurements,
 reconfiguration, time synchronization, firmware update, etc.
 
-Zubax~GNSS~2 is equipped with a doubly-redundant CAN bus interface, which can be used in the non-redundant mode
-as well.
+Zubax~GNSS~2 is equipped with a doubly-redundant ISO 11898-2 CAN bus interface,
+which can be used in a non-redundant mode as well.
 Each of the interfaces is equipped with two standard
 UAVCAN Micro connectors (JST GH)\footnote{\url{https://kb.zubax.com/x/EoAh}}
 electrically parallel to each other,
 which facilitates easy integration of the device into the end application without the need to use T-connectors.
+
+The CAN interface recovers from the bus-off state automatically once the controller has
+observed 128 occurrences of 11 consecutive recessive bits on the bus, as defined by the CAN specification.
 
 The physical location of each connector is documented in the section \ref{sec:mechanical}.
 
@@ -304,11 +307,11 @@ The figure \ref{can_daisy_chain} shows the possible device interconnection schem
 		        & Negative-going input threshold voltage    & 500  & 600  &      & mV \\
 		        & Differential output voltage, dominant     & 1.5  & 2.0  & 3.0  & V \\
 		        & Differential output voltage, recessive    & -120 & 0    & 12   & mV \\
-		        & Inter-connector current pass-through\tnote{1}& -1&      & 1    & A \\
+		        & Inter-connector current pass-through\tnote{a}& -1&      & 1    & A \\
 		        & Connector resistance during device lifetime &    & 30   & 50   & $\text{m}\Omega$ \\
 	\end{ZubaxWrappedTable}
 	\begin{tablenotes}
-	    \item [1] The limit is imposed by the PCB.
+	    \item [a] The limit is imposed by the PCB.
 	\end{tablenotes}
 \end{ZubaxTableWrapper}
 
@@ -319,7 +322,7 @@ The device implements a full-speed USB 2.0 port with the standard CDC ACM interf
 The device features driverless compatibility with all major operating systems
 (Windows, GNU/Linux, Mac OS).\footnote{Get more knowledge and helpful tips at \url{https://kb.zubax.com}.}
 
-The physical connector type is USB micro B (which is the most common device-side USB connector type).
+The physical connector type is USB micro B (which is one of the most common device-side USB connector types).
 
 \subsubsection{Identification}
 
@@ -410,7 +413,7 @@ The following protocols are exposed via the UART interface:
 \begin{ZubaxTableWrapper}{Dronecode Debug Mini standard connector pinout}
     \begin{ZubaxWrappedTable}{|l X X X[2]|}
         Pin no. & Type            & Name                & Comment\\
-        1       & Power           & TPWR                & +5 V power supply input\tnote{1}\\
+        1       & Power           & TPWR                & +5 V power supply input\tnote{a}\\
         2       & Output          & UART\_TX            & Collect the NMEA and diagnostic output here\\
         3       & Input           & UART\_RX            & Pulled down with a resistor\\
         4       & Input/Output    & SWDIO               & Not for production use\\
@@ -418,7 +421,7 @@ The following protocols are exposed via the UART interface:
         6       & Ground          & GND                 & Power \& signal ground\\
     \end{ZubaxWrappedTable}
 	\begin{tablenotes}
-	    \item[1] Available in hardware v2.1 (manufacturing year 2015) and newer.
+	    \item[a] Available in hardware v2.1 (manufacturing year 2015) and newer.
                  Older revisions of the hardware cannot be powered via the Dronecode debug port.
 	\end{tablenotes}
 \end{ZubaxTableWrapper}
@@ -488,10 +491,15 @@ Note that all revisions of Zubax~GNSS~2 share the same major hardware version nu
      \textbf{Zubax GNSS 2.2}    & 2017      & v4.x        & Backward compatible with Zubax GNSS 2.1. \\
 \end{ZubaxSimpleTable}
 
-\section{Mechanical}\label{sec:mechanical}
+\section{Physical characteristics}\label{sec:mechanical}
 
 The figure \ref{drawing} documents the basic mechanical characteristics of Zubax~GNSS~2,
 such as the placement of connectors and mounting holes.
+
+\begin{ZubaxSimpleTable}{Physical characteristics}{|c X| c | c | }
+    Symbol & Parameter                       & Typ & Unit \\
+    m      & Mass                            & 42  & g \\
+\end{ZubaxSimpleTable}
 
 \begin{figure}[!hbt]
     \center
