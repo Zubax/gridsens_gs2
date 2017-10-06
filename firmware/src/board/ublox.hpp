@@ -286,6 +286,7 @@ struct Config
 {
     float fix_rate_hz = 10;
     float aux_rate_hz = 1;
+    msg::CFG_NAV5::DynModel nav_filter_model = msg::CFG_NAV5::DynModel::Airborne_4g;
 };
 
 class Driver

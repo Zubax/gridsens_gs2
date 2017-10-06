@@ -54,6 +54,10 @@ os::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-aux",
                                                 uavcan::TransferPriority::NumericallyMin,
                                                 uavcan::TransferPriority::NumericallyMax);
 
+os::config::Param<unsigned> param_gnss_nav_filter_model("gnss.filter_mode",
+                                                        GNSS_DYN_MODEL_DEFAULT,
+                                                        GNSS_DYN_MODEL_MIN,
+                                                        GNSS_DYN_MODEL_MAX);
 os::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.warn_dimens", 0, 0, 3);
 os::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
 
@@ -335,6 +339,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         auto cfg = ublox::Config();
         cfg.fix_rate_hz = 1e6F / param_gnss_fix_period_usec.get();
         cfg.aux_rate_hz = 1e6F / param_gnss_aux_period_usec.get();
+        cfg.nav_filter_model = static_cast<ublox::msg::CFG_NAV5::DynModel>(param_gnss_nav_filter_model.get());
 
         while (shouldKeepGoing() && !driver_.configure(cfg, watchdog_))
         {
