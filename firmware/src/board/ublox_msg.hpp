@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 
 namespace ublox
 {
@@ -455,6 +456,19 @@ struct MON_GNSS
     U1 reserved4[3];
 };
 static_assert(sizeof(MON_GNSS) == 8, "Struct size error");
+
+
+struct MON_VER
+{
+    static constexpr unsigned Class = 0x0A;
+    static constexpr unsigned ID    = 0x04;
+
+    std::array<CH, 30> swVersion;
+    std::array<CH, 10> hwVersion;
+
+    std::array<CH, 30> extension[1];
+};
+static_assert(sizeof(MON_VER) == 40 + 30, "Struct size error");
 
 } // namespace msg
 

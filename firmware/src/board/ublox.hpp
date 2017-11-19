@@ -252,7 +252,7 @@ public:
     bool sendAndWaitAck(const Message& msg, unsigned ack_timeout_ms = DefaultAckTimeoutMs);
 
     template <typename MessageStruct>
-    const MessageStruct* poll(unsigned timeout_ms = DefaultAckTimeoutMs)
+    std::pair<const MessageStruct*, std::uint16_t> pollWithLength(unsigned timeout_ms = DefaultAckTimeoutMs)
     {
         const auto deadline = platform_.getMonotonicUSec() + timeout_ms * 1000ULL;
 
@@ -268,10 +268,16 @@ public:
             spin(0);
             if (auto msg = last_received_msg_.tryCastTo<MessageStruct>())
             {
-                return msg;
+                return {msg, last_received_msg_.len};
             }
         }
-        return nullptr;
+        return {nullptr, 0};
+    }
+
+    template <typename MessageStruct>
+    const MessageStruct* poll(unsigned timeout_ms = DefaultAckTimeoutMs)
+    {
+        return pollWithLength<MessageStruct>(timeout_ms).first;
     }
 
     std::uint64_t getMonotonicUSec() const { return platform_.getMonotonicUSec(); }
@@ -309,6 +315,19 @@ class Driver
     Auxiliary aux_ = Auxiliary();
     GpsLeapSeconds leaps_ = GpsLeapSeconds();
 
+    struct UbloxProtocolVersion
+    {
+        std::uint8_t major = 0;
+        std::uint8_t minor = 0;
+
+        bool operator>=(const UbloxProtocolVersion& r) const
+        {
+            return (major * 1000U + minor) >= (r.major * 1000U + r.minor);
+        }
+
+        bool operator<=(const UbloxProtocolVersion& r) const { return r >= *this; }
+    } protocol_version_;
+
     void handlePVT(const Timestamps& ts, const msg::NAV_PVT& pvt);
     void handleSOL(const Timestamps& ts, const msg::NAV_SOL& sol);
     void handleDOP(const Timestamps& ts, const msg::NAV_DOP& dop);
@@ -317,6 +336,7 @@ class Driver
 
     void handleReceivedMessage(const RxMessage& msg);
 
+    bool detectReceiver();
     bool configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_t rate);
     bool configureGnss(os::watchdog::Timer& wdt);
     bool configureMessages();

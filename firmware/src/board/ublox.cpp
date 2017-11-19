@@ -19,6 +19,7 @@
 
 #include "ublox.hpp"
 #include <ctime>
+#include <cstring>
 #include <zubax_chibios/os.hpp>
 
 namespace ublox
@@ -532,6 +533,107 @@ void Driver::handleReceivedMessage(const RxMessage& raw_msg)
     }
 }
 
+bool Driver::detectReceiver()
+{
+    auto mon_ver = io_.pollWithLength<msg::MON_VER>();
+    if (mon_ver.first == nullptr)
+    {
+        os::lowsyslog("ublox: Failed to poll MON-VER\n");
+        return false;
+    }
+
+    const unsigned num_extensions =
+        (mon_ver.second - sizeof(msg::MON_VER::swVersion) - sizeof(msg::MON_VER::hwVersion)) /
+        sizeof(msg::MON_VER::extension);
+
+    static const auto as_string = [](auto s) {
+        s[s.size() - 1] = '\0';
+        return reinterpret_cast<const char*>(s.data());
+    };
+
+    os::lowsyslog("ublox: MON-VER: SW='%s' HW='%s'\n",
+                  as_string(mon_ver.first->swVersion),
+                  as_string(mon_ver.first->hwVersion));
+    for (unsigned i = 0; i < num_extensions; i++)
+    {
+        os::lowsyslog("ublox: MON-VER extension %u: '%s'\n",
+                      i,
+                      as_string(mon_ver.first->extension[i]));
+    }
+
+    static const auto parse_uint = [](const char* begin, const char* end) -> std::pair<std::uint8_t, bool> {
+        std::uint8_t out = 0;
+        while (begin < end)
+        {
+            if (*begin < '0' || *begin > '9')
+            {
+                return {0, false};
+            }
+            out *= 10;
+            out += *begin - '0';
+            ++begin;
+        }
+        return {out, true};
+    };
+
+    // Parsing the response here
+    for (unsigned i = 0; i < num_extensions; i++)
+    {
+        const char ProtocolVersionPrefix[] = "PROTVER=";
+        const auto& current = mon_ver.first->extension[i];
+
+        if (0 == std::strncmp(current.data(), &ProtocolVersionPrefix[0], sizeof(ProtocolVersionPrefix) - 1))
+        {
+            os::lowsyslog("ublox: MON-VER '%s' match on '%s'\n",
+                          &ProtocolVersionPrefix[0],
+                          as_string(current));
+
+            const char* const major_begin = &current[sizeof(ProtocolVersionPrefix) - 1];
+            const char* const major_end   = static_cast<const char*>(std::memchr(major_begin, '.', 3));
+            const char* const minor_begin = major_end + 1;
+            const char* const minor_end   = static_cast<const char*>(std::memchr(minor_begin, '\0', 3));
+
+            if ((major_begin == nullptr) ||
+                (major_end   == nullptr) ||
+                (minor_begin == nullptr) ||
+                (minor_end   == nullptr) ||
+                (major_end - major_begin > 2) ||
+                (minor_end - minor_begin > 2) ||
+                (major_end <= major_begin) ||
+                (minor_end <= minor_begin))
+            {
+                os::lowsyslog("ublox: MON-VER: Invalid PROTVER string\n");
+                return false;
+            }
+
+            const auto parse_output_major = parse_uint(major_begin, major_end);
+            const auto parse_output_minor = parse_uint(minor_begin, minor_end);
+            if (!parse_output_major.second ||
+                !parse_output_minor.second)
+            {
+                os::lowsyslog("ublox: MON-VER: Could not parse protocol version\n");
+                return false;
+            }
+
+            protocol_version_.major = parse_output_major.first;
+            protocol_version_.minor = parse_output_minor.first;
+
+            break;
+        }
+        else
+        {
+            os::lowsyslog("ublox: MON-VER NO match on '%s'\n",
+                          as_string(current));
+        }
+    }
+
+    os::lowsyslog("ublox: Detected protocol version: %03d.%03d\n",
+                  int(protocol_version_.major),
+                  int(protocol_version_.minor));
+
+    return true;
+}
+
 bool Driver::configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_t rate)
 {
     msg::CFG_MSG msg;
@@ -561,7 +663,17 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
         }
     }
 
-    // GNSS configuration
+    // GNSS configuration - only if the protocol version is above 18
+    if (protocol_version_ >= UbloxProtocolVersion{18, 0})
+    {
+        os::lowsyslog("ublox: TODO: GNSS CONFIGURATION\n");
+    }
+    else
+    {
+        os::lowsyslog("ublox: GNSS configuration skipped - old protocol\n");
+    }
+
+    // GNSS configuration display
     wdt.reset();
     msg::MON_GNSS mon_gnss;
     {
@@ -576,10 +688,6 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
     os::lowsyslog("ublox: MON-GNSS supported=%u default=%u enabled=%u simultaneous=%u\n",
               unsigned(mon_gnss.supported), unsigned(mon_gnss.default_),
               unsigned(mon_gnss.enabled), unsigned(mon_gnss.simultaneous));
-    /*
-     * Here we could set-up the new configuration, but we won't because
-     * receivers are properly configured by default.
-     */
 
     // NAV5
     wdt.reset();
@@ -673,6 +781,12 @@ bool Driver::configure(const Config& cfg, os::watchdog::Timer& wdt)
 
     wdt.reset();
     if (!io_.configure(wdt))
+    {
+        return false;
+    }
+
+    wdt.reset();
+    if (!detectReceiver())
     {
         return false;
     }
