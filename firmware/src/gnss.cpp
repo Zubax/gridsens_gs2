@@ -57,6 +57,11 @@ os::config::Param<unsigned> param_gnss_aux_prio("uavcan.prio-aux",
 os::config::Param<unsigned> param_gnss_warn_min_fix_dimensions("gnss.warn_dimens", 0, 0, 3);
 os::config::Param<unsigned> param_gnss_warn_min_sats_used("gnss.warn_sats", 0, 0, 20);
 
+os::config::Param<std::uint8_t> param_gnss_dynamic_model("gnss.dyn_model",
+                                                         std::uint8_t(ublox::Config().dynamic_model),
+                                                         0,
+                                                         ublox::Config::NumDynamicModels - 1);
+
 os::config::Param<bool> param_gnss_use_old_fix_message("gnss.old_fix_msg", true);
 
 chibios_rt::Mutex last_sample_mutex;
@@ -335,6 +340,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         auto cfg = ublox::Config();
         cfg.fix_rate_hz = 1e6F / param_gnss_fix_period_usec.get();
         cfg.aux_rate_hz = 1e6F / param_gnss_aux_period_usec.get();
+        cfg.dynamic_model = ublox::Config::DynamicModel(param_gnss_dynamic_model.get());
 
         while (shouldKeepGoing() && !driver_.configure(cfg, watchdog_))
         {

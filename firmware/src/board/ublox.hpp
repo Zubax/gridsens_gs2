@@ -284,8 +284,19 @@ public:
  */
 struct Config
 {
+    enum class DynamicModel : std::uint8_t
+    {
+        Automotive,
+        Sea,
+        Airborne
+    };
+
+    static constexpr std::uint8_t NumDynamicModels = 3; ///< Please maintain this carefully!
+
     float fix_rate_hz = 10;
     float aux_rate_hz = 1;
+
+    DynamicModel dynamic_model = DynamicModel::Airborne;
 };
 
 class Driver

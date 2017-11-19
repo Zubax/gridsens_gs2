@@ -586,7 +586,33 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
     {
         auto nav5 = io_.allocateMessage<msg::CFG_NAV5>();
         nav5->mask = msg::CFG_NAV5::Mask::dyn;
-        nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_4g;
+
+        switch (cfg_.dynamic_model)
+        {
+        case Config::DynamicModel::Automotive:
+        {
+            nav5->dynModel = msg::CFG_NAV5::DynModel::Automotive;
+            break;
+        }
+        case Config::DynamicModel::Sea:
+        {
+            nav5->dynModel = msg::CFG_NAV5::DynModel::Sea;
+            break;
+        }
+        case Config::DynamicModel::Airborne:
+        {
+            nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_4g;
+            break;
+        }
+        default:
+        {
+            assert(false);
+            nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_4g;      // The default
+            break;
+        }
+        }
+        os::lowsyslog("ublox: Dynamic model: 0x%02x\n", int(nav5->dynModel));
+
         if (!io_.sendAndWaitAck(Message::make(*nav5)))
         {
             os::lowsyslog("ublox: CFG-NAV5 failed\n");
