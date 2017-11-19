@@ -53,9 +53,25 @@ enum class GnssID : U1
     SBAS    = 1,
     Galileo = 2,
     BeiDou  = 3,
+    IMES    = 4,
     QZSS    = 5,
     GLONASS = 6
 };
+
+static inline const char* gnssIDToString(const GnssID id)
+{
+    switch (id)
+    {
+    case GnssID::GPS:     return "GPS";
+    case GnssID::SBAS:    return "SBAS";
+    case GnssID::Galileo: return "Galileo";
+    case GnssID::BeiDou:  return "BeiDou";
+    case GnssID::IMES:    return "IMES";
+    case GnssID::QZSS:    return "QZSS";
+    case GnssID::GLONASS: return "GLONASS";
+    default: return "?";
+    }
+}
 
 struct ACK_ACK
 {
@@ -80,7 +96,9 @@ struct CFG_GNSS
     static constexpr unsigned Class = 0x06;
     static constexpr unsigned ID    = 0x3E;
 
-    static constexpr unsigned MsgVersion = 0;
+    static constexpr U1 MsgVersion = 0;
+
+    static constexpr U1 NumTrkChUseAllAvailable = 0xFF;
 
     U1 msgVer;
     U1 numTrkChHw;
@@ -94,9 +112,14 @@ struct CFG_GNSS
         U1 maxTrkCh;
         U1 reserved1;
         X4 flags;
-    } configBlocks[1];
+    } configBlocks[8];
+
+    unsigned computeLength() const
+    {
+        return 4 + numConfigBlocks * 8;
+    }
 };
-static_assert(sizeof(CFG_GNSS) == 12, "Struct size error");
+static_assert(sizeof(CFG_GNSS) == 4 + 8 * 8, "Struct size error");
 
 struct CFG_NAV5
 {

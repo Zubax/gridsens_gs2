@@ -533,6 +533,25 @@ void Driver::handleReceivedMessage(const RxMessage& raw_msg)
     }
 }
 
+void Driver::logCfgGnssMessage(const msg::CFG_GNSS& msg)
+{
+    os::lowsyslog("ublox: CFG-GNSS numTrkChHw  = %u\n", unsigned(msg.numTrkChHw));
+    os::lowsyslog("ublox: CFG-GNSS numTrkChUse = %u\n", unsigned(msg.numTrkChUse));
+
+    for (unsigned i = 0; i < msg.numConfigBlocks; i++)
+    {
+        const msg::CFG_GNSS::ConfigBlock& b = msg.configBlocks[i];
+        os::lowsyslog("ublox: CFG-GNSS block %u: gnssId=%u[%-7s] resTrkCh=%-2u maxTrkCh=%-2u flags=0x%08x[%s]\n",
+                      i,
+                      unsigned(b.gnssId),
+                      msg::gnssIDToString(b.gnssId),
+                      unsigned(b.resTrkCh),
+                      unsigned(b.maxTrkCh),
+                      unsigned(b.flags),
+                      (b.flags & 1) ? "on" : "off");
+    }
+}
+
 bool Driver::detectReceiver()
 {
     auto mon_ver = io_.pollWithLength<msg::MON_VER>();
@@ -620,11 +639,12 @@ bool Driver::detectReceiver()
 
             break;
         }
-        else
-        {
-            os::lowsyslog("ublox: MON-VER NO match on '%s'\n",
-                          as_string(current));
-        }
+    }
+
+    if (protocol_version_.major == 0)
+    {
+        os::lowsyslog("ublox: MON-VER: Could not detect protocol version\n");
+        return false;
     }
 
     os::lowsyslog("ublox: Detected protocol version: %03d.%03d\n",
@@ -666,7 +686,65 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
     // GNSS configuration - only if the protocol version is above 18
     if (protocol_version_ >= UbloxProtocolVersion{18, 0})
     {
-        os::lowsyslog("ublox: TODO: GNSS CONFIGURATION\n");
+        auto cfg_gnss_ptr = io_.poll<msg::CFG_GNSS>();
+        if (cfg_gnss_ptr == nullptr)
+        {
+            os::lowsyslog("ublox: Failed to poll CFG-GNSS\n");
+            return false;
+        }
+
+        if (cfg_gnss_ptr->msgVer == msg::CFG_GNSS::MsgVersion)
+        {
+            os::lowsyslog("ublox: CFG-GNSS BEFORE configuration:\n");
+            logCfgGnssMessage(*cfg_gnss_ptr);
+
+            // Observe that the fields resTrkCh and maxTrkCh will become read-only starting from the protocol version 23
+            // The values that we set are defaults, as reported by a ublox-M8Q protocol version 18
+            msg::CFG_GNSS set = *cfg_gnss_ptr;
+            set.numTrkChUse = cfg_gnss_ptr->numTrkChHw;
+            set.numConfigBlocks = 4;
+
+            set.configBlocks[0].gnssId = msg::GnssID::GPS;
+            set.configBlocks[0].resTrkCh = 8;
+            set.configBlocks[0].maxTrkCh = 16;
+            set.configBlocks[0].flags = (1U << 16) | 1;         // Enabled always
+
+            set.configBlocks[1].gnssId = msg::GnssID::Galileo;
+            set.configBlocks[1].resTrkCh = 4;
+            set.configBlocks[1].maxTrkCh = 8;
+            set.configBlocks[1].flags = cfg_.prefer_beidou_over_galileo ? 0 : ((1U << 16) | 1);
+
+            set.configBlocks[2].gnssId = msg::GnssID::BeiDou;
+            set.configBlocks[2].resTrkCh = 8;
+            set.configBlocks[2].maxTrkCh = 16;
+            set.configBlocks[2].flags = cfg_.prefer_beidou_over_galileo ? ((1U << 16) | 1) : 0;
+
+            set.configBlocks[3].gnssId = msg::GnssID::GLONASS;
+            set.configBlocks[3].resTrkCh = 8;
+            set.configBlocks[3].maxTrkCh = 14;
+            set.configBlocks[3].flags = (1U << 16) | 1;         // Enabled always
+
+            if (!io_.sendAndWaitAck(Message::make(set, set.computeLength())))
+            {
+                os::lowsyslog("ublox: CFG-GNSS set failed\n");
+                return false;
+            }
+
+            cfg_gnss_ptr = io_.poll<msg::CFG_GNSS>();
+            if (cfg_gnss_ptr == nullptr)
+            {
+                os::lowsyslog("ublox: Failed to poll CFG-GNSS\n");
+                return false;
+            }
+
+            os::lowsyslog("ublox: CFG-GNSS AFTER configuration:\n");
+            logCfgGnssMessage(*cfg_gnss_ptr);
+        }
+        else
+        {
+            os::lowsyslog("ublox: GNSS configuration skipped - unknown version of CFG-GNSS: %d\n",
+                          int(cfg_gnss_ptr->msgVer));
+        }
     }
     else
     {
@@ -675,19 +753,21 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
 
     // GNSS configuration display
     wdt.reset();
-    msg::MON_GNSS mon_gnss;
     {
-        auto mon_gnss_ptr = io_.poll<msg::MON_GNSS>();
-        if (mon_gnss_ptr == nullptr)
+        msg::MON_GNSS mon_gnss;
         {
-            os::lowsyslog("ublox: Failed to poll MON-GNSS\n");
-            return false;
+            auto mon_gnss_ptr = io_.poll<msg::MON_GNSS>();
+            if (mon_gnss_ptr == nullptr)
+            {
+                os::lowsyslog("ublox: Failed to poll MON-GNSS\n");
+                return false;
+            }
+            mon_gnss = *mon_gnss_ptr;
         }
-        mon_gnss = *mon_gnss_ptr;
+        os::lowsyslog("ublox: MON-GNSS supported=%u default=%u enabled=%u simultaneous=%u\n",
+                  unsigned(mon_gnss.supported), unsigned(mon_gnss.default_),
+                  unsigned(mon_gnss.enabled), unsigned(mon_gnss.simultaneous));
     }
-    os::lowsyslog("ublox: MON-GNSS supported=%u default=%u enabled=%u simultaneous=%u\n",
-              unsigned(mon_gnss.supported), unsigned(mon_gnss.default_),
-              unsigned(mon_gnss.enabled), unsigned(mon_gnss.simultaneous));
 
     // NAV5
     wdt.reset();

@@ -62,6 +62,8 @@ os::config::Param<std::uint8_t> param_gnss_dynamic_model("gnss.dyn_model",
                                                          0,
                                                          ublox::Config::NumDynamicModels - 1);
 
+os::config::Param<bool> param_gnss_prefer_beidou_over_galileo("gnss.pref_beidou", false);
+
 os::config::Param<bool> param_gnss_use_old_fix_message("gnss.old_fix_msg", true);
 
 chibios_rt::Mutex last_sample_mutex;
@@ -341,6 +343,7 @@ class GnssThread : public chibios_rt::BaseStaticThread<3000>
         cfg.fix_rate_hz = 1e6F / param_gnss_fix_period_usec.get();
         cfg.aux_rate_hz = 1e6F / param_gnss_aux_period_usec.get();
         cfg.dynamic_model = ublox::Config::DynamicModel(param_gnss_dynamic_model.get());
+        cfg.prefer_beidou_over_galileo = param_gnss_prefer_beidou_over_galileo.get();
 
         while (shouldKeepGoing() && !driver_.configure(cfg, watchdog_))
         {

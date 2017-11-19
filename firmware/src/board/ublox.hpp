@@ -303,6 +303,8 @@ struct Config
     float aux_rate_hz = 1;
 
     DynamicModel dynamic_model = DynamicModel::Airborne;
+
+    bool prefer_beidou_over_galileo = false;
 };
 
 class Driver
@@ -335,6 +337,8 @@ class Driver
     void handleTIMEGPS(const Timestamps& ts, const msg::NAV_TIMEGPS& timegps);
 
     void handleReceivedMessage(const RxMessage& msg);
+
+    void logCfgGnssMessage(const msg::CFG_GNSS& msg);
 
     bool detectReceiver();
     bool configureMessageRate(std::uint8_t cls, std::uint8_t id, std::uint8_t rate);
