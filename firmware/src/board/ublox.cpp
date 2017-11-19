@@ -586,7 +586,7 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
     {
         auto nav5 = io_.allocateMessage<msg::CFG_NAV5>();
         nav5->mask = msg::CFG_NAV5::Mask::dyn;
-        nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_2g;
+        nav5->dynModel = msg::CFG_NAV5::DynModel::Airborne_4g;
         if (!io_.sendAndWaitAck(Message::make(*nav5)))
         {
             os::lowsyslog("ublox: CFG-NAV5 failed\n");
