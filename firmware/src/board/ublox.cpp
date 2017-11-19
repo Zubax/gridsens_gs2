@@ -197,7 +197,7 @@ void IOManager::handleReceivedMessage(const RxMessage& raw_msg)
 
     if (auto msg = raw_msg.tryCastTo<msg::ACK_ACK>())
     {
-        os::lowsyslog("ublox: ACK 0x%02x 0x%02x\n", int(msg->clsID), int(msg->msgID));
+        //os::lowsyslog("ublox: ACK 0x%02x 0x%02x\n", int(msg->clsID), int(msg->msgID));
         last_ack_.cls = msg->clsID;
         last_ack_.id  = msg->msgID;
         return;
@@ -605,10 +605,6 @@ bool Driver::detectReceiver()
 
         if (0 == std::strncmp(current.data(), &ProtocolVersionPrefix[0], sizeof(ProtocolVersionPrefix) - 1))
         {
-            os::lowsyslog("ublox: MON-VER '%s' match on '%s'\n",
-                          &ProtocolVersionPrefix[0],
-                          as_string(current));
-
             const char* const major_begin = &current[sizeof(ProtocolVersionPrefix) - 1];
             const char* const major_end   = static_cast<const char*>(std::memchr(major_begin, '.', 3));
             const char* const minor_begin = major_end + 1;
