@@ -89,8 +89,8 @@ class ZubaxIDCommand : public os::shell::ICommandHandler
         if (appinfo.second)
         {
             const auto& inf = appinfo.first;
-            ios.print("fw_version: '%u.%u'\n", inf.major_version, inf.minor_version);
-            ios.print("fw_vcs_commit: %u\n", unsigned(inf.vcs_commit));
+            ios.print("sw_version: '%u.%u'\n", inf.major_version, inf.minor_version);
+            ios.print("sw_vcs_commit: %u\n", unsigned(inf.vcs_commit));
         }
     }
 } static cmd_zubax_id;
