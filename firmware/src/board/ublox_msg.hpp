@@ -116,7 +116,7 @@ struct CFG_GNSS
 
     unsigned computeLength() const
     {
-        return 4 + numConfigBlocks * 8;
+        return 4 + numConfigBlocks * sizeof(ConfigBlock);
     }
 };
 static_assert(sizeof(CFG_GNSS) == 4 + 8 * 8, "Struct size error");

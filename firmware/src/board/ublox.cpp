@@ -197,6 +197,7 @@ void IOManager::handleReceivedMessage(const RxMessage& raw_msg)
 
     if (auto msg = raw_msg.tryCastTo<msg::ACK_ACK>())
     {
+        os::lowsyslog("ublox: ACK 0x%02x 0x%02x\n", int(msg->clsID), int(msg->msgID));
         last_ack_.cls = msg->clsID;
         last_ack_.id  = msg->msgID;
         return;
@@ -325,6 +326,7 @@ bool IOManager::sendAndWaitAck(const Message& msg, unsigned ack_timeout_ms)
     send(msg);
 
     last_ack_ = LastAck();
+    assert((last_ack_.cls == 0) && (last_ack_.id == 0));
 
     while (platform_.getMonotonicUSec() < deadline)
     {
@@ -702,33 +704,58 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
             // The values that we set are defaults, as reported by a ublox-M8Q protocol version 18
             msg::CFG_GNSS set = *cfg_gnss_ptr;
             set.numTrkChUse = cfg_gnss_ptr->numTrkChHw;
-            set.numConfigBlocks = 4;
+            set.numConfigBlocks = 7;
 
+            // GPS is always enabled
             set.configBlocks[0].gnssId = msg::GnssID::GPS;
             set.configBlocks[0].resTrkCh = 8;
             set.configBlocks[0].maxTrkCh = 16;
-            set.configBlocks[0].flags = (1U << 16) | 1;         // Enabled always
+            set.configBlocks[0].flags = (1U << 16) | 1;
 
+            // Galileo is always enabled
             set.configBlocks[1].gnssId = msg::GnssID::Galileo;
             set.configBlocks[1].resTrkCh = 4;
             set.configBlocks[1].maxTrkCh = 8;
-            set.configBlocks[1].flags = cfg_.prefer_beidou_over_galileo ? 0 : ((1U << 16) | 1);
+            set.configBlocks[1].flags = (1U << 16) | 1;
 
+            // Beidou is always disabled. Switching between GNSS can be dangerous, see the section 4.2.1
             set.configBlocks[2].gnssId = msg::GnssID::BeiDou;
             set.configBlocks[2].resTrkCh = 8;
             set.configBlocks[2].maxTrkCh = 16;
-            set.configBlocks[2].flags = cfg_.prefer_beidou_over_galileo ? ((1U << 16) | 1) : 0;
+            set.configBlocks[2].flags = (1U << 16) | 0;
 
+            // GLONASS is always enabled
             set.configBlocks[3].gnssId = msg::GnssID::GLONASS;
             set.configBlocks[3].resTrkCh = 8;
             set.configBlocks[3].maxTrkCh = 14;
             set.configBlocks[3].flags = (1U << 16) | 1;         // Enabled always
 
+            // QZSS must be enabled/disabled together with GPS (see the user manual)
+            // L1-SAIF is disabled by default, but we turn it on here
+            set.configBlocks[4].gnssId = msg::GnssID::QZSS;
+            set.configBlocks[4].resTrkCh = 0;
+            set.configBlocks[4].maxTrkCh = 3;
+            set.configBlocks[4].flags = (4U << 16) | (1U << 16) | 1;
+
+            // SBAS is always enabled, like GPS
+            set.configBlocks[5].gnssId = msg::GnssID::SBAS;
+            set.configBlocks[5].resTrkCh = 1;
+            set.configBlocks[5].maxTrkCh = 3;
+            set.configBlocks[5].flags = (1U << 16) | 1;
+
+            // IMES is always disabled
+            set.configBlocks[6].gnssId = msg::GnssID::IMES;
+            set.configBlocks[6].resTrkCh = 0;
+            set.configBlocks[6].maxTrkCh = 8;
+            set.configBlocks[6].flags = (1U << 16) | 0;
+
+            os::lowsyslog("ublox: Setting new CFG-GNSS...\n");
             if (!io_.sendAndWaitAck(Message::make(set, set.computeLength())))
             {
                 os::lowsyslog("ublox: CFG-GNSS set failed\n");
                 return false;
             }
+            os::lowsyslog("ublox: New CFG-GNSS configuration has been confirmed by the receiver\n");
 
             cfg_gnss_ptr = io_.poll<msg::CFG_GNSS>();
             if (cfg_gnss_ptr == nullptr)

@@ -303,8 +303,6 @@ struct Config
     float aux_rate_hz = 1;
 
     DynamicModel dynamic_model = DynamicModel::Airborne;
-
-    bool prefer_beidou_over_galileo = false;
 };
 
 class Driver
