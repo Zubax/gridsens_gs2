@@ -715,6 +715,8 @@ bool Driver::configureGnss(os::watchdog::Timer& wdt)
             set.configBlocks[1].flags = (1U << 16) | 1;
 
             // Beidou is always disabled. Switching between GNSS can be dangerous, see the section 4.2.1
+            // BeiDou cannot be used concurrently with GLONASS on u-blox M8. We prefer GLONASS because it significantly
+            // outperforms BeiDou in Europe, and probably in the rest of the world barring probably Asia.
             set.configBlocks[2].gnssId = msg::GnssID::BeiDou;
             set.configBlocks[2].resTrkCh = 8;
             set.configBlocks[2].maxTrkCh = 16;
