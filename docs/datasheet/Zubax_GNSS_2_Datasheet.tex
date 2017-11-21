@@ -23,19 +23,19 @@
 \section*{Overview}
 
 Zubax~GNSS~2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
-It includes a state-of-the-art multi-system GPS/\allowbreak{}GLONASS receiver,
+It includes a multi-system concurrent GPS+\allowbreak{}GLONASS+\allowbreak{}Galileo receiver,
 a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
 
 \section*{Features}
 
 \begin{itemize}
-    \item State-of-the-art concurrent GPS/GLONASS receiver u-blox MAX-M8Q.
+    \item Concurrent GPS + GLONASS + Galileo receiver \mbox{u-blox} MAX-M8Q.
     \begin{itemize}
     	\item Full RF shielding of the GNSS circuits ensures reliable operation in high-EMI environments.
     	\item 35 mm high-gain patch antenna with large ground plane for reliable reception even in deep urban canyons.
     	\item Analog front-end with LNA and SAW ensures high noise resilience.
     	\item Supercapacitor-based backup power source enables low time-to-first-fix (a few seconds).
-    	\item Up to 15 Hz update rate.
+    	\item Up to 15 Hz solution update rate.
     \end{itemize}
 	\item High precision digital barometer TE Connectivity MS5611.
     \item High precision 3-axis digital compass STMicroelectronics LIS3MDL with thermal compensation.
@@ -78,7 +78,8 @@ a high-precision barometric altimeter, and a 3-axis compass with thermal compens
 \chapter{Overview}
 
 Zubax~GNSS~2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
-It includes a state-of-the-art multi-system GPS/GLONASS receiver,
+It includes a multi-system concurrent GPS + GLONASS + Galileo
+receiver\footnote{Support for Galileo is available since firmware version 4.1.},
 a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
 Zubax~GNSS~2 supports a variety of standard protocols,
 which ensures compatibility with third party software and hardware:
@@ -203,6 +204,15 @@ The period of GNSS solution reporting is defined by the configuration parameters
 
 The parameters \CfgRef{gnss.warn+dimens} and \CfgRef{gnss.warn+sats} can be used to reflect the quality of
 the GNSS solution in the device health code (section \ref{sec:self-diagnostics}).
+
+The dynamic model used in the GNSS positioning engine is defined by the configuration parameter
+\CfgRef{gnss.dyn+model}.
+The possible values and the respective dynamic models they define are listed below:
+\begin{itemize}
+    \item 0 -- Automotive.
+    \item 1 -- Sea.
+    \item 2 -- Airborne. This is the default dynamic model.
+\end{itemize}
 
 \subsection{Digital barometric altimeter}
 
@@ -746,8 +756,12 @@ from the bus.
 Note that if the bootloader (section \ref{sec:bootloader}) was able to obtain a dynamic UAVCAN node ID
 from the bus before starting the application,
 it will pass the detected value over to the application while booting it,
-in which case the application will use the provided node ID
-\emph{regardless of the value configured in \CfgRef{uavcan.node+id}}.
+in which case the application will use the provided node ID,
+unless a different value is configured via
+\CfgRef{uavcan.node+id}\footnote{The static node ID value configured via the parameter
+always takes precedence, regardless of the value supplied by the bootloader, since firmware version 4.1.
+Earlier versions of the firmware used to prefer the node ID supplied by the bootloader over the statically
+configured value.}.
 
 Until there is a valid node ID available for the local UAVCAN node (either specified
 statically via the configuration parameter, or provided dynamically),
@@ -1978,6 +1992,9 @@ the GNSS solution is less than this value. 3 for the full (3D) solution, 2 for p
 
 \CfgParamIndexEntry{gnss.warn+sats}{}{0}{20}{0}{Set the device health to Warning if the number of satellites
 used in the GNSS solution is below this threshold. Zero disables the feature.}
+
+\CfgParamIndexEntry{gnss.dyn+model}{}{0}{2}{2}{Dynamic model used in the GNSS positioning engine.
+0 -- Automotive, 1 -- Sea, 2 -- Airborne.}
 
 \CfgParamIndexEntry{gnss.old+fix+msg}{}{0}{1}{1}{Broadcast the old (deprecated) GNSS fix message
 \texttt{uavcan.equipment.gnss.Fix} alongside the new alternative \texttt{uavcan.equipment.gnss.Fix2}.
