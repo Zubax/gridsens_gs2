@@ -27,6 +27,7 @@
 #include <uavcan/protocol/param_server.hpp>
 #include <uavcan/protocol/dynamic_node_id_client.hpp>
 #include <uavcan/protocol/file/BeginFirmwareUpdate.hpp>
+#include <uavcan/transport/can_acceptance_filter_configurator.hpp>
 #include <zubax_chibios/os.hpp>
 
 
@@ -361,6 +362,23 @@ class : public chibios_rt::BaseStaticThread<3000>
         while (res < 0);
     }
 
+    int configureCanAcceptanceFilters() const
+    {
+        // Note that we don't need anonymous messages because we aren't allocating anything
+        const auto res =
+            uavcan::configureCanAcceptanceFilters(getNode(),
+                                                  uavcan::CanAcceptanceFilterConfigurator::IgnoreAnonymousMessages);
+        if (res < 0)
+        {
+            os::lowsyslog("Could not initialize CAN acceptance filters; error %d\n", res);
+            return res;
+        }
+
+        os::lowsyslog("CAN acceptance filters have been initialized successfully [%d]\n", res);
+
+        return 0;
+    }
+
     int init() const
     {
         {
@@ -403,6 +421,12 @@ class : public chibios_rt::BaseStaticThread<3000>
                 {
                     return -2000 + res;
                 }
+            }
+
+            const int acceptance_res = configureCanAcceptanceFilters();
+            if (acceptance_res < 0)
+            {
+                return acceptance_res;
             }
 
             os::lowsyslog("Waiting for dynamic node ID allocation...\n");
@@ -465,6 +489,14 @@ class : public chibios_rt::BaseStaticThread<3000>
         if (begin_firmware_update_res < 0)
         {
             return -6000 + begin_firmware_update_res;
+        }
+
+        // At the end, when everything is initialized, set up the acceptance filters again,
+        // to take into account new subscribers
+        const int acceptance_res = configureCanAcceptanceFilters();
+        if (acceptance_res < 0)
+        {
+            return acceptance_res;
         }
 
         started = true;
