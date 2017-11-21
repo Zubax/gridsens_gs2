@@ -4,9 +4,9 @@ Zubax GNSS
 [![Join the chat at https://gitter.im/Zubax/general](https://badges.gitter.im/Zubax/zubax_gnss.svg)](https://gitter.im/Zubax/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
-It includes a state-of-the-art multi-system GPS/GLONASS receiver, a high-precision barometric altimeter,
-and a 3-axis compass with thermal compensation.
-Zubax GNSS 2 supports variety of standard protocols, which ensures compatibility with most of existing
+It includes a state-of-the-art multi-system concurrent GPS+GLONASS+Galileo receiver,
+a high-precision barometric altimeter, and a 3-axis compass with thermal compensation.
+Zubax GNSS 2 supports a variety of standard protocols, which ensure compatibility with most of existing
 software and hardware: [UAVCAN](http://uavcan.org) (over CAN bus), NMEA 0183 (over USB and UART),
 and u-Blox M8 protocol.
 
@@ -28,6 +28,15 @@ Master branch always contains the newest version of firmware and it may be unsta
 ## Release notes
 
 Newest entries at the top.
+
+### Zubax GNSS v2.2, firmware v4.1
+
+* Added support for Galileo, since the system is now operational.
+Now, Zubax GNSS 2 utilizes GPS+GLONASS+Galileo concurrently.
+* Added a configuration parameter that allows the user to change the dynamic model of the vehicle.
+Three options are available: Automotive, Sea, Airborne. Airborne is chosen by default.
+* Bootloader updated to version 1.1, where the field naming issue in `zubax_id` was resolved.
+* Static UAVCAN node ID setting takes precedence over the value provided by the bootloader.
 
 ### Zubax GNSS v2.2, firmware v4.0
 
