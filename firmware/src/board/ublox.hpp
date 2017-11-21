@@ -211,7 +211,7 @@ public:
 class IOManager
 {
     static constexpr unsigned PayloadBufferSize = 1024;
-    static constexpr unsigned DefaultAckTimeoutMs = 200;
+    static constexpr unsigned DefaultAckTimeoutMs = 300;
     static constexpr unsigned ValidBaudRates[] = { 9600, 115200, 57600, 38400, 19200, 4800 };
     static constexpr unsigned TargetBaudRate = 115200;
 
