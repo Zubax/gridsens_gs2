@@ -596,7 +596,15 @@ void init(std::uint32_t bit_rate_hint,
           const FirmwareUpdateRequestCallback& on_firmware_update_requested)
 {
     g_can_bit_rate = bit_rate_hint;
-    g_node_id = node_id_hint;
+
+    if (param_node_id.get() == 0)
+    {
+        g_node_id = node_id_hint;                               // Use the hint only if the static node ID is not set
+    }
+    else
+    {
+        g_node_id = uavcan::NodeID(param_node_id.get());        // Otherwise, prefer the manually assigned static node ID
+    }
 
     g_firmware_version.major = firmware_version_major_minor.first;
     g_firmware_version.minor = firmware_version_major_minor.second;
