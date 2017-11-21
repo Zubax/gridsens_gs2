@@ -82,8 +82,8 @@ void cmd_gnssbridge(BaseSequentialStream*, int, char**)
 
     while (usb_cdc_acm::getState() == usb_cdc_acm::State::Connected)
     {
-        // GNSS --> CLI
-        unsigned sz = chIQReadTimeout(&gnss_port->iqueue, buffer, sizeof(buffer), TIME_IMMEDIATE);
+        // GNSS --> CLI (blocking here because the latency in this direction should be minimized)
+        unsigned sz = chIQReadTimeout(&gnss_port->iqueue, buffer, sizeof(buffer), MS2ST(1));
         if (sz > 0)
         {
             // Block for a brief period of time only because the CLI port may become unwriteable
