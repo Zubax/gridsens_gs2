@@ -329,11 +329,7 @@ def test_uavcan():
                         abort('Invalid magnetic field strength reading: %d Gauss. Check the sensor.',
                               magnetic_field_scalar)
 
-            imperative('Testing GNSS performance. Place the device close to a window to ensure decent GNSS reception. '
-                       'Please note that this test is very crude, it can only detect whether GNSS circuit is working '
-                       'at all or not. If GNSS performance is degraded due to improper manufacturing process, '
-                       'this test may fail to detect it, so please double check that your manufacturing process '
-                       'adheres to the documentation.')
+            imperative('Testing GNSS performance.')
             info('Waiting for GNSS fix...')
             with time_limit(GNSS_FIX_TIMEOUT, 'GNSS fix timeout. Check the RF circuit, AFE, antenna, and receiver'):
                 while True:
