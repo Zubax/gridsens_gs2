@@ -825,14 +825,14 @@ More information about the standard UAVCAN data structures can be obtained from 
     \item[\texttt{covariance}] The $6\times6$ position and velocity error covariance matrix.
     Only the diagonal is reported. The items on the diagonal are ordered as follows:
     \begin{enumerate}
-        \item Longitude error variance, in $\text{meters}^2$.
-        \item Latitude error variance, in $\text{meters}^2$.
-        \item Altitude error variance, in $\text{meters}^2$.
-        \item Longitudinal (north--south) velocity error variance,
-              in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
-        \item Lateral (east--west) velocity error variance,
-              in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
-        \item Vertical velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+        \item Longitude error variance, in $\text{meter}^2$.
+        \item Latitude error variance, in $\text{meter}^2$.
+        \item Altitude error variance, in $\text{meter}^2$.
+        \item Longitudinal (east--west) velocity error variance,
+              in $\left(\frac{\text{meter}}{\text{second}}\right)^2$.
+        \item Lateral (north--south) velocity error variance,
+              in $\left(\frac{\text{meter}}{\text{second}}\right)^2$.
+        \item Vertical velocity error variance, in $\left(\frac{\text{meter}}{\text{second}}\right)^2$.
     \end{enumerate}
     
     \item[\texttt{pdop}] 3D geometric dilution of precision (PDOP).
@@ -853,12 +853,12 @@ The nested data structure \verb|ecef_position_velocity| contains the following f
     \item[\texttt{covariance}] The $6\times6$ position and velocity error covariance matrix.
     Only the diagonal is reported. The items on the diagonal are ordered as follows:
     \begin{enumerate}
-        \item ECEF-X coordinate error variance, in $\text{meters}^2$.
-        \item ECEF-Y coordinate error variance, in $\text{meters}^2$.
-        \item ECEF-Z coordinate error variance, in $\text{meters}^2$.
-        \item ECEF-X velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
-        \item ECEF-Y velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
-        \item ECEF-Z velocity error variance, in $\left(\frac{\text{meters}}{\text{second}}\right)^2$.
+        \item ECEF-X coordinate error variance, in $\text{meter}^2$.
+        \item ECEF-Y coordinate error variance, in $\text{meter}^2$.
+        \item ECEF-Z coordinate error variance, in $\text{meter}^2$.
+        \item ECEF-X velocity error variance, in $\left(\frac{\text{meter}}{\text{second}}\right)^2$.
+        \item ECEF-Y velocity error variance, in $\left(\frac{\text{meter}}{\text{second}}\right)^2$.
+        \item ECEF-Z velocity error variance, in $\left(\frac{\text{meter}}{\text{second}}\right)^2$.
     \end{enumerate}
 \end{description}
 
