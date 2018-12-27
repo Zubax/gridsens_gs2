@@ -58,17 +58,16 @@ If you're a licensed manufacturer, you should have received usage
 instructions with the manufacturing doc pack.''',
             lambda p: p.add_argument('iface', help='CAN interface or device path, e.g. "can0", "/dev/ttyACM0", etc.'),
             lambda p: p.add_argument('--firmware', '-f', help='location of the firmware file (if not provided, ' +
-                                     'the firmware will be downloaded from Zubax Robotics file server)'),
-            require_root=True)
+                                     'the firmware will be downloaded from Zubax Robotics file server)'))
 
 info('''
 Usage instructions:
 
 1. Connect a CAN adapter to this computer. Supported adapters are:
 1.1. SLCAN-compliant adapters. If you're using an SLCAN adapter,
-     use its serial port name as CAN interface name (e.g. "/dev/ttyACM0").
+     use its serial port name as a CAN interface name (e.g. "/dev/ttyACM0").
 1.2. SocketCAN-compatible adapters. In this case it is recommended to use
-     8devices USB2CAN. Correct interface name would be "can0".
+     8devices USB2CAN. The correct interface name would be "can0".
 
 2. Connect exactly one DroneCode Probe to this computer.
    For more info refer to https://kb.zubax.com/x/iIAh.
@@ -124,10 +123,10 @@ def wait_for_boot():
     deadline = time.monotonic() + BOOT_TIMEOUT
 
     def handle_serial_port_hanging():
-        fatal('DRWATSON HAS DETECTED A PROBLEM WITH CONNECTED HARDWARE AND NEEDS TO TERMINATE.\n'
+        fatal('DRWATSON HAS DETECTED A PROBLEM WITH THE CONNECTED HARDWARE AND NEEDS TO TERMINATE.\n'
               'A serial port operation has timed out. This usually indicates a problem with the connected '
               'hardware or its drivers. Please disconnect all USB devices currently connected to this computer, '
-              "then connect them back and restart Drwatson. If you're using a virtual machine, please reboot it.",
+              "then connect them back and restart DrWatson. If you're using a virtual machine, please reboot it.",
               use_abort=True)
 
     with BackgroundDelay(BOOT_TIMEOUT * 5, handle_serial_port_hanging):
@@ -148,13 +147,13 @@ def wait_for_boot():
             finally:
                 p.flushInput()
 
-    warning("The device did not report to CLI with a correct boot message, but we're going "
+    warning("The device did not emit a correct boot message via CLI, but we're going "
             "to continue anyway. Possible reasons for this warning:\n"
             '1. The device could not boot properly (however it was flashed successfully).\n'
             '2. The debug connector is not soldered properly.\n'
-            '3. The serial port is open by another application.\n'
-            '4. Either USB-UART adapter or VM are malfunctioning. Try to re-connect the '
-            'adapter (disconnect from USB and from the device!) or reboot the VM.')
+            '3. The serial port is opened by another application.\n'
+            '4. Either the USB-UART adapter or the VM are malfunctioning. Try reconnecting '
+            'the adapter (disconnect from USB and from the device!) or reboot the VM.')
 
 
 def test_uavcan():
@@ -189,7 +188,8 @@ def test_uavcan():
             nsmon = uavcan.app.node_monitor.NodeMonitor(n)
             alloc = uavcan.app.dynamic_node_id.CentralizedServer(n, nsmon)
 
-            with time_limit(10, 'The node did not show up in time. Check CAN interface and crystal oscillator.'):
+            with time_limit(10,
+                            'The node did not show up in time. Check the CAN interface and the crystal oscillator.'):
                 while True:
                     safe_spin(1)
                     target_nodes = list(nsmon.find_all(lambda e: e.info and e.info.name.decode() == PRODUCT_NAME))
@@ -357,7 +357,7 @@ def test_uavcan():
 
             check_everything()
 
-            info('Last sampled sensor measurements are provided below. They appear to be correct.')
+            info('The last sampled sensor measurements are provided below. They appear to be correct.')
             info('GNSS fix: %r', col_fix[node_id].message)
             info('GNSS aux: %r', col_aux[node_id].message)
             info('Magnetic field [Ga]: %r', col_mag[node_id].message)
@@ -365,7 +365,7 @@ def test_uavcan():
             info('Temperature [K]: %r', col_temp[node_id].message)
 
             # Finalizing the test
-            info('Resetting the configuration to factory default...')
+            info('Resetting the configuration to the factory defaults...')
             enforce(request(uavcan.protocol.param.ExecuteOpcode.Request(
                 opcode=uavcan.protocol.param.ExecuteOpcode.Request().OPCODE_ERASE)).ok,
                 'Could not erase configuration')
@@ -400,7 +400,7 @@ def test_uavcan():
                 abort('STATUS LED is not working')
 
             # Testing CAN2
-            input('1. Disconnect CAN1 and connect to CAN2\n'
+            input('1. Disconnect the cable from CAN1 and connect it to CAN2\n'
                   '2. Terminate CAN2\n'
                   '3. Press ENTER')
 
@@ -466,11 +466,11 @@ with CLIWaitCursor():
 
 
 def process_one_device(set_device_info):
-    out = input('1. Connect DroneCode Probe to the debug connector\n'
-                '2. Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector\n'
-                '3. Connect USB to the device, and make sure that no other Zubax GNSS is connected\n'
-                '4. If you want to skip firmware upload, type F\n'
-                '5. Press ENTER')
+    out = input('1. Connect DroneCode Probe to the debug connector.\n'
+                '2. Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector.\n'
+                '3. Connect USB to the device, and make sure that no other Zubax GNSS is connected.\n'
+                '4. If you want to skip firmware upload, type F.\n'
+                '5. Press ENTER.')
 
     skip_fw_upload = 'f' in out.lower()
     if not skip_fw_upload:
@@ -490,7 +490,7 @@ def process_one_device(set_device_info):
         unique_id = b64decode(zubax_id['hw_unique_id'])
         set_device_info(product_id, unique_id)
 
-    info('Testing UAVCAN interface...')
+    info('Testing the UAVCAN interface...')
     test_uavcan()
 
     info('Connecting via USB...')
@@ -512,7 +512,7 @@ def process_one_device(set_device_info):
         if gensign_response.new:
             info('New signature has been generated')
         else:
-            info('This particular device has been signed earlier, reusing existing signature')
+            info('This particular device was signed earlier, reusing the existing signature')
         base64_signature = b64encode(gensign_response.signature).decode()
         logger.info('Generated signature in Base64: %s', base64_signature)
 
