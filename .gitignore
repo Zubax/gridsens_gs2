@@ -29,3 +29,5 @@ dsdlc_generated
 
 # JetBrains
 .idea
+
+.vscode

@@ -1,5 +1,5 @@
 %
-% Copyright (c) 2017  Zubax Robotics OU  <info@zubax.com>
+% Copyright (c) 2017-2019  Zubax Robotics  <info@zubax.com>
 %
 % Distributed under BY-NC-ND (attribution required, non-commercial use only, no derivatives).
 %
@@ -1157,7 +1157,7 @@ The following snippet of Python code can be used to compute the checksum of an N
 from functools import reduce
 from operator import xor
 
-def compute_nmea_checksum(s: str):
+def compute_nmea_checksum(s: str) -> int:
     """
     Usage example:
     >>> hex(compute_nmea_checksum('$GPRMC,072626.30,A,0036.27144,N,00042.93538,E,1.097,235.8,141215,,*'))
@@ -2105,7 +2105,7 @@ The table \ref{table:bootloader_states} summarizes the states.
     2  & BootCancelled        & There is a valid application to boot; however,
                                 booting was canceled by an external command.\\
 
-    3  & AppUpgradeinProgress & The application is currently being updated.
+    3  & AppUpgradeInProgress & The application is currently being updated.
                                 If interrupted, the bootloader will switch into
                                 \textbf{NoAppToBoot} or \textbf{BootCancelled},
                                 depending on whether there is a valid image after the interruption.\\
