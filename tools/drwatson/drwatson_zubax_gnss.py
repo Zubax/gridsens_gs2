@@ -111,7 +111,7 @@ def load_firmware(firmware_data):
                 'mon swdp_scan',
                 'attach 1',
                 'load',
-                'compare-sections',
+                #'compare-sections',    # Commented out because this command breaks the GDB session on GDB 8.x. Why tho?
                 'kill',
                 'quit 0'
             ]))
