@@ -88,6 +88,10 @@ SERIAL_CLI_PORT_NUMBER = 3
 
 CPPWARN := -Wundef -Wno-error=undef
 
+# Added for compatibility with legacy Zubax ChibiOS codebase.
+# To be removed later when the dependency on Zubax ChibiOS is removed (it is obsolete).
+CPPWARN += -Wno-error=implicit-fallthrough
+
 RELEASE_OPT = -O2 -fomit-frame-pointer
 DEBUG_OPT = -Os -g3 -DDISABLE_WATCHDOG=1
 
@@ -110,23 +114,23 @@ BOOTLOADER_IMAGE := $(BOOTLOADER_DIR)/build/com.zubax.gnss.bin
 binaries: build/$(PROJECT).bin build/$(PROJECT).elf $(BOOTLOADER_IMAGE)
 	# Removing previous build outputs that could use a different git hash
 	rm -rf build/*.application.bin build/*.compound.bin
-	
+
 	# Generating compound image with embedded bootloader
 	cd build && dd if=/dev/zero bs=$(BOOTLOADER_SIZE) count=1 | tr "\000" "\377" >padded_bootloader.tmp.bin
 	cd build && dd if=$(BOOTLOADER_IMAGE) of=padded_bootloader.tmp.bin conv=notrunc
 	cd build && cat padded_bootloader.tmp.bin $(PROJECT).bin >$(COMPOUND_IMAGE_FILE)
-	
+
 	# Generating the signed image for the bootloader
 	cd build && ../zubax_chibios/tools/make_boot_descriptor.py $(PROJECT).bin $(PROJECT) $(HW_VERSION_MAJOR_MINOR) \
 	                                                           --also-patch-descriptor-in=$(PROJECT).elf           \
 	                                                           --also-patch-descriptor-in=$(COMPOUND_IMAGE_FILE)
-	
+
 	# Injecting the bootloader into the final ELF
 	cd build && $(TOOLCHAIN_PREFIX)-objcopy --add-section bootloader=$(BOOTLOADER_IMAGE)   \
 	                                        --set-section-flags bootloader=load,alloc      \
 	                                        --change-section-address bootloader=0x08000000 \
 	                                        $(PROJECT).elf compound.elf
-	
+
 	# Removing temporary files
 	cd build && rm -f $(PROJECT).bin $(PROJECT).elf *.hex *.tmp.bin
 

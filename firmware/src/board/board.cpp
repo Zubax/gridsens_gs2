@@ -134,12 +134,12 @@ void setCANLed(unsigned iface_index, bool state)
     {
     case 0:
     {
-        palWritePad(GPIO_PORT_LED_CAN1, GPIO_PIN_LED_CAN1, state);
+        palWritePad(GPIO_PORT_LED_CAN1, GPIO_PIN_LED_CAN1, std::uint8_t(state));
         break;
     }
     case 1:
     {
-        palWritePad(GPIO_PORT_LED_CAN2, GPIO_PIN_LED_CAN2, state);
+        palWritePad(GPIO_PORT_LED_CAN2, GPIO_PIN_LED_CAN2, std::uint8_t(state));
         break;
     }
     default:
@@ -151,7 +151,7 @@ void setCANLed(unsigned iface_index, bool state)
 
 void setStatusLed(bool state)
 {
-    palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, state);
+    palWritePad(GPIO_PORT_LED_STATUS, GPIO_PIN_LED_STATUS, std::uint8_t(state));
 }
 
 void restart()
