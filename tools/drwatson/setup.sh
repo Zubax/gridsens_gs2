@@ -8,4 +8,4 @@ fi
 
 sudo apt-get install -y python3-pip can-utils
 
-sudo pip3 install colorama easywebdav pyserial numpy pyyaml eventlet
+sudo pip3 install colorama easywebdav pyserial numpy pyyaml
