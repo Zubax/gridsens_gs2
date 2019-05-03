@@ -80,6 +80,10 @@ BUILD_BOOTLOADER = 1
 
 CPPWARN := -Wshadow -Wpointer-arith -Wno-packed -Wno-attributes -Wno-error=undef -Wno-error=shadow
 
+# Added for compatibility with legacy Zubax ChibiOS codebase.
+# To be removed later when the dependency on Zubax ChibiOS is removed (it is obsolete).
+CPPWARN += -Wno-error=implicit-fallthrough -Wno-error=bool-operation
+
 RELEASE_OPT = -Os -fomit-frame-pointer
 DEBUG_OPT = -Os -g3 -DDISABLE_WATCHDOG=1
 
