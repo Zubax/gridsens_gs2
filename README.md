@@ -22,8 +22,8 @@ Hardware                        | Compatible firmware versions  | Branch
 Zubax GNSS v1 (year 2014)       | 1.x, 2.x                      | `release_1.0`, `release_2.0`
 Zubax GNSS v2.1 (year 2015)     | 3.x                           | `release_3.0`
 Zubax GNSS v2.2 (year 2017)     | 4.x                           | `master`
-Zubax GNSS v2.3 (year 2019)     | 4.x, x>1                      | see v2.2
-Zubax GNSS v2.4 (year 2023)     | 4.x, x>1                      | see v2.2
+Zubax GNSS v2.3 (year 2019)     | 4.x, x≥1                      | see v2.2
+Zubax GNSS v2.4 (year 2023)     | 4.x, x≥1                      | see v2.2
 
 Please check out the corresponding branch to see instructions specific for your firmware version.
 Master branch always contains the newest version of firmware and it may be unstable.
