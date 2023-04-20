@@ -1,7 +1,8 @@
 Zubax GNSS
 ==========
 
-[![Join the chat at https://gitter.im/Zubax/general](https://badges.gitter.im/Zubax/zubax_gnss.svg)](https://gitter.im/Zubax/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Forum](https://img.shields.io/discourse/https/forum.zubax.com/users.svg?color=e00000)](https://forum.zubax.com)
+[![Forum](https://img.shields.io/discourse/https/forum.opencyphal.org/users.svg?color=1700b3)](https://forum.opencyphal.org)
 
 Zubax GNSS 2 is a multipurpose high-performance positioning module interfaced via CAN bus, USB, and UART.
 It includes a state-of-the-art multi-system concurrent GPS+GLONASS+Galileo receiver,
@@ -21,7 +22,8 @@ Hardware                        | Compatible firmware versions  | Branch
 Zubax GNSS v1 (year 2014)       | 1.x, 2.x                      | `release_1.0`, `release_2.0`
 Zubax GNSS v2.1 (year 2015)     | 3.x                           | `release_3.0`
 Zubax GNSS v2.2 (year 2017)     | 4.x                           | `master`
-Zubax GNSS v2.3 (year 2019)     | 4.x                           | see v2.2
+Zubax GNSS v2.3 (year 2019)     | 4.x, x≥1                      | see v2.2
+Zubax GNSS v2.4 (year 2023)     | 4.x, x≥1                      | see v2.2
 
 Please check out the corresponding branch to see instructions specific for your firmware version.
 Master branch always contains the newest version of firmware and it may be unstable.
@@ -29,6 +31,19 @@ Master branch always contains the newest version of firmware and it may be unsta
 ## Release notes
 
 Newest entries at the top.
+Additional information is available upon request to <quality@zubax.com>.
+
+### Zubax GNSS v2.4
+
+* Replace the NVRAM/RTC backup supercapacitor because the original model is no longer available outside the US.
+  The height of the new supercapacitor is 8.5 mm while the old model is 5.5 mm tall;
+  hence, the total height of the device is increased by 3 mm.
+* Replace passive components that have reached the end-of-life with fully functionally equivalent alternatives.
+
+### Zubax GNSS v2.3
+
+* Upgrade the RF front-end to use a higher-performance LNA.
+* Switch most of the design to AEC-Q qualified components.
 
 ### Zubax GNSS v2.2, firmware v4.1
 
