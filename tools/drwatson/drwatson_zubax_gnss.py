@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
 #
 # Copyright (C) 2015 Zubax Robotics <info@zubax.com>
 #
