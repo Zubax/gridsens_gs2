@@ -23,6 +23,27 @@ execute `./setup.sh`, and you're ready to get started:
 `run.sh` is just a convenient wrapper that pulls the latest version from git before running Drwatson.
 You can either use it or run drwatson manually as `./drwatson_zubax_gnss.py`.
 
-## Other documentation
+## Usage
 
-Refer to <https://kb.zubax.com/> to find more documentation about anything.
+The following parts will be needed:
+
+- Zubax Babel, aka CF1
+- Zubax Dronecode Probe, aka BF1
+- DCD-M Cable
+- UAVCAN Micro patch cable
+- UAVCAN/CAN Micro termination plug
+- x3 Micro USB cable Type B
+
+Connect all hardware as follows:
+
+- Connect DroneCode Probe to the debug connector.
+- Connect CAN to the first CAN1 connector on the device; terminate the other CAN1 connector.
+- Connect USB to the device.
+
+From this directory execute:
+
+```
+sudo ./drwatson_zubax_gnss.py /dev/serial/by-id/usb*Zubax*Babel*
+```
+
+After that follow the on-screen instructions.
