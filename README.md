@@ -13,6 +13,8 @@ and u-Blox M8 protocol.
 
 [**ZUBAX GNSS HOMEPAGE**](https://zubax.com/products/gnss_2)
 
+For the production testing instructions please refer to `tools/drwatson`.
+
 ## Revisions
 
 The following table documents existing modifications of Zubax GNSS hardware and compatible firmware versions.
