@@ -1,4 +1,4 @@
-GridSens GS2 Zubax GNSS
+GridSens GS2 / Zubax GNSS
 ==========
 
 [![Forum](https://img.shields.io/discourse/https/forum.zubax.com/users.svg?color=e00000)](https://forum.zubax.com)
